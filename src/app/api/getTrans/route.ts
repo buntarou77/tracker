@@ -5,7 +5,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const login = searchParams.get('login');
     const bankName = searchParams.get('bankName');
-    
+    console.log(login)
+    console.log(bankName)
     if (!login || !bankName) {
         return NextResponse.json(
             { error: 'Параметры login и bankName обязательны' },
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
             if (!result || !result.banks || result.banks.length === 0) {
                 return [];
             }
-            
+            console.log(result)
             return result.banks[0].transactions || [];
         } catch (error) {
             console.error('Ошибка при получении транзакций:', error);

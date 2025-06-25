@@ -40,6 +40,7 @@ export default function Operations() {
             if(res.ok){
               const data = await res.json();
               const upatedTransactions = [Object.values(data.value).flat()]
+              console.log(upatedTransactions)
               console.log(upatedTransactions[0].length)
               setItems(upatedTransactions[0])
             }
@@ -197,7 +198,7 @@ export default function Operations() {
         console.log(e)
       }
     }
-    console.log(balance)
+    console.log(items)
     const numeralBalane = Number(balance)
     return (
         <div className="w-[1200px] m-auto p-[40px] input">

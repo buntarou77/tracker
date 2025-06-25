@@ -4,7 +4,6 @@ import { Inter, Roboto_Mono } from "next/font/google";
 import Link from "next/link";
 import '../globals.css'
 import BankAccount from './BankAccount';
-import { useAppContext } from '../context/BalanceContext';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -17,14 +16,6 @@ const robotoMono = Roboto_Mono({
 });
 
 export default function Header() {
-  const { state } = useAppContext();
-  
-  // Вычисляем общий баланс
-  const totalBalance = state.bankAccounts.data.reduce(
-    (total, account) => total + (account.balance || 0), 
-    0
-  );
-  
   return (
     <div className={`${inter.variable} ${robotoMono.variable} antialiased`}>
       <div className="header bg-dark relative flex items-center">
@@ -39,18 +30,6 @@ export default function Header() {
               <Link className="[all:unset] !cursor-pointer" href='/about'><li>About</li></Link>
             </ul>
           </nav>
-        </div>
-        
-        {/* Показываем информацию пользователя и баланс */}
-        <div className="user-info flex items-center gap-4 mr-4">
-          {state.user.isAuthenticated && state.user.data && (
-            <div className="flex items-center gap-2 text-white">
-              <span>👤 {state.user.data.login}</span>
-              <span className="text-green-400">
-                💰 ₽{state.bankAccounts.loading ? '...' : totalBalance.toLocaleString()}
-              </span>
-            </div>
-          )}
         </div>
         
         <BankAccount />

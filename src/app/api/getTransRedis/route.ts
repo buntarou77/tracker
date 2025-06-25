@@ -5,6 +5,8 @@ export async function GET(request: Request) {
 const { searchParams } = new URL(request.url);
 const login = searchParams.get('login');
 const bankName = searchParams.get('bankName')
+console.log(login)
+console.log(bankName)
   const client = createClient({
     url: 'redis://127.0.0.1:6379'
   });

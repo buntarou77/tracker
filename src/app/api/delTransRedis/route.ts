@@ -5,7 +5,8 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const login = searchParams.get('login');
     const bankName = searchParams.get('bankName');
-    
+    console.log(login)
+    console.log(bankName)
     if (!login || !bankName) {
         return NextResponse.json(
             { error: 'Параметры login и bankName обязательны' },
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: e }, { status: 400 });
             }
         }
-
+        console.log(`${login}_${bankName}_transactions`)
         const trans = await client.get(`${login}_${bankName}_transactions`);
         
         if (!trans) {
