@@ -4,12 +4,11 @@ import { MongoClient } from 'mongodb';
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const login = searchParams.get('login');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const bankName = searchParams.get('bankName');
     
-    if (!login) {
+    if (!login || !bankName) {
         return NextResponse.json(
-            { error: 'Параметр login обязателен' },
+            { error: 'Параметры login и bankName обязательны' },
             { status: 400 }
         );
     }
@@ -19,9 +18,16 @@ export async function GET(request: NextRequest) {
         try {
             await client.connect();
             const db = client.db('users');
-            const result = await db.collection('users').findOne({ user: login });
+            const result = await db.collection('users').findOne(
+                { user: login },
+                { projection: { banks: { $elemMatch: { name: bankName } } } }
+            );
             
-            return result?.transactions || []; 
+            if (!result || !result.banks || result.banks.length === 0) {
+                return [];
+            }
+            
+            return result.banks[0].transactions || [];
         } catch (error) {
             console.error('Ошибка при получении транзакций:', error);
             throw error;

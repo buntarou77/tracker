@@ -6,7 +6,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublicPath = ['/login', '/register'].includes(path);
   const token = request.cookies.get('accessToken')?.value;
-  console.log('check')
   if (isPublicPath) {
     if (token) {
       return NextResponse.redirect(new URL('/dashboard', request.nextUrl));

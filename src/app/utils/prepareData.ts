@@ -1,4 +1,6 @@
 const prepareBarData = (data, labelData)=>{
+    // console.log(data)
+    // console.log(labelData)
     return {
         labels: labelData,
             datasets: [
@@ -39,6 +41,7 @@ const prepareBarData = (data, labelData)=>{
 }
 }
 const prepareLineData = (data, labels)=>{
+    
     return{
             data: {
             labels: labels,

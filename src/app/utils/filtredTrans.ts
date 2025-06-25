@@ -27,7 +27,17 @@ const FiltredTransactions = (transactions, method, payload = [])=>{
         const resultBudget = endBudget - startBudget
         const gainTransactions = filteredTransactions.filter((item) => item.type === 'gain');
         const lossTransactions = filteredTransactions.filter((item) => item.type === 'loss');
+        const frequencyHours = Array(24).fill(0)
+        
+        filteredTransactions.forEach((item)=>{
+            const fullTime = new Date(item.date)
+            const time = fullTime.getHours()
+            const indexHour = Number(time)
+            frequencyHours[indexHour] += 1
+        })
+
         return {
+            frequencyHours,
             filteredTransactions,
             startBudget,
             endBudget,

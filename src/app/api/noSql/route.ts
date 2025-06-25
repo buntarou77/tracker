@@ -12,7 +12,6 @@ export async function POST(request: NextRequest){
  }
  async function modifyUser() {
     const client = new MongoClient('mongodb://localhost:27017');
-    console.log(client)
     try {
       await client.connect();
       const db = client.db('users'); 

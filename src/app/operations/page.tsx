@@ -1,18 +1,15 @@
 'use client'
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAuth } from "../hooks/useAuth";
-import FirstForm from './form';
 import Cookies from 'js-cookie';
 
 export default function Operations() {
-    const [successTest, setSuccessTest] = useState<boolean | null>(true);
-    const [time, setTime] = useState<boolean>(false);
     const [items, setItems] = useState<any[]>([]);
     const [login, setLogin] = useState<string>('');
     const [show, setShow] = useState<boolean>(false);
     const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
     const formRef = useRef<HTMLFormElement>(null);
-    const [balance, setBalance] = useState<object>({});
+    const [balance, setBalance] = useState<{}>();
     const [loadingCurrency, setLoadingCurrency] = useState<string>('');
     const [transactionType, setTransactionType] = useState<'loss' | 'gain'>('loss');
     const auth = useAuth();
@@ -31,43 +28,44 @@ export default function Operations() {
         };
     }, [show]);
     useEffect(() => {
-
         const token = Cookies.get('info_token');
-        if (localStorage.getItem(`success_first_test_${token}`) === 'true') {
-            setSuccessTest(true);
-        }
+        const activeBank = JSON.parse(Cookies.get('ActiveBank'))
+        console.log(activeBank)
         setLogin(token || '');
-        async function getTransactions() {
-            try {
-                const response = await fetch(`/api/getTrans?login=${token}`, {
-                    method: 'GET' 
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    setItems(data.transactions || []); 
-                }
-            } catch(error) {
-                console.error('Error fetching transactions:', error);
+        async function getRedis(){
+          try{
+            const res = await fetch(`api/getTransRedis?login=${token}&bankName=${activeBank.name}`, {
+              method: 'GET'
+            })
+            if(res.ok){
+              const data = await res.json();
+              const upatedTransactions = [Object.values(data.value).flat()]
+              console.log(upatedTransactions[0].length)
+              setItems(upatedTransactions[0])
             }
+          }catch(e){
+            console.log(e)
+          }finally{
+            setLoadingCurrency('') 
+          }
         }
         if (token) {
-            getTransactions();
+          getRedis()
         }
-        const timer = setTimeout(() => {
-            setTime(true);
-        }, 200);
         async function getBalance() {
           setLoadingCurrency('loading')
           try{
-            console.log(token)  
-           const response = await fetch(`/api/getBalance?login=${token}`, {
+            const bankCookies = Cookies.get('ActiveBank')
+            const bank = JSON.parse(bankCookies)
+           const response = await fetch(`/api/getBalanceRedis?login=${token}&bankName=${bank.name}`, {
              method: 'GET'
            })
            if (response.ok) {
              setLoadingCurrency('')
              const data = await response.json();
-             setBalance(data.balance);
+             console.log(data)
+             Cookies.set(`bank_account_${token}`, data.value)
+             setBalance(data.value);
            }
          }catch(e){
           setLoadingCurrency('error')
@@ -75,10 +73,11 @@ export default function Operations() {
         }
       }
       getBalance()
-        return () => clearTimeout(timer);
     }, []);
-    const addTransaction = async (amount, category, date, login, type) => {
+    const addTransaction = async (amount: any, category: any, date: any, login: any, type: any) => {
       try {
+        console.log(amount)
+        const activeBank = JSON.parse(Cookies.get('ActiveBank') || '{}');
           const response = await fetch('/api/addTrans', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -87,27 +86,29 @@ export default function Operations() {
                   category,
                   date,
                   login,
-                  balance: balance.balance || 0,
-                  type
+                  balance: balance || 0,
+                  type,
+                  bankName: activeBank.name
               })
           });
   
           if (response.ok) {
-              const result = await response.json();
               if(type === 'gain'){
-                setBalance(prev => ({
-                  ...prev,
-                  balance: result.newBalance || prev.balance + Number(amount)
-              }));
+              setBalance(prev=> Number(prev) + Number(amount));
+              console.log(new Date(date))
+              const fullTime = new Date(date).getHours()
+              console.log(fullTime)
+              const balanceToken  = Cookies.get(`bank_account_${login}`)
+              Cookies.set(`bank_account_${login}`, Number(balanceToken) + Number(amount))
               }else{
-              setBalance(prev => ({
-                  ...prev,
-                  balance: result.newBalance || prev.balance - Number(amount)
-              }));
+              setBalance(prev=> Number(prev) - Number(amount))
+              const balanceToken  = Cookies.get(`bank_account_${login}`)
+              Cookies.set(`bank_account_${login}`, Number(balanceToken) - Number(amount))
+
             }
   
               const token = Cookies.get('info_token');
-              const transResponse = await fetch(`/api/getTrans?login=${token}`);
+              const transResponse = await fetch(`/api/getTrans?login=${token}&bankName=${activeBank.name}`);
               if (transResponse.ok) {
                   setItems((await transResponse.json()).transactions || []);
               }
@@ -120,7 +121,7 @@ export default function Operations() {
         setShow(prev => !prev);
         setShouldAnimate(prev => !prev);
     }, []);
-    const handleSubmit = (event) => {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const amount = formData.get('amount');
@@ -132,39 +133,44 @@ export default function Operations() {
           setItems(prevItems => [...prevItems, { amount, category, date, type: transactionType }]);
         }
     };
-    const transactions = [...items].filter(item => !isNaN(new Date(item.date))).sort((a, b) => new Date(b.date) - new Date(a.date)).map((item, index) => {
-        return (
-          <div
-          key={item.id || index}
-          className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-[8px] p-[12px] mb-[10px] border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
-          <div className="flex flex-col text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Amount:</span>
-            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">${item.amount}</span>
-          </div>
-          <div className="flex flex-col text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Category:</span>
-            <span className="capitalize text-gray-800 dark:text-gray-200">{item.category}</span>
-          </div>
-          <div className="flex flex-col text-sm">
-            <span className="text-gray-500 dark:text-gray-400">type:</span>
-            <span className={` ${item.type === 'gain' ? '!text-[green]': '!text-[gray]'}`}>{item.type}</span>
-          </div>
-          <div className="flex flex-col text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Date:</span>
-            <span className="text-gray-700 dark:text-gray-300">{new Date(item.date).toLocaleDateString()}</span>
-          </div>
-          <button
-            onClick={() => delTransaction(item.id, Number(item.numeralAmount), item.type)}
-            className="ml-4 px-[10px] py-[5px] text-red-500 border border-red-500 rounded-[6px] cursor-pointer hover:bg-[orange] hover:text-white text-sm transition"
-          >
-            Delete
-          </button>
-        </div>
-        );
-    });
-    const delTransaction = async (id, amount, type) =>{ 
+    const transactions = [...items]
+        .filter(item => !isNaN(new Date(item.date)))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map((item, index) => {
+            return (
+              <div
+              key={item.id || index}
+              className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-[8px] p-[12px] mb-[10px] border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
+              <div className="flex flex-col text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Amount:</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">${item.numeralAmount || item.amount}</span>
+              </div>
+              <div className="flex flex-col text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Category:</span>
+                <span className="capitalize text-gray-800 dark:text-gray-200">{item.category}</span>
+              </div>
+              <div className="flex flex-col text-sm">
+                <span className="text-gray-500 dark:text-gray-400">type:</span>
+                <span className={` ${item.type === 'gain' ? '!text-[green]': '!text-[gray]'}`}>{item.type}</span>
+              </div>
+              <div className="flex flex-col text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Date:</span>
+                <span className="text-gray-700 dark:text-gray-300">{new Date(item.date).toLocaleDateString()}</span>
+              </div>
+              <button
+                onClick={() => delTransaction(item.id, Number(item.numeralAmount || item.amount), item.type, item.date)}
+                className="ml-4 px-[10px] py-[5px] text-red-500 border border-red-500 rounded-[6px] cursor-pointer hover:bg-[orange] hover:text-white text-sm transition"
+              >
+                Delete
+              </button>
+            </div>
+            );
+        });
+    const delTransaction = async (id: any, amount: any, type: any, date: any) =>{ 
       try{
-        const info = `${login}:${id}:${amount}:${balance.balance}:${type}`
+        const activeBank = JSON.parse(Cookies.get('ActiveBank') || '{}');
+        const info = `${login}:${id}:${amount}:${balance}:${type}:${date}:${activeBank.name}`
+        console.log(info)
         const response = await fetch(`api/delTrans?info=${info}`, {
           method: 'DELETE'
         })
@@ -173,15 +179,15 @@ export default function Operations() {
         if(type === 'loss'){
           setBalance((prev) => ({
             ...prev,
-            balance: balance.balance + amount
+            balance: (prev.balance ?? 0) + amount
           }));
         }else{
         setBalance((prev) => ({
           ...prev,
-          balance: balance.balance - amount
+          balance: (prev.balance ?? 0) - amount
         }));
       }
-          console.log('transaction is deleted!')
+          console.log('transaction is deleted!')  
           setItems((prev)=> prev.filter(item=> item.id != id))
         }else{
           console.log('something wrong(')
@@ -191,8 +197,9 @@ export default function Operations() {
         console.log(e)
       }
     }
-    if (successTest) {
-        return (
+    console.log(balance)
+    const numeralBalane = Number(balance)
+    return (
         <div className="w-[1200px] m-auto p-[40px] input">
               <div className="flex flex-col items-center text-center space-y-[10px] mb-[40px]">
                 <h2 className="text-[24px] font-bold text-white">
@@ -210,7 +217,7 @@ export default function Operations() {
                   >
                     +
                   </button>
-                  <p>{`your balance:${loadingCurrency? loadingCurrency : `${balance.balance} ${balance.currency}`}`}</p>
+                  <p>{`your balance:${numeralBalane}`}</p>
                   <form
                     ref={formRef}
                     onSubmit={handleSubmit}
@@ -298,12 +305,5 @@ export default function Operations() {
                   <p className=' flex flex-col items-center'>{`you didnt add transaction(`}</p>}</div>
               </div>
             </div>
-        );
-    }else if (time) {
-      return (
-          <div className="w-[1200px] m-auto  !h-[700px] ">
-              <FirstForm onComplite={() => setSuccessTest(true)}/>
-          </div>
-      );
-  }
-  }
+    );
+}

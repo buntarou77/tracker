@@ -74,7 +74,6 @@ export async function POST(request: Request) {
       path: '/',
       sameSite: 'lax',
     });
-    console.log(111)
     response.cookies.set('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

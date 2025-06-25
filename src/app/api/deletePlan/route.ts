@@ -11,10 +11,8 @@ export async function DELETE(request: NextRequest) {
             await client.connect();
             const db = client.db('users');
             const result = await db.collection('users').updateOne({ user: login }, { $pull :{ plans: {id: Number(id)}}})
-            console.log(result)
             return result 
         } catch (error) {
-            console.error('error:', error);
             throw error;
         } finally {
             await client.close();

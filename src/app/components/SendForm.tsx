@@ -4,7 +4,8 @@ import EmailIcon from '../resources/email.svg';
 import PasswordIcon from '../resources/password.svg';
 import LoginIcon from '../resources/login.svg';
 import React, {  useState, useEffect } from 'react';
-
+import Cookies from 'js-cookie';
+import deleteCookiesStartingWith from '../utils/delCookies'
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +28,12 @@ export default function RegisterForm() {
       setIsLoading(false);
       return;
     }
-    
+    const active = 0;
     const data = {
       login: formData.get('login'),
       password: formData.get('password'),
-      email: formData.get('email')
+      email: formData.get('email'),
+      active
     };
     
     try {
@@ -67,7 +69,7 @@ export default function RegisterForm() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    
+    const login = Cookies.get('info_token')
     const formData = new FormData(e.currentTarget);
 
     
@@ -93,7 +95,9 @@ export default function RegisterForm() {
         return;
       }
       if (result.success) {
-        localStorage.removeItem('success_first_test')
+        deleteCookiesStartingWith('bank_account')
+        Cookies.set('info_token', result.user.login)
+        Cookies.set(`bank_account_${result.user.login}`, 0)
         setSucces("вход прошел успешно");
       } else {
         setError('Ошибка при входе');

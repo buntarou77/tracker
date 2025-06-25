@@ -92,45 +92,24 @@ export default function Analytics() {
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
   useEffect(()=>{
     async function getRedis(){
+      try{
     const res = await fetch('api/getTransRedis?login='+ Cookies.get('info_token'), {
       method: 'GET'
     })
     if(res.ok){
       const data = await res.json();
-      console.log('data:'+ data.trans)
+      const upatedTransactions = [Object.values(data.value).flat()]
+      console.log(upatedTransactions[0]);
+      setTrans(upatedTransactions[0])
     }
+  }catch(e){
+    console.log(e)
+  }finally{
+    setIsLoading(false) 
+  }
   }
   getRedis()
   },[])
-  useEffect(() => {
-    if(!localStorage.getItem('activePlans')){
-      localStorage.setItem('activePlans', JSON.stringify([]))
-      setStoragePlans([])
-    }else{
-      setStoragePlans(JSON.parse(localStorage.getItem('activePlans') || '[]'))
-    }
-    async function getTrans() {
-      const login = Cookies.get('info_token');
-      try {
-        const res = await fetch(`api/getTrans?login=${login}`, {
-          method: 'GET'
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setTrans(data.transactions || []);
-        } else {
-          setError('Something went wrong');
-        }
-      } catch (e) {
-        console.log(e);
-        setError('Failed to fetch transactions');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    getTrans();
-  }, []);
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
@@ -187,7 +166,6 @@ export default function Analytics() {
         const data = await res.json();
         const activePlans = getActivePlans();
         
-        // Инициализируем состояние активных планов
         const activePlansStatus = data.plans.reduce((acc: ActivePlansStatus, plan: Plan) => {
           if (activePlans.includes(plan.id)) {
             acc[plan.frequency as keyof ActivePlansStatus] = {

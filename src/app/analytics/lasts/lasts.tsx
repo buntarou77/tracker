@@ -7,7 +7,6 @@ import { preparePieTransactions, prepareBarTransactions, getMonth, prepareMonthB
 import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } from '@/app/utils/prepareData';
 import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
-
 interface LastsAnalyticsProps {
   lossTrans: any[];
   gainTrans: any[];
@@ -46,7 +45,6 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   const [totalGains, setTotalGains] = useState(0);
   const [prevMonthLoss, setPrevMonthLoss] = useState(0);
   const [prevMonthGain, setPrevMonthGain] = useState(0);
-
   useEffect(()=>{
     setPlanProgress(planProgress)
     setTotalPlanAmount(totalPlanAmount)
@@ -59,22 +57,17 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   useEffect(()=>{
   const startDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset - 1, 1);
   const endDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset, 0);
-  
   const filtredTrans = FiltredTransactions(trans, 'lasts', [startDate, endDate])
-
   setPrevMonthLoss(filtredTrans.lossTransactions.reduce((acc, item) => acc + item.amount, 0))
   setPrevMonthGain(filtredTrans.gainTransactions.reduce((acc, item) => acc + item.amount, 0))
   }, [trans, monthOffset])
 
   const loadMonthData = (offset: number) => {
-
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    console.log('offset:' + offset)
     const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth()  - offset, 1);
     const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() - offset + 1, 1); 
     const filteredData = FiltredTransactions(trans, 'lasts', [startDate, endDate]);
-    console.log(filteredData)
     setFilteredTrans(filteredData.filteredTransactions);
     setFilteredGainTrans(filteredData.gainTransactions);
     setFilteredLossTrans(filteredData.lossTransactions);
@@ -106,9 +99,11 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   },[totalLosses, totalGains, prevMonthLoss, prevMonthGain])
 
   useEffect(()=>{
-    setTotalLosses(filteredLossTrans.reduce((acc, item) => acc + item.amount, 0))
-    setTotalGains(filteredGainTrans.reduce((acc, item) => acc + item.amount, 0))
+
+    setTotalLosses(filteredLossTrans.reduce((acc, item) => Number(acc) + Number(item.amount || item.numeralAmount), 0))
+    setTotalGains(filteredGainTrans.reduce((acc, item) => Number(acc) + Number(item.amount || item.numeralAmount), 0))
   },[filteredLossTrans, filteredGainTrans, ])
+
 
   const lossBarLabels = prepareMonthBarData(filteredLossTrans).label;
   const lossBarData = prepareMonthBarData(filteredLossTrans).data;
@@ -118,6 +113,9 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   const gainBarLabels = prepareMonthBarData(filteredGainTrans).label;
   const gainBarData = prepareMonthBarData(filteredGainTrans).data;
   const barGainData = prepareBarData(gainBarData, gainBarLabels);
+    
+
+
   const allDates = Array.from(
     new Set([...filteredGainTrans.map((t) => t.date), ...filteredLossTrans.map((t) => t.date)])
   ).sort();
@@ -134,7 +132,6 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
 
   const typeDatas = preparePieData([filteredGainTrans.length, filteredLossTrans.length], ['gains', 'losses']);
   const { data: lineData, options: lineOptions } = prepareLineData([gains, losses], allDates);
-  
   const { categorys, categoryAmounts, sortCategory } = filtredCategorys(filteredTrans);
   
   const showCategory = sortCategory.slice(0, 5).map((item, index) => (
@@ -159,6 +156,7 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
       setIncomeProgress((monthRes / lastsPlan.totalAmount) * 100)
     }
   },[filteredTrans])
+
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
       <div className='w-[100%] flex justify-center'>
@@ -180,17 +178,26 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
       </div>
       
       <div className='flex justify-between'>
-        <div>
-
-
-        <p className='opacity-[0.8]'>{`Your start Budget:${startBudget}$`}</p>
-        <p className={`${endBudget > startBudget ? 'text-[green]' : 'text-[red]'} opacity-[0.8]`}>
-          {`Your budget now:${endBudget}$`}
-        </p>
-        <p className={`${endBudget > startBudget ? 'text-[#bdffab]' : 'text-[red]'} opacity-[0.8]`}>
-          <span className='text-[white]'>Result:</span>{`${monthRes}$`}
-        </p>
-        </div> 
+      <div className=" p-4 rounded-lg shadow-md text-white w-[300px] space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-gray-400">Start Budget:</span>
+        <span className="font-semibold text-blue-300">{startBudget}$</span>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <span className="text-gray-400">Current Budget:</span>
+        <span className={`font-semibold ${endBudget > startBudget ? 'text-green-400' : 'text-red-400'}`}>
+          {endBudget}$  
+        </span>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <span className="text-gray-400">Monthly Result:</span>
+        <span className={`font-semibold ${endBudget > startBudget ? 'text-lime-300' : 'text-red-400'}`}>
+          {monthRes}$
+        </span>
+      </div>
+    </div>
         <div className='m-5'>
           <div className='w-[300px] h-[40px] flex items-start justify-center !items-center'>
             {
@@ -216,10 +223,24 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
           </div>
         </div>
         <div className='flex gap-[10px] flex-col'>
-          <p>{`Your Losses:${totalLosses}$`}</p>
-          <p>{`Your Gains:${totalGains}$`}</p>
-          <p>{`Gains more than last year by: ${moreGains}$`}</p>
-          <p>{`Losses more than last year by: ${moreLosses}$`}</p>
+        <div className='flex flex-col gap-2 text-white  p-4 rounded-lg shadow-md min-w-[280px]'>
+          <div className='flex justify-between items-center '>
+            <span className='text-gray-400'>Your Losses:</span>
+            <span className='text-red-400 font-semibold'>{totalLosses}$</span>
+          </div>
+          <div className='flex justify-between items-center'>
+            <span className='text-gray-400'>Your Gains:</span>
+            <span className='text-green-400 font-semibold'>{totalGains}$</span>
+          </div>
+          <div className='flex justify-between items-center'>
+            <span className='text-gray-400'>Gains ↑ vs last year:</span>
+            <span className='text-lime-400 font-semibold'>+{moreGains}$</span>
+          </div>
+          <div className='flex justify-between items-center'>
+            <span className='text-gray-400'>Losses ↑ vs last year:</span>
+            <span className='text-orange-400 font-semibold'>+{moreLosses}$</span>
+          </div>
+        </div>
         </div>
       </div>
       
@@ -240,6 +261,7 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
           </div>
         )}
       </div>
+
       
       <div className='flex flex-col w-[1000px] pt-[50px]'>
         <div className='flex flex-row'>

@@ -10,7 +10,7 @@ interface User {
 
 export async function POST(request: Request) {
   try {
-    const { email, password, login } = await request.json()
+    const { email, password, login, active } = await request.json()
 
     if (!email || !password || !login) {
       return NextResponse.json(
@@ -38,17 +38,14 @@ export async function POST(request: Request) {
       'INSERT INTO usersitems (email, password_hash, login) VALUES (?, ?, ?)',
       [email, hashedPassword, login]
     ) as { insertId: number }
-    async function addUser(user) {
+    async function addUser(user: any) {
       const client = new MongoClient('mongodb://localhost:27017');
-      console.log(client)
       try {
         await client.connect();
         const db = client.db('users'); 
-        const result = await db.collection('users').insertOne({user});
-        console.log('User added:', result.insertedId);
+        const result = await db.collection('users').insertOne({user, active: 0});
         return result.insertedId;
       } catch (error) {
-        console.error('Error adding user:', error);
         throw error;
       } finally {
         await client.close();
@@ -61,13 +58,13 @@ export async function POST(request: Request) {
         user: { 
           id: result.insertId, 
           email, 
-          login 
+          login,
+          active: 0
         } 
       },
       { status: 201 }
     )
   } catch (error) {
-    console.error('Registration error:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

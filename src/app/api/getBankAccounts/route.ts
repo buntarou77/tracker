@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from 'mongodb';
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const login = searchParams.get('login');
-  const bankName = searchParams.get('bankName')
 
   if (!login) {
     return NextResponse.json(
@@ -11,20 +11,16 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
-  async function getBalance() {
+
+  async function getBankAccounts() {
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
     try {
       await client.connect();
       const db = client.db('users');
-      const result = await db.collection('users').findOne(
-        { user: login },
-        { projection: { banks: { $elemMatch: { name: bankName } } } }
-      );
-      
-      const res = await JSON.stringify(result.banks[0].balance)
-      return res
+      const result = await db.collection('users').findOne({ user: login }, {projection: {banks: 1, _id: 0}});
+      return result.banks 
     } catch (error) {
-      console.error('Ошибка при получении баланса:', error);
+      console.error('Ошибка при получении банковских счетов:', error);
       throw error;
     } finally {
       await client.close();
@@ -32,14 +28,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const balance = await getBalance();
+    const bankAccounts = await getBankAccounts();
     return NextResponse.json(
-      { balance },
+      { bankAccounts },
       { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
-      { error: 'Не удалось получить баланс' },
+      { error: 'Не удалось получить банковские счета' },
       { status: 500 }
     );
   }

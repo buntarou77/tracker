@@ -7,9 +7,6 @@ export async function POST(request: NextRequest) {
     const login = searchParams.get('login');
     const id = searchParams.get('id');
 
-    console.log(id)
-    console.log(login)
-    console.log(state)
     if (!login || !id) {
         return NextResponse.json(
             { error: 'Параметры login и id обязательны' },
@@ -34,7 +31,6 @@ export async function POST(request: NextRequest) {
                     } 
                 }
             );
-            console.log(result)
             return result;
         } catch (error) {
             console.error('Ошибка при обновлении плана:', error);

@@ -19,7 +19,6 @@ const prepareBarTransactions = (data, yearData = '2025')=>{
             monthsGainAmounts['April'] = (monthsGainAmounts['April'] || 0) + amount;
             break;
           case '05':
-            console.log('5')
             monthsGainAmounts['May'] = (monthsGainAmounts['May'] || 0) + amount;
             break;
           case '06':
@@ -55,10 +54,11 @@ const prepareBarTransactions = (data, yearData = '2025')=>{
 }
 const prepareMonthBarData= (data)=>{
     const monthsGainAmounts = {};
+
     for (let i = 0; i < data.length; i++) {
-      const { amount, date } = data[i];
-      const day = date.split('-')[2];
-      monthsGainAmounts[day] = (monthsGainAmounts[day] || 0) + amount;
+      const { amount, date , numeralAmount} = data[i];
+      const day = new Date(date).getDate();
+      monthsGainAmounts[day] = (monthsGainAmounts[day] || 0) + amount || numeralAmount;
     }
     return{
         label: Object.keys(monthsGainAmounts),

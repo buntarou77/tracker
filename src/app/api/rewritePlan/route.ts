@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const login = searchParams.get('login');
     const id = searchParams.get('id');
-    console.log(id)
-    console.log(login)
     if (!login || !id) {
         return NextResponse.json(
             { error: 'Параметры login и id обязательны' },
