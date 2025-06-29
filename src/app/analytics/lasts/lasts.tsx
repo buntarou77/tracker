@@ -1,21 +1,23 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { FiltredTransactions, filtredCategorys } from '../../utils/filtredTrans';
 import { preparePieTransactions, prepareBarTransactions, getMonth, prepareMonthBarData } from '@/app/utils/createData';
 import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } from '@/app/utils/prepareData';
+import { useApp } from '../../context/AppContext';
 import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
+
 interface LastsAnalyticsProps {
   lossTrans: any[];
   gainTrans: any[];
   trans: any[];
-  planProgress: number;
-  totalPlanAmount: number;
+  transObj?: any;
+  lastsPlan?: any;
 }
 
-export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan }: LastsAnalyticsProps) {
+export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, lastsPlan }: LastsAnalyticsProps) {
   ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -27,6 +29,8 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
     Legend,
     BarElement
   );
+  
+  const { login, activeBank } = useApp();
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
@@ -45,76 +49,136 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   const [totalGains, setTotalGains] = useState(0);
   const [prevMonthLoss, setPrevMonthLoss] = useState(0);
   const [prevMonthGain, setPrevMonthGain] = useState(0);
-  useEffect(()=>{
-    setPlanProgress(planProgress)
-    setTotalPlanAmount(totalPlanAmount)
-  },[planProgress, totalPlanAmount])
+  const [isLoadingMonth, setIsLoadingMonth] = useState(false);
+  
+  // Функция для проверки, загружен ли месяц
+  const isMonthLoaded = (year: number, month: number) => {
+    if (!transObj || typeof transObj !== 'object') return false;
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    return transObj.hasOwnProperty(monthKey) && transObj[monthKey]?.length > 0;
+  };
+  
+  // Функция для загрузки месяца
+  const loadMonth = async (monthSkip: number) => {
+    if (!login || !activeBank.name || isLoadingMonth) return;
+    
+    setIsLoadingMonth(true);
+    try {
+      const response = await fetch(`/api/loadmoreTrans?login=${login}&bankName=${activeBank.name}&monthSkip=${monthSkip}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const { monthKey, transactions } = data;
+        
+        if (transactions && transactions.length > 0 && transObj) {
+          // Обновляем объект транзакций
+          transObj[monthKey] = transactions;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading month:', error);
+    } finally {
+      setIsLoadingMonth(false);
+    }
+  };
+  
+  // Функция для получения транзакций за месяц
+  const getMonthTransactions = (year: number, month: number) => {
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    if (transObj && transObj[monthKey]) {
+      return transObj[monthKey];
+    }
+    return [];
+  };
+  
+  useEffect(() => {
+    setPlanProgress(planProgress);
+    setTotalPlanAmount(totalPlanAmount);
+  }, [planProgress, totalPlanAmount]);
+  
   useEffect(() => {
     if (trans && trans.length > 0) {
       loadMonthData(monthOffset);
     }
   }, [trans, monthOffset]);
-  useEffect(()=>{
-  const startDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset - 1, 1);
-  const endDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset, 0);
-  const filtredTrans = FiltredTransactions(trans, 'lasts', [startDate, endDate])
-  setPrevMonthLoss(filtredTrans.lossTransactions.reduce((acc, item) => acc + item.amount, 0))
-  setPrevMonthGain(filtredTrans.gainTransactions.reduce((acc, item) => acc + item.amount, 0))
-  }, [trans, monthOffset])
+  
+  useEffect(() => {
+    const startDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset - 1, 1);
+    const endDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset, 0);
+    const filtredTrans = FiltredTransactions(trans, 'month', undefined);
+    if (filtredTrans !== 'error' && 'lossTransactions' in filtredTrans) {
+      setPrevMonthLoss(filtredTrans.lossTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
+      setPrevMonthGain(filtredTrans.gainTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
+    }
+  }, [trans, monthOffset]);
 
-  const loadMonthData = (offset: number) => {
+  const loadMonthData = async (offset: number) => {
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth()  - offset, 1);
-    const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() - offset + 1, 1); 
-    const filteredData = FiltredTransactions(trans, 'lasts', [startDate, endDate]);
-    setFilteredTrans(filteredData.filteredTransactions);
-    setFilteredGainTrans(filteredData.gainTransactions);
-    setFilteredLossTrans(filteredData.lossTransactions);
-    setStartBudget(filteredData.startBudget);
-    setEndBudget(filteredData.endBudget);
-    setMonthRes(filteredData.resultBudget);
-    setMonth(getMonth(`${targetDate.getFullYear()}-${targetDate.getMonth() - offset + 1}-01`));
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() - offset + 1;
+    
+    // Проверяем, загружен ли нужный месяц
+    if (!isMonthLoaded(year, month) && transObj) {
+      await loadMonth(offset);
+    }
+    
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    // Получаем транзакции за месяц
+    const monthTransactions = getMonthTransactions(year, month);
+    
+    // Фильтруем транзакции
+    const filteredData = FiltredTransactions(monthTransactions, 'lasts', [startDate, endDate]);
+    if (filteredData !== 'error' && 'filteredTransactions' in filteredData) {
+      setFilteredTrans(filteredData.filteredTransactions || []);
+      setFilteredGainTrans(filteredData.gainTransactions || []);
+      setFilteredLossTrans(filteredData.lossTransactions || []);
+      setStartBudget(filteredData.startBudget || 0);
+      setEndBudget(filteredData.endBudget || 0);
+      setMonthRes(filteredData.resultBudget || 0);
+    }
+    const monthName = getMonth(`${year}-${month}-01`);
+    if (monthName) {
+      setMonth(monthName);
+    }
   };
 
-  const handlePreviousMonth = (e: React.MouseEvent) => {
+  const handlePreviousMonth = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if(new Date().getMonth() - monthOffset === 0){
-      setMonthOffset(-1)
+    if (new Date().getMonth() - monthOffset === 0) {
+      setMonthOffset(-1);
     }
-    setMonthOffset(prev => prev + 1); 
+    setMonthOffset(prev => prev + 1);
   };
   
   const handleNextMonth = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log(monthOffset)
     if (monthOffset > 0) {
-
-      setMonthOffset(prev => prev - 1); 
+      setMonthOffset(prev => prev - 1);
     }
   };
-  useEffect(()=>{
-    setMoreLosses(totalLosses - prevMonthLoss)
-    setMoreGains(totalGains - prevMonthGain)
-  },[totalLosses, totalGains, prevMonthLoss, prevMonthGain])
+  
+  useEffect(() => {
+    setMoreLosses(totalLosses - prevMonthLoss);
+    setMoreGains(totalGains - prevMonthGain);
+  }, [totalLosses, totalGains, prevMonthLoss, prevMonthGain]);
 
-  useEffect(()=>{
-
-    setTotalLosses(filteredLossTrans.reduce((acc, item) => Number(acc) + Number(item.amount || item.numeralAmount), 0))
-    setTotalGains(filteredGainTrans.reduce((acc, item) => Number(acc) + Number(item.amount || item.numeralAmount), 0))
-  },[filteredLossTrans, filteredGainTrans, ])
-
+  useEffect(() => {
+    setTotalLosses(filteredLossTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
+    setTotalGains(filteredGainTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
+  }, [filteredLossTrans, filteredGainTrans]);
 
   const lossBarLabels = prepareMonthBarData(filteredLossTrans).label;
   const lossBarData = prepareMonthBarData(filteredLossTrans).data;
   const barLossData = prepareBarData(lossBarData, lossBarLabels);
 
-  
   const gainBarLabels = prepareMonthBarData(filteredGainTrans).label;
   const gainBarData = prepareMonthBarData(filteredGainTrans).data;
   const barGainData = prepareBarData(gainBarData, gainBarLabels);
-    
-
 
   const allDates = Array.from(
     new Set([...filteredGainTrans.map((t) => t.date), ...filteredLossTrans.map((t) => t.date)])
@@ -149,13 +213,14 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
   const lossDoughnutData = prepareDoughnutData(lossAmounts, lossCategorys);
   
   const categoryDoughnutData = prepareDoughnutData(categoryAmounts, categorys);
-  useEffect(()=>{
-    if(lastsPlan.type === 'expense'){
-        setExpanseProgress((monthRes / lastsPlan.totalAmount) * 100)
-    }else{
-      setIncomeProgress((monthRes / lastsPlan.totalAmount) * 100)
+  
+  useEffect(() => {
+    if (lastsPlan && lastsPlan.type === 'expense') {
+      setExpanseProgress((monthRes / lastsPlan.totalAmount) * 100);
+    } else if (lastsPlan && lastsPlan.type === 'income') {
+      setIncomeProgress((monthRes / lastsPlan.totalAmount) * 100);
     }
-  },[filteredTrans])
+  }, [filteredTrans, lastsPlan, monthRes]);
 
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
@@ -164,13 +229,20 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
           <button 
             onClick={handlePreviousMonth} 
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
+            disabled={isLoadingMonth}
           >
             <img className='w-[40px] h-[40px]' src={leftArrow.src} alt="Previous month" />
           </button>
-          <p>{month}</p>
+          <div className='flex flex-col items-center'>
+            <p>{month}</p>
+            {isLoadingMonth && (
+              <span className="text-sm text-gray-400 mt-1">Загрузка...</span>
+            )}
+          </div>
           <button 
             onClick={handleNextMonth} 
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
+            disabled={isLoadingMonth}
           >
             <img src={rigthArrow.src} alt="Next month" />
           </button>
@@ -205,15 +277,19 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, lastsPlan 
                 <div className='w-[400px]  h-[20px] flex flex-col items-center justify-center'>
                 <div className='flex flex-row'>
                 <span className='text-[white] font-[600] '>plan Status:</span>
-                <p className={` font-[600] text-[${Number(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress).toFixed(0) >= 0 ? 'green' : 'red'}]`}>{`${(Number(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress).toFixed(0) < 0 ? 0 : Number(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress).toFixed(0))}%`} </p>
+                <p className={` font-[600] ${lastsPlan.type === 'expense' ? (expanseProgress >= 0 ? 'text-green-500' : 'text-red-500') : (incomeProgress >= 0 ? 'text-green-500' : 'text-red-500')}`}>
+                  {`${Math.max(0, Math.round(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress))}%`}
+                </p>
                 </div>
                 <div  className='flex flex-row max-w-[400px] '>
-                <div style={{ width: `${(Number(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress).toFixed(0) < 0 ? 0 : Number(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress).toFixed(0) * 2.5)}px` }} className={ ` ${ lastsPlan.type === 'expense' && lastsPlan.totalAmount < Number(moreGains) ? 'rounded-md' : 'rounded-tl-md'} rounded-bl-md   bg-[green] h-[20px]`}></div>
+                <div style={{ 
+                  width: `${Math.max(0, Math.round(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress)) * 2.5}px` 
+                }} className={ ` ${ lastsPlan.type === 'expense' && lastsPlan.totalAmount < Number(moreGains) ? 'rounded-md' : 'rounded-tl-md'} rounded-bl-md   bg-[green] h-[20px]`}></div>
                 <div style={{ 
                   width: `${
                     lastsPlan.type === 'expense' && Number(expanseProgress) > 100
                       ? 0 
-                    : Number(100 - expanseProgress).toFixed(0) * 2.5}px` 
+                    : Math.round(100 - expanseProgress) * 2.5}px` 
                 }} className={`${ lastsPlan.type === 'expense' && lastsPlan.totalAmount < Number(moreGains) ? 'rounded-md' : 'rounded-br-md' } rounded-tr-md  bg-[#4f1e61] h-[20px]`}></div>
                 </div>
               </div> : null

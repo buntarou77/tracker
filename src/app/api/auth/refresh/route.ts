@@ -12,7 +12,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const decoded = verifyRefreshToken(refreshToken);
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid or expired refresh token' },
+        { status: 401 }
+      );
+    }
 
     const tokens = generateTokens({
       id: decoded.id,
@@ -29,16 +37,18 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 15 * 60,
+      domain: 'localhost',
       path: '/',
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     response.cookies.set('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60,
+      domain: 'localhost',
       path: '/',
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     return response;

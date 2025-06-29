@@ -15,7 +15,7 @@ export async function DELETE(request: NextRequest) {
 
     const [login, id, amount, balance, type, date, bankName] = info.split(':');
     
-    if (!login || !id || !bankName) {
+    if (!login || !id || !bankName || !date) {
         return NextResponse.json(
             { error: 'Invalid info format' },
             { status: 400 }
@@ -34,41 +34,75 @@ export async function DELETE(request: NextRequest) {
             
             const db = client.db('users');
             
+            // Определяем monthKey для транзакции
+            const transactionDate = new Date(date);
+            const year = transactionDate.getFullYear();
+            const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
+            const monthKey = `${year}-${month}`;
+            
+            // Удаляем транзакцию из соответствующего месяца
             const result = await db.collection('users').updateOne(
                 { user: login, "banks.name": bankName },
                 { 
                     $pull: { 
-                        "banks.$.transactions": { id: Number(id) } 
+                        [`banks.$.transactions.${monthKey}`]: { id: Number(id) }
                     } 
-                }
+                } as any
             );
 
             if (result.modifiedCount > 0) {
+                // Вычисляем новый баланс
                 const newBalance = type === 'loss' 
                     ? Number(balance) + Number(amount)
                     : Number(balance) - Number(amount);
 
+                // Обновляем баланс в MongoDB
                 await db.collection('users').updateOne(
                     { user: login, "banks.name": bankName },
                     { $set: { "banks.$.balance": newBalance } }
                 );
 
+                // Обновляем Redis кэш
                 try {
-                    const year = new Date(date).getFullYear();
-                    const month = new Date(date).getMonth();
-                    const key = `${month}-${year}`;
-                    const prevTrans = await redisClient.get(`${login}_${bankName}_transactions`);
+                    // Обновляем кэш транзакций (только для последних 2 месяцев)
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    const currentMonth = now.getMonth(); // 0-11
                     
-                    if (prevTrans) {
-                        const parsePrevTrans = JSON.parse(prevTrans);
-                        if (parsePrevTrans[key]) {
-                            const newTrans = parsePrevTrans[key].filter((elem: any) => elem.id !== Number(id));
-                            parsePrevTrans[key] = newTrans;
-                            await redisClient.set(`${login}_${bankName}_transactions`, JSON.stringify(parsePrevTrans));
+                    let prevMonth = currentMonth - 1;
+                    let prevYear = currentYear;
+                    
+                    if (prevMonth < 0) {
+                        prevMonth = 11;
+                        prevYear = currentYear - 1;
+                    }
+                    
+                    const isCurrentMonth = (transactionDate.getFullYear() === currentYear && transactionDate.getMonth() === currentMonth);
+                    const isPrevMonth = (transactionDate.getFullYear() === prevYear && transactionDate.getMonth() === prevMonth);
+                    
+                    // Обновляем Redis только если транзакция из последних 2 месяцев
+                    if (isCurrentMonth || isPrevMonth) {
+                        const redisKey = `${login}_${bankName}_transactions`;
+                        const prevTrans = await redisClient.get(redisKey);
+                        
+                        if (prevTrans) {
+                            const parsePrevTrans = JSON.parse(prevTrans);
+                            if (parsePrevTrans[monthKey]) {
+                                parsePrevTrans[monthKey] = parsePrevTrans[monthKey].filter((trans: any) => trans.id !== Number(id));
+                                
+                                // Если массив стал пустым, удаляем ключ
+                                if (parsePrevTrans[monthKey].length === 0) {
+                                    delete parsePrevTrans[monthKey];
+                                }
+                                
+                                await redisClient.set(redisKey, JSON.stringify(parsePrevTrans));
+                            }
                         }
                     }
 
+                    // Обновляем баланс в Redis
                     await redisClient.set(`${login}_${bankName}_balance`, newBalance);
+                    
                 } catch (redisError) {
                     console.error('Redis update error:', redisError);
                 }

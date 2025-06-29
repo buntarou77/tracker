@@ -67,8 +67,8 @@ const prepareLineData = (data, labels)=>{
             options:{
         responsive: true,
         plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'losses and gains', position: 'top' }
+            legend: { position: 'top' as const },
+            title: { display: true, text: 'losses and gains', position: 'top' as const }
         },
         scales: {
             y: {

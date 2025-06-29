@@ -11,6 +11,7 @@ import {
   ArcElement
 } from 'chart.js';
 import { useState, useEffect } from 'react';
+import { useApp } from '../context/AppContext';
 import Cookies from 'js-cookie';
 import GlobalsAnalytics from './globals/globals';
 import MonthAnalitycs from './month/month';
@@ -48,13 +49,39 @@ interface ActivePlansStatus {
   monthly: PlanStatus;
   yearly: PlanStatus;
 }
+
+// Вспомогательная функция для преобразования объекта транзакций в массив
+const convertTransToArray = (transObj: any) => {
+  if (!transObj || typeof transObj !== 'object') return [];
+  return Object.values(transObj).flat();
+};
+
 export default function Analytics() {
   ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, LineElement, Title, Tooltip, Legend);
 
-  const [trans, setTrans] = useState([]);
-  const [error, setError] = useState('');
+  // Используем глобальное состояние
+  const { 
+    trans, 
+    setTrans,
+    plans,
+    setPlans,
+    login,
+    activeBank,
+    activePlansStatus,
+    setActivePlansStatus,
+    storagePlans,
+    setStoragePlans,
+    isLoading,
+    setIsLoading,
+    error,
+    setError,
+    loadingSending,
+    setLoadingSending,
+    planIsSending,
+    setPlanIsSending
+  } = useApp();
+
   const [activeTab, setActiveTab] = useState('lasts');
-  const [isLoading, setIsLoading] = useState(true);
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
   const [activeTargetForm, setActiveTargetForm] = useState(false);
@@ -67,69 +94,45 @@ export default function Analytics() {
   const [notes, setNotes] = useState('');
   const [planName, setPlanName] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
-  const [loadingSending, setLoadingSending] = useState(false);
-  const [planIsSending, setPlanIsSending] = useState(false);
   const [activePlansShow, setActivePlansShow] = useState(false);
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [activePlanWindow, setActivePlanWindow] = useState(false);
   const [activePlan, setActivePlan] = useState<object>({});
   const [editPlanStatus, setEditPlanStatus] = useState(false);
   const [editedPlan, setEditedPlan] = useState({});
   const [newPlan, setNewPlan] = useState({});
-  const [activePlansStatus, setActivePlansStatus] = useState<ActivePlansStatus>({
-    daily: { status: false, id: 0 },
-    weekly: { status: false, id: 0 },
-    monthly: { status: false, id: 0 },
-    yearly: { status: false, id: 0 }
-  });
   const [lastsPlan, setLastsPlan] = useState({})
   const [doublePlansError, setDoublePlansError] = useState(false)
-  const [storagePlans, setStoragePlans] = useState([]);
   const [targets, setTargets] = useState([]);
   const [target, setTarget] = useState<string>('');
   const [targetAmount, setTargetAmount] = useState<number>(0);
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
-  useEffect(()=>{
-    async function getRedis(){
-      try{
-    const res = await fetch('api/getTransRedis?login='+ Cookies.get('info_token'), {
-      method: 'GET'
-    })
-    if(res.ok){
-      const data = await res.json();
-      const upatedTransactions = [Object.values(data.value).flat()]
-      console.log(upatedTransactions[0]);
-      setTrans(upatedTransactions[0])
-    }
-  }catch(e){
-    console.log(e)
-  }finally{
-    setIsLoading(false) 
-  }
-  }
-  getRedis()
-  },[])
+
+  // Преобразуем объект транзакций в массив для компонентов аналитики
+  const transArray = convertTransToArray(trans);
+
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
   },[plans, storagePlans])
+
   const getActivePlans = () => {
     const activePlans = localStorage.getItem('activePlans');
     return activePlans ? JSON.parse(activePlans) : [];
   };
+
   const changeActivePlan = (planId: number, isActive: boolean) => {
     const activePlans = getActivePlans();
     if (isActive) {
       if (!activePlans.includes(planId)) {
         activePlans.push(planId);
-        setStoragePlans((prev)=> [...prev, planId])
+        setStoragePlans([...storagePlans, planId]);
       }
     } else {
       const index = activePlans.indexOf(planId);
       if (index > -1) {
         activePlans.splice(index, 1);
-        setStoragePlans((prev)=> prev.splice(index, 1))
+        setStoragePlans(storagePlans.filter((id: number) => id !== planId));
       }
     }
     localStorage.setItem('activePlans', JSON.stringify(activePlans));
@@ -139,7 +142,7 @@ export default function Analytics() {
     const isChecked = e.target.checked;
     
 
-    setActivePlansStatus(prev => ({
+    setActivePlansStatus((prev: ActivePlansStatus) => ({
       ...prev,
       [frequency]: {
         status: isChecked,
@@ -157,7 +160,6 @@ export default function Analytics() {
   }, [activePlanWindow]);
   useEffect(() => {
     async function getPlans(){
-    const login = Cookies.get('info_token');
     try{
       const res = await fetch(`api/getPlans?login=${login}`, {
         method: 'GET'
@@ -188,12 +190,15 @@ export default function Analytics() {
       console.log(e)
     }
     }
-    getPlans()
-  }, [])
+    if(login){
+      getPlans()
+    }
+  }, [login])
   useEffect(()=>{
     setNewPlan({...editedPlan})
   },[editedPlan])
-  const submitPlan = async (e) => {
+  
+  const submitPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingSending(true)
     if(planName === ''){
@@ -316,8 +321,8 @@ export default function Analytics() {
   if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
   if (isLoading) return <div className="text-center p-4">Loading...</div>;
   
-  const gainTrans = trans.filter((item) => item.type === 'gain');
-  const lossTrans = trans.filter((item) => item.type === 'loss');
+  const gainTrans = transArray.filter((item) => item.type === 'gain');
+  const lossTrans = transArray.filter((item) => item.type === 'loss');
     const addDoublePlansError = (e)=>{
     e.preventDefault();
     setDoublePlansError(true)
@@ -527,6 +532,7 @@ export default function Analytics() {
                             <option value="education">Education</option>
                             <option value="taxes">Taxes</option>
                             <option value="other">Other</option>
+                            <option value="another">Another</option>
                           </select>
                           <input
                             type="number"
@@ -1185,11 +1191,11 @@ export default function Analytics() {
 )}
 
         <div className="bg-gray-800 rounded-lg p-6">
-          {activeTab === 'global' && <GlobalsAnalytics gainTrans={gainTrans} lossTrans={lossTrans} trans={trans} />}
-          {activeTab === 'month' && <MonthAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={trans} />}
-          {activeTab === 'year' && <YearAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={trans} />}
-          {activeTab === 'custom' && <CustomAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={trans} />}
-          {activeTab === 'lasts' && <LastsAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={trans} lastsPlan={lastsPlan} />}
+          {activeTab === 'global' && <GlobalsAnalytics gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
+          {activeTab === 'month' && <MonthAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
+          {activeTab === 'year' && <YearAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
+          {activeTab === 'custom' && <CustomAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
+          {activeTab === 'lasts' && <LastsAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} transObj={trans} lastsPlan={lastsPlan} />}
         </div>
       </div>
 

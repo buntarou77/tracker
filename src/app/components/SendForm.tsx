@@ -6,6 +6,7 @@ import LoginIcon from '../resources/login.svg';
 import React, {  useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
+import { useApp } from '../context/AppContext';
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +15,7 @@ export default function RegisterForm() {
   const [log, setLog] = useState<boolean>(false);
   const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
   const [activeButton, setActiveButton] = useState<boolean>(true);
+  const {login, setLogin} = useApp()
   const regSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -67,9 +69,10 @@ export default function RegisterForm() {
   };
   const logSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    console.log('logSubmit')
     setIsLoading(true);
     setError(null);
-    const login = Cookies.get('info_token')
     const formData = new FormData(e.currentTarget);
 
     
@@ -86,7 +89,6 @@ export default function RegisterForm() {
         },
         body: JSON.stringify(data),
       });
-      
       const result = await response.json();
       
       if (!response.ok) {
@@ -95,9 +97,11 @@ export default function RegisterForm() {
         return;
       }
       if (result.success) {
+        setLogin('' as string)
         deleteCookiesStartingWith('bank_account')
         Cookies.set('info_token', result.user.login)
         Cookies.set(`bank_account_${result.user.login}`, 0)
+        setLogin(data.login as string)
         setSucces("вход прошел успешно");
       } else {
         setError('Ошибка при входе');

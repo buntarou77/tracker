@@ -5,9 +5,8 @@ import { createClient } from 'redis'
 
 export async function POST(request: NextRequest) {
   const data = await request.json();
-  const { amount, category, date, login, balance, type, bankName } = data;
+  const { amount, category, date, login, type, bankName } = data;
   const numeralAmount = Number(amount);
-  const numeralBalance = Number(balance);
 
   if (!numeralAmount || !category || !date || !bankName) {
     return NextResponse.json(
@@ -27,61 +26,79 @@ export async function POST(request: NextRequest) {
 
     const db = mongoClient.db('users');
     
+    const transactionDate = new Date(date);
+    const year = transactionDate.getFullYear();
+    const month = String(transactionDate.getMonth() + 1).padStart(2, '0'); 
+    const monthKey = `${year}-${month}`;
+    
+    const newTransaction = {
+      amount: numeralAmount,
+      category,
+      date: new Date(date),
+      createdAt: new Date(),
+      id: Date.now(),
+      type,
+    };
+
+    const balance = await db.collection('users').findOne(
+      { user: login, "banks.name": bankName },
+      { projection: { "banks.$.balance": 1 } }
+    );
+
+
+    const currentBalance = Number(balance?.balance)
+
     const result = await db.collection('users').updateOne(
-      { user: `${login}`, "banks.name": bankName },
+      { user: login, "banks.name": bankName },
       {
         $push: {
-          "banks.$.transactions": {
-            amount: numeralAmount,
-            numeralAmount: numeralAmount,
-            category,
-            date: new Date(date),
-            createdAt: new Date(),
-            id: Date.now(),
-            type,
-            date_parts: {
-              year: new Date(date).getFullYear(),
-              month: new Date(date).getMonth(),
-              day: new Date(date).getDate(),
-              week: new Date(date).getDay()
-            }
-          }
+          [`banks.$.transactions.${monthKey}`]: newTransaction
         }
-      }
+      } as any
     );
 
     if (!result.matchedCount) {
       return NextResponse.json(
-        { error: 'User or bank not found' },
-        { status: 404 }
+        { error: 'Failed to add transaction' },
+        { status: 500 }
       );
     }
-
     try {
-      const year = new Date(date).getFullYear();
-      const month = new Date(date).getMonth();
-      const key = `${month}-${year}`;
-      const prevTrans = await redisClient.get(`${login}_${bankName}_transactions`);
+      // Получаем текущую дату
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-11
       
-      if (prevTrans) {
-        const parsePrevTrans = JSON.parse(prevTrans);
-        if (parsePrevTrans[key]) {
-          parsePrevTrans[key].push({
-            amount: numeralAmount,
-            numeralAmount: numeralAmount,
-            category,
-            date,
-            createdAt: new Date(),
-            id: Date.now(),
-            type,
-            date_parts: {
-              year: new Date(date).getFullYear(),
-              month: new Date(date).getMonth(),
-              day: new Date(date).getDate(),
-              week: new Date(date).getDay()
-            }
+      // Получаем дату транзакции
+      const transYear = transactionDate.getFullYear();
+      const transMonth = transactionDate.getMonth(); // 0-11
+      
+      // Определяем предыдущий месяц
+      let prevMonth = currentMonth - 1;
+      let prevYear = currentYear;
+      
+      if (prevMonth < 0) {
+        prevMonth = 11; // декабрь
+        prevYear = currentYear - 1;
+      }
+      
+      // Проверяем, попадает ли транзакция в текущий или предыдущий месяц
+      const isCurrentMonth = (transYear === currentYear && transMonth === currentMonth);
+      const isPrevMonth = (transYear === prevYear && transMonth === prevMonth);
+      
+      if (isCurrentMonth || isPrevMonth) {
+        const redisKey = `${login}_${bankName}_transactions`;
+        const prevTrans = await redisClient.get(redisKey);
+        
+        if (prevTrans) {
+          const parsePrevTrans = JSON.parse(prevTrans);
+          if (!parsePrevTrans[monthKey]) {
+            parsePrevTrans[monthKey] = [];
+          }
+          parsePrevTrans[monthKey].push({
+            ...newTransaction
           });
-          await redisClient.set(`${login}_${bankName}_transactions`, JSON.stringify(parsePrevTrans));
+          await redisClient.setEx(redisKey, 60 * 60 * 24, JSON.stringify(parsePrevTrans));
         }
       }
     } catch (redisError) {
@@ -89,11 +106,11 @@ export async function POST(request: NextRequest) {
     }
 
     const newBalance = type === 'gain' 
-      ? Number(numeralBalance) + Number(numeralAmount) 
-      : Number(numeralBalance) - Number(numeralAmount);
+      ? Number(currentBalance) + Number(numeralAmount) 
+      : Number(currentBalance) - Number(numeralAmount);
       
     const balanceResult = await db.collection('users').updateOne(
-      { user: `${login}`, "banks.name": bankName },
+      { user: login, "banks.name": bankName },
       { $set: { "banks.$.balance": newBalance } }
     );
 
@@ -106,7 +123,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, newBalance },
+      { 
+        success: true, 
+        newBalance, 
+        monthKey,
+        transactionAdded: true 
+      },
       { status: 201 }
     );
 

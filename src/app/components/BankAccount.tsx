@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
+import { useApp } from '../context/AppContext';
 
 type BankAccountType = {
   name: string;
@@ -9,6 +10,7 @@ type BankAccountType = {
   notes?: string;
   active?: boolean;
   login?: string; 
+  id?: string;
 };
 
 const BankAccount = () => {
@@ -17,36 +19,26 @@ const BankAccount = () => {
     const lastValue = useRef(Cookies.get(cookieName));
     const activeBankCookies = Cookies.get('ActiveBank')
     const [isAccountsVisible, setIsAccountsVisible] = useState(false);
-    const [accounts, setAccounts] = useState<BankAccountType[]>([]); 
     const [addBankAccountForm, setAddBankAccountForm] = useState(false);
     const [activeBank, setActiveBank] = useState<BankAccountType>({name: '', balance: '', currency: '', notes: '', active: false});
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
+    const {bankNames, setBankNames, setTrans} = useApp()
+    
     useEffect(() => {
-      async function getBanks() {
-        try {
-          const login = Cookies.get('info_token')
-          const response = await fetch(`/api/getBankAccountsRedis?login=${login}`, {
-            method: 'GET'
-          })
-          if (response.ok) {
-            const data = await response.json()
-            setAccounts(data.value.bankAccounts || data.value )
-            if(activeBankCookies){
-              const bank = JSON.parse(activeBankCookies)
-              setActiveBank({name : bank.name , currency: bank.currency, balance: bank.balance, notes: bank.notes})
-            }else{
-              const banks =  data.value.bankAccounts || data.value 
-              setActiveBank(banks[0])             
-              Cookies.set('ActiveBank', JSON.stringify(banks[0]))
-            }
-          }
-        } catch(e) {
-          console.log(e)
-        }
+      if(login){
+      if(activeBankCookies){
+        const bank = JSON.parse(activeBankCookies)
+        setActiveBank({name : bank.name , currency: bank.currency, balance: bank.balance, notes: bank.notes})
+      }else if(bankNames && bankNames.length > 0){
+        setActiveBank(bankNames[0])             
+        Cookies.set('ActiveBank', JSON.stringify(bankNames[0]))
+      }else{
+        setActiveBank({name: '', balance: '', currency: '', notes: '', active: false})
       }
-      getBanks()
-    }, [])
+    }
+    }, [bankNames])
+    
     useEffect(()=>{
       const times = setTimeout(()=>{
         setToManyBankAccounts(false)
@@ -58,14 +50,14 @@ const BankAccount = () => {
     };
     const addBankAccount = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
-      if(accounts.length >= 3){
+      if(bankNames.length >= 3){
         setToManyBankAccounts(true)
       }else{
         try{
           if(!newAccount.name || !newAccount.currency || !newAccount.balance ){
             alert('Please fill in all fields')
           }else{
-            const response = await fetch(`/api/addNewAccountRedis`,
+            const response = await fetch(`/api/addNewAccountRedis?login=${login}`,
               {method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(
@@ -73,7 +65,7 @@ const BankAccount = () => {
            )})
            if(response.status === 201){
             console.log(response)
-            setAccounts(prev=> [...prev, newAccount])
+            setBankNames([...bankNames, newAccount])
            }else{
             throw 'error'
            }
@@ -83,7 +75,18 @@ const BankAccount = () => {
         }
       }
     }
-
+    useEffect(()=>{
+      async function getTrans(){
+        const response = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`, {
+          method: 'GET'
+        })
+        if(response.ok){
+          const transData = await response.json()
+          setTrans(transData.value)
+        }
+      }
+      getTrans()
+    },[activeBank])
     const deleteAccount = async (accountName: string, e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
@@ -94,7 +97,7 @@ const BankAccount = () => {
           
           if (response.ok) {
             const result = await response.json();
-            setAccounts(prev => prev.filter(account => account.name !== accountName));
+            setBankNames(bankNames.filter(account => account.name !== accountName));
             if (activeBank.name === accountName) {
               setActiveBank({name: '', balance: '', currency: '', notes: '', active: false});
             }
@@ -154,8 +157,8 @@ const BankAccount = () => {
                     >
                         <h3 className="font-bold text-base text-white/80 mb-2 pl-1">Accounts</h3>
                         <ul className="mb-2">
-                            {accounts.length > 0 ? (
-                                accounts.map((account, index) => (
+                            {bankNames.length > 0 ? (
+                                bankNames.map((account, index) => (
                                     <li
                                         key={index}
                                         className="flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-[#2e2e4d] transition-all duration-200 group"

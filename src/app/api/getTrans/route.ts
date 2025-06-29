@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const login = searchParams.get('login');
     const bankName = searchParams.get('bankName');
-    console.log(login)
-    console.log(bankName)
+    console.log(login, bankName)
     if (!login || !bankName) {
+        console.log('failed to verify login or bankName')
         return NextResponse.json(
             { error: 'Параметры login и bankName обязательны' },
             { status: 400 }
@@ -19,16 +19,62 @@ export async function GET(request: NextRequest) {
         try {
             await client.connect();
             const db = client.db('users');
-            const result = await db.collection('users').findOne(
-                { user: login },
-                { projection: { banks: { $elemMatch: { name: bankName } } } }
-            );
             
-            if (!result || !result.banks || result.banks.length === 0) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; 
+            
+            let prevMonth = currentMonth - 1;
+            let prevYear = currentYear;
+            
+            if (prevMonth <= 0) {
+                prevMonth = 12;
+                prevYear = currentYear - 1;
+            }
+            
+            const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+            const prevMonthKey = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+            
+            console.log('Поиск транзакций для месяцев:', currentMonthKey, prevMonthKey);
+            
+            const pipeline = [
+                { $match: { user: login } },
+                { $unwind: "$banks" },
+                { $match: { "banks.name": bankName } },
+                {
+                    $project: {
+                        _id: 0,
+                        currentMonth: { $ifNull: [`$banks.transactions.${currentMonthKey}`, []] },
+                        prevMonth: { $ifNull: [`$banks.transactions.${prevMonthKey}`, []] }
+                    }
+                }
+            ];
+            
+            const result = await db.collection('users').aggregate(pipeline).toArray();
+            
+            if (!result || result.length === 0) {
                 return [];
             }
-            console.log(result)
-            return result.banks[0].transactions || [];
+            
+            const allTransactions = [
+                ...result[0].currentMonth,
+                ...result[0].prevMonth
+            ];
+            
+            allTransactions.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                
+
+                if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+                if (isNaN(dateA.getTime())) return 1;
+                if (isNaN(dateB.getTime())) return -1;
+                
+                return dateB.getTime() - dateA.getTime();
+            });
+            
+            return allTransactions;
+            
         } catch (error) {
             console.error('Ошибка при получении транзакций:', error);
             throw error;

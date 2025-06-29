@@ -1,3 +1,5 @@
+import Cookies from 'js-cookie';
+
 export const addActivePlan = async (id: number, state: boolean) => {
     const login = Cookies.get('info_token');
     try {
