@@ -7,6 +7,7 @@ interface AppContextType {
   trans: any[];
   plans: any[];
   activePlans: any[];
+  activePlan: any;
   activePlansStatus: any;
   categorys: any[];
   targets: any[];
@@ -18,6 +19,8 @@ interface AppContextType {
   balance: number;
   currency: string;
   skipTrans: number;
+  moreGains: number;
+  moreLosses: number;
   
   isLoading: boolean;
   error: string;
@@ -27,6 +30,7 @@ interface AppContextType {
   setTrans: (trans: any[]) => void;
   setPlans: (plans: any[]) => void;
   setActivePlans: (activePlans: any[]) => void;
+  setActivePlan: (activePlan: any) => void;
   setActivePlansStatus: (status: any) => void;
   setCategorys: (categorys: any[]) => void;
   setTargets: (targets: any[]) => void;
@@ -38,6 +42,8 @@ interface AppContextType {
   setBalance: (balance: number) => void;
   setCurrency: (currency: string) => void;
   setSkipTrans: (skip: number) => void;
+  setMoreGains: (gains: number) => void;
+  setMoreLosses: (losses: number) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setLoadingSending: (loading: boolean) => void;
@@ -62,6 +68,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [bankNames, setBankNames] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [activePlans, setActivePlans] = useState<any[]>([]);
+  const [activePlan, setActivePlan] = useState<any>(null);
   const [activePlansStatus, setActivePlansStatus] = useState({
     daily: { status: false, id: 0 },
     weekly: { status: false, id: 0 },
@@ -74,12 +81,26 @@ export function AppProvider({ children }: AppProviderProps) {
   const [targets, setTargets] = useState<any[]>([]);
   const [loadingSending, setLoadingSending] = useState(false);
   const [planIsSending, setPlanIsSending] = useState(false);
+  const [moreGains, setMoreGains] = useState(0);
+  const [moreLosses, setMoreLosses] = useState(0);
   const auth = useAuth();
   useEffect(() => {
     if(auth.user){
       setLogin(auth.user.login)
     }
   }, [auth.user])
+  // useEffect(() => {
+  //  const bankNameCookie = Cookies.get('activeBankName')
+  //  if(bankNameCookie){
+
+  //   const bank = bankNames.find((bank: any) => bank.name === bankNameCookie)
+  //   if(bank){
+  //     setActiveBank(bank)
+  //   }
+  //  }else{
+  //   setActiveBank(bankNames[0])
+  //  }
+  // }, [])
   useEffect(() => {
     async function gatBanks() {
       if(login !== '' && bankNames.length === 0){
@@ -92,15 +113,14 @@ export function AppProvider({ children }: AppProviderProps) {
           const trueData = namesData.value.bankAccounts || namesData.value
           setBankNames(trueData)
           
-          // Если нет банковских аккаунтов
           if(!trueData || trueData.length === 0){
             setIsLoading(false)
             return
           }
           
-          const activeBankId = Cookies.get('activeBankId')
-          if(activeBankId){
-            const activeBank = trueData.find((bank: any) => bank.id === activeBankId)
+          const activeBankName = Cookies.get('ActiveBankName')
+          if(activeBankName){
+            const activeBank = trueData.find((bank: any) => bank.name === activeBankName)
             if(activeBank){
               try{
                 const response = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`, {
@@ -152,12 +172,53 @@ export function AppProvider({ children }: AppProviderProps) {
     }
     gatBanks()
   }, [login, bankNames.length])
-  
+  useEffect(() => {
+    async function getPlans(){
+    try{
+      const res = await fetch(`api/getPlans?login=${login}`, {
+        method: 'GET'
+      })
+      if(res.ok){
+        const data = await res.json();
+        const activePlans = getActivePlans();
+        
+        const activePlansStatus = data.plans.reduce((acc: ActivePlansStatus, plan: Plan) => {
+          if (activePlans.includes(plan.id)) {
+            acc[plan.frequency as keyof ActivePlansStatus] = {
+              status: true,
+              id: plan.id
+            };
+          }
+          return acc;
+        }, {
+          daily: { status: false, id: 0 },
+          weekly: { status: false, id: 0 },
+          monthly: { status: false, id: 0 },
+          yearly: { status: false, id: 0 }
+        });
+
+        setActivePlansStatus(activePlansStatus);
+        setPlans(data.plans);
+        setIsLoading(false)
+      }
+    }catch(e){
+      console.log(e)
+    }
+    }
+    if(login){
+      getPlans()
+    }
+  }, [login])
+  const getActivePlans = () => {
+    const activePlans = localStorage.getItem('activePlans');
+    return activePlans ? JSON.parse(activePlans) : [];
+  };
   
   const contextValue: AppContextType = {
     trans,
     plans,
     activePlans,
+    activePlan,
     activePlansStatus,
     categorys,
     targets,
@@ -169,6 +230,8 @@ export function AppProvider({ children }: AppProviderProps) {
     balance,
     currency,
     skipTrans,
+    moreGains,
+    moreLosses,
     
     isLoading,
     error,
@@ -178,6 +241,7 @@ export function AppProvider({ children }: AppProviderProps) {
     setTrans,
     setPlans,
     setActivePlans,
+    setActivePlan,
     setActivePlansStatus,
     setCategorys,
     setTargets,
@@ -189,6 +253,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setBalance,
     setCurrency,
     setSkipTrans,
+    setMoreGains,
+    setMoreLosses,
     setIsLoading,
     setError,
     setLoadingSending,

@@ -15,15 +15,19 @@ export default function Operations() {
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
+            console.log('click')
             if (show && formRef.current && !formRef.current.contains(event.target as Node)) {
+                console.log('click outside')
                 setShow(false);
                 setShouldAnimate(false);
             }
         };
         if (show) {
+            console.log('listen')
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
+            console.log('remove listen')
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [show]);
@@ -31,7 +35,7 @@ export default function Operations() {
     
     const addTransaction = async (amount: any, category: any, date: any, type: any) => {
         try {
-            const response = await fetch('/api/addTrans', {
+            const response = await fetch('/api/addTransRedis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -39,7 +43,7 @@ export default function Operations() {
                     category,
                     date,
                     login,
-                    balance: balance || 0,
+                    balanceStatus: balance || 0,
                     type,
                     bankName: activeBank.name
                 })
@@ -86,7 +90,7 @@ export default function Operations() {
     const delTransaction = async (id: any, amount: any, type: any, date: any) => { 
         try {
             const info = `${login}:${id}:${amount}:${balance}:${type}:${date}:${activeBank.name}`;
-            const response = await fetch(`api/delTransRedis?info=${info}`, {
+            const response = await fetch(`api/delTrans?info=${info}`, {
                 method: 'DELETE'
             });
             

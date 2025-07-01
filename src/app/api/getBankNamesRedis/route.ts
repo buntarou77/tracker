@@ -28,7 +28,6 @@ const login = searchParams.get('login');
     }
 
     const trans = await client.get(`bankNames_${login}`);
-    console.log(trans);
     if(!trans || trans === 'null' || trans === null){
         try{
             const f = await fetch(`http://localhost:3000/api/getBankNames?login=${login}`, {

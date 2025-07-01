@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { query } from '../db';
 import bcryptjs from 'bcryptjs';
-import { generateTokens} from '../auth/auth';
+import { MongoClient } from 'mongodb';
+import { generateTokens } from '../auth/auth';
+
 interface User {
-  id: number;
+  _id: string;
   login: string;
   email: string;
-  password: string;
+  password_hash: string;
+  active: number;
 }
 
 export async function POST(request: Request) {
@@ -20,71 +22,84 @@ export async function POST(request: Request) {
       );
     }
 
-    const users = await query(
-      "SELECT * FROM usersitems WHERE login = ?",
-      [login]
-    ) as User[];
-
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: "Incorrect login or password" },
-        { status: 400 }
-      );
-    }
-
-    const user = users[0];
-    const isPasswordValid = await bcryptjs.compare(password, user.password_hash);
+    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
     
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: "Incorrect login or password" },
-        { status: 400 }
+    try {
+      await client.connect();
+      const db = client.db('users');
+      
+      // Ищем пользователя в коллекции auth_users
+      const user = await db.collection('users').findOne({
+        login: login
+      }) as User | null;
+      console.log(login)
+      console.log(password)
+      console.log(user)
+      if (!user) {
+        return NextResponse.json(
+          { error: "Incorrect login or password" },
+          { status: 400 }
+        );
+      }
+
+      const isPasswordValid = await bcryptjs.compare(password, user.password_hash);
+      
+      if (!isPasswordValid) {
+        return NextResponse.json(
+          { error: "Incorrect login or password" },
+          { status: 400 }
+        );
+      }
+
+      const { password_hash, ...userWithoutPassword } = user;
+
+      const tokens = generateTokens({
+        id: user._id.toString(),
+        login: user.login,
+        email: user.email
+      });
+
+      const response = NextResponse.json(
+        { 
+          success: true, 
+          user: {
+            id: user._id.toString(),
+            login: user.login,
+            email: user.email,
+            active: user.active
+          }
+        },
+        { status: 200 }
       );
+      
+      response.cookies.set('info_token', login, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60 * 60,
+        path: '/',
+        sameSite: 'lax',
+      });
+      
+      response.cookies.set('accessToken', tokens.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60,
+        path: '/',
+        sameSite: 'lax',
+      });
+      
+      response.cookies.set('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+        sameSite: 'lax',
+      });
+      
+      return response;
+    } finally {
+      await client.close();
     }
-
-    const { password: _, ...userWithoutPassword } = user;
-
-
-    const tokens = generateTokens({
-      id: user.id,
-      login: user.login,
-      email: user.email
-    });
-
-    const response = NextResponse.json(
-      { 
-        success: true, 
-        user: userWithoutPassword 
-      },
-      { status: 200 }
-    );
-    response.cookies.set('info_token', login, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 15 * 60 * 60,
-      domain: 'localhost',
-      path: '/',
-      sameSite: 'lax',
-    });
-    response.cookies.set('accessToken', tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 15 * 60,
-      domain: 'localhost',
-      path: '/',
-      sameSite: 'lax',
-    });
-    response.cookies.set('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-      domain: 'localhost',
-      sameSite: 'lax',
-    });
-    
-    return response;
-
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

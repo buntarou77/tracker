@@ -8,7 +8,7 @@ const ACCESS_TOKEN_EXPIRES = '15m';
 const REFRESH_TOKEN_EXPIRES = '7d';
 
 interface TokenPayload {
-  id: number;
+  id: string;
   login: string;
   email: string;
 }

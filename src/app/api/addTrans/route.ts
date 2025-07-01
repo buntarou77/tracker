@@ -1,35 +1,72 @@
 import { NextRequest } from "next/server";
 import { NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
-import { createClient } from 'redis'
 
 export async function POST(request: NextRequest) {
-  const data = await request.json();
-  const { amount, category, date, login, type, bankName } = data;
+  let data;
+  try {
+    data = await request.json();
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body' },
+      { status: 400 }
+    );
+  }
+
+  const { amount, category, date, login, type, bankName, balanceStatus } = data;
   const numeralAmount = Number(amount);
 
-  if (!numeralAmount || !category || !date || !bankName) {
+  if (!numeralAmount || isNaN(numeralAmount) || !category || !date || !bankName) {
     return NextResponse.json(
-      { text: 'one of the fields is not filled in' },
+      { error: 'Required fields missing or invalid: amount, category, date, bankName' },
       { status: 400 }
-    )
+    );
+  }
+
+  if (!login) {
+    return NextResponse.json(
+      { error: 'User not authenticated' },
+      { status: 401 }
+    );
+  }
+
+  if (type !== 'gain' && type !== 'loss') {
+    return NextResponse.json(
+      { error: 'Invalid transaction type. Must be "gain" or "loss"' },
+      { status: 400 }
+    );
+  }
+
+  if (typeof balanceStatus !== 'number') {
+    return NextResponse.json(
+      { error: 'balanceStatus is required and must be a number' },
+      { status: 400 }
+    );
   }
 
   const mongoClient = new MongoClient('mongodb://localhost:27017');
-  const redisClient = createClient({
-    url: 'redis://127.0.0.1:6379'
-  });
 
   try {
     await mongoClient.connect();
-    await redisClient.connect();
-
     const db = mongoClient.db('users');
     
-    const transactionDate = new Date(date);
+    let transactionDate;
+    try {
+      transactionDate = new Date(date);
+      if (isNaN(transactionDate.getTime())) {
+        throw new Error('Invalid date');
+      }
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid date format' },
+        { status: 400 }
+      );
+    }
+
     const year = transactionDate.getFullYear();
     const month = String(transactionDate.getMonth() + 1).padStart(2, '0'); 
     const monthKey = `${year}-${month}`;
+    
     
     const newTransaction = {
       amount: numeralAmount,
@@ -38,15 +75,9 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       id: Date.now(),
       type,
+      balanceStatus
     };
 
-    const balance = await db.collection('users').findOne(
-      { user: login, "banks.name": bankName },
-      { projection: { "banks.$.balance": 1 } }
-    );
-
-
-    const currentBalance = Number(balance?.balance)
 
     const result = await db.collection('users').updateOne(
       { user: login, "banks.name": bankName },
@@ -59,67 +90,33 @@ export async function POST(request: NextRequest) {
 
     if (!result.matchedCount) {
       return NextResponse.json(
-        { error: 'Failed to add transaction' },
+        { error: 'Failed to add transaction - user or bank not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!result.modifiedCount) {
+      return NextResponse.json(
+        { error: 'Failed to add transaction - no changes made' },
         { status: 500 }
       );
     }
-    try {
-      // Получаем текущую дату
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth(); // 0-11
-      
-      // Получаем дату транзакции
-      const transYear = transactionDate.getFullYear();
-      const transMonth = transactionDate.getMonth(); // 0-11
-      
-      // Определяем предыдущий месяц
-      let prevMonth = currentMonth - 1;
-      let prevYear = currentYear;
-      
-      if (prevMonth < 0) {
-        prevMonth = 11; // декабрь
-        prevYear = currentYear - 1;
-      }
-      
-      // Проверяем, попадает ли транзакция в текущий или предыдущий месяц
-      const isCurrentMonth = (transYear === currentYear && transMonth === currentMonth);
-      const isPrevMonth = (transYear === prevYear && transMonth === prevMonth);
-      
-      if (isCurrentMonth || isPrevMonth) {
-        const redisKey = `${login}_${bankName}_transactions`;
-        const prevTrans = await redisClient.get(redisKey);
-        
-        if (prevTrans) {
-          const parsePrevTrans = JSON.parse(prevTrans);
-          if (!parsePrevTrans[monthKey]) {
-            parsePrevTrans[monthKey] = [];
-          }
-          parsePrevTrans[monthKey].push({
-            ...newTransaction
-          });
-          await redisClient.setEx(redisKey, 60 * 60 * 24, JSON.stringify(parsePrevTrans));
-        }
-      }
-    } catch (redisError) {
-      console.error('Redis update error:', redisError);
-    }
-
+    
     const newBalance = type === 'gain' 
-      ? Number(currentBalance) + Number(numeralAmount) 
-      : Number(currentBalance) - Number(numeralAmount);
+      ? balanceStatus + numeralAmount 
+      : balanceStatus - numeralAmount;
+
+    if (newBalance < 0) {
+      console.warn(`Warning: Balance will be negative: ${newBalance}`);
+    }
       
     const balanceResult = await db.collection('users').updateOne(
       { user: login, "banks.name": bankName },
       { $set: { "banks.$.balance": newBalance } }
     );
 
-    if (balanceResult.modifiedCount) {
-      try {
-        await redisClient.set(`${login}_${bankName}_balance`, newBalance);
-      } catch (redisError) {
-        console.error('Redis balance update error:', redisError);
-      }
+    if (!balanceResult.modifiedCount) {
+      console.error('Failed to update balance');
     }
 
     return NextResponse.json(
@@ -132,14 +129,20 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in transaction:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   } finally {
-    await mongoClient.close();
-    await redisClient.disconnect();
+    try {
+      await mongoClient.close();
+    } catch (error) {
+      console.error('Error closing MongoDB connection:', error);
+    }
   }
 }

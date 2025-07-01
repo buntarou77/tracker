@@ -14,10 +14,9 @@ interface LastsAnalyticsProps {
   gainTrans: any[];
   trans: any[];
   transObj?: any;
-  lastsPlan?: any;
 }
 
-export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, lastsPlan }: LastsAnalyticsProps) {
+export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }: LastsAnalyticsProps) {
   ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -30,7 +29,7 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
     BarElement
   );
   
-  const { login, activeBank } = useApp();
+  const { login, activeBank, activePlansStatus, plans } = useApp();
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
@@ -50,15 +49,15 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
   const [prevMonthLoss, setPrevMonthLoss] = useState(0);
   const [prevMonthGain, setPrevMonthGain] = useState(0);
   const [isLoadingMonth, setIsLoadingMonth] = useState(false);
+  const [activePlan, setActivePlan] = useState<any>(null);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   
-  // Функция для проверки, загружен ли месяц
   const isMonthLoaded = (year: number, month: number) => {
     if (!transObj || typeof transObj !== 'object') return false;
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
     return transObj.hasOwnProperty(monthKey) && transObj[monthKey]?.length > 0;
   };
-  
-  // Функция для загрузки месяца
+
   const loadMonth = async (monthSkip: number) => {
     if (!login || !activeBank.name || isLoadingMonth) return;
     
@@ -73,7 +72,6 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
         const { monthKey, transactions } = data;
         
         if (transactions && transactions.length > 0 && transObj) {
-          // Обновляем объект транзакций
           transObj[monthKey] = transactions;
         }
       }
@@ -84,7 +82,6 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
     }
   };
   
-  // Функция для получения транзакций за месяц
   const getMonthTransactions = (year: number, month: number) => {
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
     if (transObj && transObj[monthKey]) {
@@ -92,27 +89,92 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
     }
     return [];
   };
+
+  const loadActivePlan = () => {
+    if (isLoadingPlan) return;
+    
+    setIsLoadingPlan(true);
+    
+    try {
+      if (!plans || plans.length === 0) {
+        setActivePlan(null);
+        return;
+      }
+      
+      let activePlanId = null;
+      
+      for (const period of ['daily', 'weekly', 'monthly', 'yearly']) {
+        if (activePlansStatus[period]?.status === true) {
+          activePlanId = activePlansStatus[period].id;
+
+          break;
+        }
+      }
+      
+      const active = activePlanId ? plans.find((plan: any) => plan.id === activePlanId) : null;
+      setActivePlan(active || null);
+      
+    } catch (error) {
+      console.error('Error processing active plan:', error);
+      setActivePlan(null);
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
   
   useEffect(() => {
     setPlanProgress(planProgress);
     setTotalPlanAmount(totalPlanAmount);
   }, [planProgress, totalPlanAmount]);
+
+  useEffect(() => {
+    if (login) {
+      loadActivePlan();
+    }
+  }, [login, activePlansStatus]);
   
   useEffect(() => {
     if (trans && trans.length > 0) {
       loadMonthData(monthOffset);
+      if (login) {
+        loadActivePlan();
+      }
     }
   }, [trans, monthOffset]);
-  
   useEffect(() => {
-    const startDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset - 1, 1);
-    const endDate = new Date(new Date().getFullYear(), new Date().getMonth() - monthOffset, 0);
-    const filtredTrans = FiltredTransactions(trans, 'month', undefined);
-    if (filtredTrans !== 'error' && 'lossTransactions' in filtredTrans) {
-      setPrevMonthLoss(filtredTrans.lossTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
-      setPrevMonthGain(filtredTrans.gainTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
+    const loadPrevMonthData = async () => {
+      setPrevMonthLoss(0);
+      setPrevMonthGain(0);
+      
+      const now = new Date();
+      const currentTargetDate = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
+      const prevTargetDate = new Date(currentTargetDate.getFullYear(), currentTargetDate.getMonth() - 1, 1);
+      const prevYear = prevTargetDate.getFullYear();
+      const prevMonth = prevTargetDate.getMonth() + 1; 
+      
+      if (!isMonthLoaded(prevYear, prevMonth) && transObj) {
+        const prevMonthOffset = monthOffset + 1;
+        await loadMonth(prevMonthOffset);
+      }
+      
+      const prevMonthTransactions = getMonthTransactions(prevYear, prevMonth);
+      const startDate = new Date(prevYear, prevMonth - 1, 1);
+      const endDate = new Date(prevYear, prevMonth, 0);
+      
+      const filtredTrans = FiltredTransactions(prevMonthTransactions, 'lasts', [startDate, endDate]);
+      if (filtredTrans !== 'error' && 'lossTransactions' in filtredTrans) {
+        setPrevMonthLoss(filtredTrans.lossTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
+        setPrevMonthGain(filtredTrans.gainTransactions.reduce((acc: number, item: any) => acc + item.amount, 0));
+      } else {
+        setPrevMonthLoss(0);
+        setPrevMonthGain(0);
+      }
+    };
+    
+    if (trans && trans.length > 0) {
+      loadPrevMonthData();
     }
-  }, [trans, monthOffset]);
+  }, [trans, monthOffset, transObj]);
 
   const loadMonthData = async (offset: number) => {
     const now = new Date();
@@ -215,12 +277,12 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
   const categoryDoughnutData = prepareDoughnutData(categoryAmounts, categorys);
   
   useEffect(() => {
-    if (lastsPlan && lastsPlan.type === 'expense') {
-      setExpanseProgress((monthRes / lastsPlan.totalAmount) * 100);
-    } else if (lastsPlan && lastsPlan.type === 'income') {
-      setIncomeProgress((monthRes / lastsPlan.totalAmount) * 100);
+    if (activePlan && activePlan.type === 'expense') {
+      setExpanseProgress((monthRes / activePlan.totalAmount) * 100);
+    } else if (activePlan && activePlan.type === 'income') {
+      setIncomeProgress((monthRes / activePlan.totalAmount) * 100);
     }
-  }, [filteredTrans, lastsPlan, monthRes]);
+  }, [filteredTrans, activePlan, monthRes]);
 
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
@@ -234,10 +296,9 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
             <img className='w-[40px] h-[40px]' src={leftArrow.src} alt="Previous month" />
           </button>
           <div className='flex flex-col items-center'>
-            <p>{month}</p>
-            {isLoadingMonth && (
-              <span className="text-sm text-gray-400 mt-1">Загрузка...</span>
-            )}
+            <p>{ isLoadingMonth ? <span className="text-sm text-gray-400 mt-1 h-[5px]">Loading...</span> : month}</p>
+            
+          
           </div>
           <button 
             onClick={handleNextMonth} 
@@ -270,32 +331,73 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
         </span>
       </div>
     </div>
-        <div className='m-5'>
-          <div className='w-[300px] h-[40px] flex items-start justify-center !items-center'>
-            {
-              lastsPlan.type ? 
-                <div className='w-[400px]  h-[20px] flex flex-col items-center justify-center'>
-                <div className='flex flex-row'>
-                <span className='text-[white] font-[600] '>plan Status:</span>
-                <p className={` font-[600] ${lastsPlan.type === 'expense' ? (expanseProgress >= 0 ? 'text-green-500' : 'text-red-500') : (incomeProgress >= 0 ? 'text-green-500' : 'text-red-500')}`}>
-                  {`${Math.max(0, Math.round(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress))}%`}
-                </p>
-                </div>
-                <div  className='flex flex-row max-w-[400px] '>
-                <div style={{ 
-                  width: `${Math.max(0, Math.round(lastsPlan.type === 'expense' ? expanseProgress : incomeProgress)) * 2.5}px` 
-                }} className={ ` ${ lastsPlan.type === 'expense' && lastsPlan.totalAmount < Number(moreGains) ? 'rounded-md' : 'rounded-tl-md'} rounded-bl-md   bg-[green] h-[20px]`}></div>
-                <div style={{ 
-                  width: `${
-                    lastsPlan.type === 'expense' && Number(expanseProgress) > 100
-                      ? 0 
-                    : Math.round(100 - expanseProgress) * 2.5}px` 
-                }} className={`${ lastsPlan.type === 'expense' && lastsPlan.totalAmount < Number(moreGains) ? 'rounded-md' : 'rounded-br-md' } rounded-tr-md  bg-[#4f1e61] h-[20px]`}></div>
-                </div>
-              </div> : null
-              
+                <div className='m-3'>
+          <div className='min-w-[280px] bg-gray-800/40 backdrop-blur-sm p-4 rounded-lg border border-gray-600 shadow-lg'>
+            {isLoadingPlan ? (
+              <div className='flex items-center justify-center py-4 '>
+                <span className='text-gray-400 text-xs '>Loading plan...</span>
+              </div>
+            ) : activePlan ? 
+                <div className='w-[280px] flex flex-col items-center justify-center space-y-2'>
+                  {/* Header with plan status */}
+                  <div className='flex flex-row items-center space-x-2'>
+                    <span className='text-white font-medium text-xs'>Plan:</span>
+                    <p className={`font-bold text-sm ${activePlan.type === 'expense' ? (expanseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
+                      {`${Math.max(0, Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress))}%`}
+                    </p>
+                  </div>
+                  
+                  {/* Compact Progress Bar */}
+                  <div className='w-full max-w-[260px] relative'>
+                    {/* Background container */}
+                    <div className='relative w-full h-5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg border border-gray-500 shadow-md overflow-hidden'>
+                      {/* Progress fill */}
+                      <div 
+                        style={{ 
+                          width: `${Math.min(100, Math.max(0, Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress)))}%` 
+                        }} 
+                        className={`
+                          absolute top-0 left-0 h-full rounded-md transition-all duration-500 ease-out
+                          ${activePlan.type === 'expense' 
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-md shadow-emerald-500/30' 
+                            : 'bg-gradient-to-r from-blue-500 to-blue-400 shadow-md shadow-blue-500/30'
+                          }
+                        `}
+                      >
+                        {/* Subtle shine effect */}
+                        <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-md'></div>
+                      </div>
+                      
+                      {/* Overflow indicator */}
+                      {(activePlan.type === 'expense' ? expanseProgress : incomeProgress) > 100 && (
+                        <div className='absolute top-0 right-0 h-full w-1 bg-red-500 rounded-r-md shadow-sm'></div>
+                      )}
+                    </div>
+                    
+                    {/* Progress text overlay */}
+                    <div className='absolute inset-0 flex items-center justify-center'>
+                      <span className='text-white font-semibold text-xs drop-shadow'>
+                        {Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress)}%
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Plan info */}
+                  <div className='flex items-center space-x-1'>
+                    <div className={`w-2 h-2 rounded-full ${activePlan.type === 'expense' ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
+                    <span className='text-gray-300 text-xs capitalize'>
+                      {activePlan.type}
+                    </span>
+                    <span className='text-gray-400 text-xs'>
+                      ({activePlan.totalAmount}$)
+                    </span>
+                  </div>
+                  </div> : (
+                   <div className='flex items-center justify-center py-4'>
+                     <span className='text-gray-400 text-xs'>No active plan</span>
+                   </div>
+                 )
             }
-
           </div>
         </div>
         <div className='flex gap-[10px] flex-col'>
@@ -309,12 +411,16 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj, 
             <span className='text-green-400 font-semibold'>{totalGains}$</span>
           </div>
           <div className='flex justify-between items-center'>
-            <span className='text-gray-400'>Gains ↑ vs last year:</span>
-            <span className='text-lime-400 font-semibold'>+{moreGains}$</span>
+            <span className='text-gray-400'>Gains vs prev month:</span>
+            <span className={`font-semibold ${moreGains >= 0 ? 'text-lime-400' : 'text-red-400'}`}>
+              {moreGains >= 0 ? '+' : ''}{moreGains}$
+            </span>
           </div>
           <div className='flex justify-between items-center'>
-            <span className='text-gray-400'>Losses ↑ vs last year:</span>
-            <span className='text-orange-400 font-semibold'>+{moreLosses}$</span>
+            <span className='text-gray-400'>Losses vs prev month:</span>
+            <span className={`font-semibold ${moreLosses >= 0 ? 'text-orange-400' : 'text-green-400'}`}>
+              {moreLosses >= 0 ? '+' : ''}{moreLosses}$
+            </span>
           </div>
         </div>
         </div>

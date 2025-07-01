@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     try {
       userData = verifyAccessToken(accessToken);
     } catch (error) {
-      // Токен истек или невалидный
       return NextResponse.json(
         { error: 'Access token expired or invalid' },
         { status: 401 }

@@ -62,6 +62,44 @@ export async function DELETE(request: NextRequest) {
                     { $set: { "banks.$.balance": newBalance } }
                 );
 
+                // Обновляем balanceStatus у всех последующих транзакций
+                const userData = await db.collection('users').findOne(
+                    { user: login, "banks.name": bankName },
+                    { projection: { "banks.$": 1 } }
+                );
+
+                if (userData && userData.banks && userData.banks[0]) {
+                    const transactions = userData.banks[0].transactions || {};
+                    const amountChange = type === 'loss' ? -Number(amount) : Number(amount);
+                    
+                    // Обновляем транзакции по месяцам
+                    for (const [mk, monthTransactions] of Object.entries(transactions)) {
+                        if (Array.isArray(monthTransactions)) {
+                            const updatedTransactions = monthTransactions.map((t: any) => {
+                                if (new Date(t.date).getTime() > new Date(date).getTime()) {
+                                    return {
+                                        ...t,
+                                        balanceStatus: (t.balanceStatus || 0) + amountChange
+                                    };
+                                }
+                                return t;
+                            });
+                            
+                            // Проверяем, были ли изменения
+                            const hasChanges = updatedTransactions.some((t: any, i: number) => 
+                                t.balanceStatus !== (monthTransactions as any)[i].balanceStatus
+                            );
+                            
+                            if (hasChanges) {
+                                await db.collection('users').updateOne(
+                                    { user: login, "banks.name": bankName },
+                                    { $set: { [`banks.$.transactions.${mk}`]: updatedTransactions } } as any
+                                );
+                            }
+                        }
+                    }
+                }
+
                 // Обновляем Redis кэш
                 try {
                     // Обновляем кэш транзакций (только для последних 2 месяцев)
@@ -80,24 +118,34 @@ export async function DELETE(request: NextRequest) {
                     const isCurrentMonth = (transactionDate.getFullYear() === currentYear && transactionDate.getMonth() === currentMonth);
                     const isPrevMonth = (transactionDate.getFullYear() === prevYear && transactionDate.getMonth() === prevMonth);
                     
-                    // Обновляем Redis только если транзакция из последних 2 месяцев
-                    if (isCurrentMonth || isPrevMonth) {
-                        const redisKey = `${login}_${bankName}_transactions`;
-                        const prevTrans = await redisClient.get(redisKey);
+                    // Обновляем Redis с актуальными данными
+                    const redisKey = `${login}_${bankName}_transactions`;
+                    
+                    // Получаем актуальные данные из БД для Redis
+                    const updatedUserData = await db.collection('users').findOne(
+                        { user: login, "banks.name": bankName },
+                        { projection: { "banks.$": 1 } }
+                    );
+                    
+                    if (updatedUserData && updatedUserData.banks && updatedUserData.banks[0]) {
+                        const updatedTransactions = updatedUserData.banks[0].transactions || {};
+                        const redisTransactions: any = {};
                         
-                        if (prevTrans) {
-                            const parsePrevTrans = JSON.parse(prevTrans);
-                            if (parsePrevTrans[monthKey]) {
-                                parsePrevTrans[monthKey] = parsePrevTrans[monthKey].filter((trans: any) => trans.id !== Number(id));
-                                
-                                // Если массив стал пустым, удаляем ключ
-                                if (parsePrevTrans[monthKey].length === 0) {
-                                    delete parsePrevTrans[monthKey];
-                                }
-                                
-                                await redisClient.set(redisKey, JSON.stringify(parsePrevTrans));
+                        // Берем только текущий и предыдущий месяц для Redis
+                        Object.entries(updatedTransactions).forEach(([mk, trans]) => {
+                            const [year, month] = mk.split('-');
+                            const tYear = parseInt(year);
+                            const tMonth = parseInt(month) - 1;
+                            
+                            const isCurrent = (tYear === currentYear && tMonth === currentMonth);
+                            const isPrev = (tYear === prevYear && tMonth === prevMonth);
+                            
+                            if (isCurrent || isPrev) {
+                                redisTransactions[mk] = trans;
                             }
-                        }
+                        });
+                        
+                        await redisClient.setEx(redisKey, 60 * 60 * 24, JSON.stringify(redisTransactions));
                     }
 
                     // Обновляем баланс в Redis

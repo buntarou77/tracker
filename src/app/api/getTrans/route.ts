@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
     const bankName = searchParams.get('bankName');
     console.log(login, bankName)
     if (!login || !bankName) {
-        console.log('failed to verify login or bankName')
         return NextResponse.json(
             { error: 'Параметры login и bankName обязательны' },
             { status: 400 }
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
             const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
             const prevMonthKey = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
             
-            console.log('Поиск транзакций для месяцев:', currentMonthKey, prevMonthKey);
             
             const pipeline = [
                 { $match: { user: login } },

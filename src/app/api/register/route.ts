@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
-import { query } from '../db'
 import bcryptjs from 'bcryptjs'
-import {MongoClient} from 'mongodb';
+import { MongoClient } from 'mongodb'
+
 interface User {
-  id: number;
+  _id?: string;
   login: string;
   email: string;
+  password_hash: string;
+  active: number;
 }
 
 export async function POST(request: Request) {
@@ -19,52 +21,59 @@ export async function POST(request: Request) {
       )
     }
 
-    const existingUser = await query(
-      'SELECT id FROM usersitems WHERE email = ? OR login = ?', 
-      [email, login]
-    ) as User[]
+    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017')
+    
+    try {
+      await client.connect()
+      const db = client.db('users')
+      
+      // Проверяем существует ли пользователь
+      const existingUser = await db.collection('users').findOne({
+        $or: [
+          { email: email },
+          { user: login }
+        ]
+      })
 
-    if (existingUser.length > 0) {
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 409 }
-      )
-    }
-
-    const salt = await bcryptjs.genSalt(10)
-    const hashedPassword = await bcryptjs.hash(password, salt)
-
-    const result = await query(
-      'INSERT INTO usersitems (email, password_hash, login) VALUES (?, ?, ?)',
-      [email, hashedPassword, login]
-    ) as { insertId: number }
-    async function addUser(user: any) {
-      const client = new MongoClient('mongodb://localhost:27017');
-      try {
-        await client.connect();
-        const db = client.db('users'); 
-        const result = await db.collection('users').insertOne({user, active: 0});
-        return result.insertedId;
-      } catch (error) {
-        throw error;
-      } finally {
-        await client.close();
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'User already exists' },
+          { status: 409 }
+        )
       }
+
+      const salt = await bcryptjs.genSalt(10)
+      const hashedPassword = await bcryptjs.hash(password, salt)
+
+      // Создаем пользователя в коллекции auth_users
+      const authResult = await db.collection('users').insertOne({
+        email,
+        user: login,
+        password_hash: hashedPassword,
+        banks: [],
+        plans: [],
+        created_at: new Date()
+      })
+
+      // Создаем пользователя в основной коллекции users для банковских данных
+
+      return NextResponse.json(
+        { 
+          success: true,
+          user: { 
+            id: authResult.insertedId.toString(), 
+            email, 
+            login,
+            active: active || 0
+          } 
+        },
+        { status: 201 }
+      )
+    } finally {
+      await client.close()
     }
-    addUser(login)
-    return NextResponse.json(
-      { 
-        success: true,
-        user: { 
-          id: result.insertId, 
-          email, 
-          login,
-          active: 0
-        } 
-      },
-      { status: 201 }
-    )
   } catch (error) {
+    console.error('Registration error:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

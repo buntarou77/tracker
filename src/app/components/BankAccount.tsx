@@ -20,24 +20,31 @@ const BankAccount = () => {
     const activeBankCookies = Cookies.get('ActiveBank')
     const [isAccountsVisible, setIsAccountsVisible] = useState(false);
     const [addBankAccountForm, setAddBankAccountForm] = useState(false);
-    const [activeBank, setActiveBank] = useState<BankAccountType>({name: '', balance: '', currency: '', notes: '', active: false});
+    // const [activeBank, setActiveBank] = useState<BankAccountType>({name: '', balance: '', currency: '', notes: '', active: false});
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
-    const {bankNames, setBankNames, setTrans} = useApp()
-    
+    const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency} = useApp()
+    console.log(activeBank)
     useEffect(() => {
       if(login){
       if(activeBankCookies){
         const bank = JSON.parse(activeBankCookies)
-        setActiveBank({name : bank.name , currency: bank.currency, balance: bank.balance, notes: bank.notes})
+        setActiveBank({name : bank.name, id: bank.id || ''})
+        setBalance(bank.balance || 0)
+        setCurrency(bank.currency || 'RUB')
       }else if(bankNames && bankNames.length > 0){
-        setActiveBank(bankNames[0])             
-        Cookies.set('ActiveBank', JSON.stringify(bankNames[0]))
+        const firstBank = bankNames[0]
+        setActiveBank({name: firstBank.name, id: firstBank.id || ''})
+        setBalance(firstBank.balance || 0)
+        setCurrency(firstBank.currency || 'RUB')           
+        Cookies.set('ActiveBankName', JSON.stringify(firstBank.name))
       }else{
-        setActiveBank({name: '', balance: '', currency: '', notes: '', active: false})
+        setActiveBank({name: '', id: ''})
+        setBalance(0)
+        setCurrency('RUB')
       }
     }
-    }, [bankNames])
+    }, [bankNames, login, activeBankCookies, setActiveBank, setBalance, setCurrency])
     
     useEffect(()=>{
       const times = setTimeout(()=>{
@@ -50,7 +57,7 @@ const BankAccount = () => {
     };
     const addBankAccount = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
-      if(bankNames.length >= 3){
+      if(bankNames.length >= 6){
         setToManyBankAccounts(true)
       }else{
         try{
@@ -64,7 +71,23 @@ const BankAccount = () => {
                newAccount
            )})
            if(response.status === 201){
-            console.log(response)
+            try{
+              const res = await fetch(`/api/revalidateBankNamesRedis?login=${login}`, 
+                {method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({login})
+              })
+              if(res.ok){
+                const bankNames = await res.json()
+                console.log(bankNames)
+                setBankNames(bankNames.freshData)
+                console.log('revalidate')
+              }else{
+                throw 'error'
+              }
+            }catch(e){
+              console.log(e)
+            }
             setBankNames([...bankNames, newAccount])
            }else{
             throw 'error'
@@ -97,9 +120,13 @@ const BankAccount = () => {
           
           if (response.ok) {
             const result = await response.json();
+            console.log(result)
             setBankNames(bankNames.filter(account => account.name !== accountName));
+
             if (activeBank.name === accountName) {
-              setActiveBank({name: '', balance: '', currency: '', notes: '', active: false});
+              setActiveBank({name: '', id: ''});
+              setBalance(0);
+              setCurrency('RUB');
             }
             console.log('Account successfully deleted:', result);
           } else {
@@ -113,10 +140,12 @@ const BankAccount = () => {
       }
     };
     const bankToActive = (bank: BankAccountType) =>{
-      setActiveBank(bank)
+      setActiveBank({name: bank.name, id: bank.id || ''})
+      setBalance(Number(bank.balance) || 0)
+      setCurrency(bank.currency || 'RUB')
       console.log(bank)
-      Cookies.remove('ActiveBank')
-      Cookies.set('ActiveBank', JSON.stringify(bank))
+      Cookies.remove('ActiveBankName')
+      Cookies.set('ActiveBankName', bank.name)
     }
     const handleAccountsClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation(); 
@@ -139,10 +168,10 @@ const BankAccount = () => {
                         <span className="font-bold text-[75%] text-white/90 leading-tight">{activeBank.name || "No name"}</span>
                         </div>
                         <div className="flex items-end gap-1 mt-0.5">
-                            <span className={`font-extrabold text-[80%] ${Number(activeBank.balance) >= 0 ? "text-green-300" : "text-red-400"} drop-shadow`}>
-                                {activeBank.balance || "0"}
+                            <span className={`font-extrabold text-[80%] ${Number(balance) >= 0 ? "text-green-300" : "text-red-400"} drop-shadow`}>
+                                {balance || "0"}
                                 <span className="text-xs text-white/60 font-semibold pb-0.5">
-                                {activeBank.currency === "RUB" ? "₽" : activeBank.currency === "USD" ? "$" : activeBank.currency === "EUR" ? "€" : activeBank.currency}
+                                {currency === "RUB" ? "₽" : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency}
                             </span>
                             </span> 
                         

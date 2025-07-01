@@ -50,7 +50,6 @@ interface ActivePlansStatus {
   yearly: PlanStatus;
 }
 
-// Вспомогательная функция для преобразования объекта транзакций в массив
 const convertTransToArray = (transObj: any) => {
   if (!transObj || typeof transObj !== 'object') return [];
   return Object.values(transObj).flat();
@@ -59,7 +58,6 @@ const convertTransToArray = (transObj: any) => {
 export default function Analytics() {
   ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, LineElement, Title, Tooltip, Legend);
 
-  // Используем глобальное состояние
   const { 
     trans, 
     setTrans,
@@ -108,7 +106,6 @@ export default function Analytics() {
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
 
-  // Преобразуем объект транзакций в массив для компонентов аналитики
   const transArray = convertTransToArray(trans);
 
   useEffect(()=>{
@@ -117,8 +114,8 @@ export default function Analytics() {
   },[plans, storagePlans])
 
   const getActivePlans = () => {
-    const activePlans = localStorage.getItem('activePlans');
-    return activePlans ? JSON.parse(activePlans) : [];
+    const storedPlans = localStorage.getItem('activePlans');
+    return storedPlans ? JSON.parse(storedPlans) : [];
   };
 
   const changeActivePlan = (planId: number, isActive: boolean) => {
@@ -158,42 +155,7 @@ export default function Analytics() {
       setEditedPlan({...activePlan});
     }
   }, [activePlanWindow]);
-  useEffect(() => {
-    async function getPlans(){
-    try{
-      const res = await fetch(`api/getPlans?login=${login}`, {
-        method: 'GET'
-      })
-      if(res.ok){
-        const data = await res.json();
-        const activePlans = getActivePlans();
-        
-        const activePlansStatus = data.plans.reduce((acc: ActivePlansStatus, plan: Plan) => {
-          if (activePlans.includes(plan.id)) {
-            acc[plan.frequency as keyof ActivePlansStatus] = {
-              status: true,
-              id: plan.id
-            };
-          }
-          return acc;
-        }, {
-          daily: { status: false, id: 0 },
-          weekly: { status: false, id: 0 },
-          monthly: { status: false, id: 0 },
-          yearly: { status: false, id: 0 }
-        });
 
-        setActivePlansStatus(activePlansStatus);
-        setPlans(data.plans);
-      }
-    }catch(e){
-      console.log(e)
-    }
-    }
-    if(login){
-      getPlans()
-    }
-  }, [login])
   useEffect(()=>{
     setNewPlan({...editedPlan})
   },[editedPlan])
@@ -236,10 +198,11 @@ export default function Analytics() {
     setLoadingSending(false)
   }
 
-    const handleChange = (field, value)=>{
+    const handleChange = (field: string, value: any)=>{
       setNewPlan({...newPlan, [field]: value})
+      console.log(newPlan)
   }
-  const delPlan = async (id) => {
+  const delPlan = async (id: number) => {
     const login = Cookies.get('info_token');
     try{
       const res = await fetch(`api/deletePlan?id=${id}&login=${login}`, {
@@ -254,7 +217,7 @@ export default function Analytics() {
     }
   }
 
-  const addPlanButton = async(id) => {
+  const addPlanButton = async(id: number) => {
     const login = Cookies.get('info_token');
     try{
       const res = await fetch(`api/rewritePlan?login=${login}&id=${id}`, {
@@ -262,7 +225,7 @@ export default function Analytics() {
          body: JSON.stringify(newPlan)}
     )
     if(res.ok){
-      setPlans(prev => prev.map((item) => item.id === id ? newPlan : item))
+      setPlans((prev: any[]) => prev.map((item: any) => item.id === id ? newPlan : item))
       setActivePlan(newPlan)
       console.log('ok')
     }else{
@@ -273,21 +236,27 @@ export default function Analytics() {
     }
     setEditPlanStatus(false);
   };
-
-  const addCateghoryButton = (e) => {
+  const addCateghoryButton = (e: React.MouseEvent) => {
     e.preventDefault();
+    console.log(editedPlan)
     setActiveCateghoryForm((m) => !m);
   };
 
-  const removeCategory = (e, id)=>{
+  const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
-    console.log(id)
-    setCategorys(prev => prev.filter((item) => item.id !== id))
+
+    setEditedPlan(prev => ({
+      ...prev, 
+      categorys: prev.categorys?.filter((item: any) => item.id !== id) || []  
+    }))
   }
 
   const removeTarget = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
     e.preventDefault();
-    setTargets(prev => prev.filter((item) => item.id !== id));
+    setEditedPlan(prev => ({
+      ...prev,                                                 
+      targets: prev.targets?.filter((item: any) => item.id !== id) || [] 
+    }))
   }
 
   const handleSubmit = (e) => {
@@ -307,7 +276,31 @@ export default function Analytics() {
       amount,
       id: Date.now()
     }
-    setCategorys(prev => [...(prev || []),newCategory])
+    setEditedPlan(prev => ({
+      ...prev,
+      categorys: [...(prev.categorys || []), newCategory]
+    }))
+  }
+
+  const addTargetToEditedPlan = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!target.trim() || targetAmount <= 0) {
+      alert('Please enter both target name and amount')
+      return
+    }
+    const newTarget = {
+      target: target.trim(),
+      amount: targetAmount,
+      id: Date.now()
+    }
+    setEditedPlan(prev => ({
+      ...prev,
+      targets: [...(prev.targets || []), newTarget]
+    }))
+    // Очистить поля после добавления
+    setTarget('')
+    setTargetAmount(0)
+    setActiveAddTargetForm(false)
   }
   useEffect(()=>{
   if(doublePlansError){
@@ -323,17 +316,17 @@ export default function Analytics() {
   
   const gainTrans = transArray.filter((item) => item.type === 'gain');
   const lossTrans = transArray.filter((item) => item.type === 'loss');
-    const addDoublePlansError = (e)=>{
+    const addDoublePlansError = (e: React.ChangeEvent<HTMLInputElement>)=>{
     e.preventDefault();
     setDoublePlansError(true)
 
   }
-  const addTargetButton = (e) => {
+  const addTargetButton = (e: React.MouseEvent) => {
     e.preventDefault();
     setActiveTargetForm((prev) => !prev);
   };
 
-  const addTarget = (e) => {
+  const addTarget = (e: React.MouseEvent) => {
     e.preventDefault();
     const newTarget = {
       target,
@@ -344,15 +337,185 @@ export default function Analytics() {
     setTarget('');
     setTargetAmount(0);
   };
-
+  console.log(activePlan)
   return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Modern Header */}
+      <div className="sticky top-0 z-50 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                Analytics Dashboard
+              </h1>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setActivePlansShow(!activePlansShow)}
+                  className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                    activePlansShow 
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-purple-500/25' 
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Plans
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveForm(prev => !prev)}
+                  className="px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg shadow-green-500/25"
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Plan
+                  </span>
+                </button>
+              </div>
+            </div>
 
-    <div className="bg-dark min-h-screen p-4 md:p-8">
+            {/* Modern Tab Navigation */}
+            <div className="mt-6 flex space-x-1 bg-gray-800/50 p-1 rounded-xl">
+              {['lasts', 'global', 'year', 'month', 'custom'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all duration-300 ${
+                    activeTab === tab
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {
-        activePlanWindow && (
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Notification Toast */}
+        {planIsSending && (
+          <div className="fixed top-20 right-4 z-50 animate-slide-in">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Plan created successfully!
+            </div>
+          </div>
+        )}
+
+        {/* Error Toast */}
+        {doublePlansError && (
+          <div className="fixed top-20 right-4 z-50 animate-slide-in">
+            <div className="bg-red-500/90 backdrop-blur-lg text-white p-4 rounded-xl shadow-2xl max-w-sm">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-3">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p className="text-sm">Cannot create multiple active plans with the same frequency.</p>
+                </div>
+                <button 
+                  onClick={() => setDoublePlansError(false)}
+                  className="ml-4 text-white/80 hover:text-white"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plans Section */}
+        {activePlansShow && (
+          <div className="mb-8 animate-fade-in">
+            <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
+              <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Your Plans
+              </h2>
+              <div className="space-y-3">
+                {plans?.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="group bg-gray-900/50 rounded-xl p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-2 h-2 rounded-full ${
+                          getActivePlans().includes(item.id) ? 'bg-green-400' : 'bg-gray-600'
+                        }`} />
+                        <div>
+                          <h3 className="text-white font-medium">{item.name}</h3>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className={`text-sm font-semibold ${
+                              item.type === 'income' ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {item.type === 'income' ? '+' : '-'}${item.totalAmount}
+                            </span>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-sm text-blue-400 capitalize">{item.frequency}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        {activePlansStatus[item.frequency]?.status && activePlansStatus[item.frequency]?.id !== item.id ? (
+                          <label className="relative inline-flex items-center cursor-not-allowed opacity-50">
+                            <input
+                              type="checkbox"
+                              checked={false}
+                              onChange={addDoublePlansError}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        ) : (
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={getActivePlans().includes(item.id)}
+                              onChange={(e) => handleToggleActive(e, item.frequency, item.id)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-purple-600"></div>
+                          </label>
+                        )}
+                        
+                        <button
+                          onClick={() => {
+                            setActivePlanWindow(!activePlanWindow);
+                            setActivePlan(item);
+                          }}
+                          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                        >
+                          <img src={InfoSvg.src} alt="" className="w-4 h-4 opacity-70" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plan Details Modal */}
+        {activePlanWindow && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => {
               setActivePlanWindow(false);
               setActivePlan({});
@@ -360,837 +523,637 @@ export default function Analytics() {
             }}
           >
             <div 
-              className="w-[90%] md:w-[70%] lg:w-[40%] bg-gray-800 border-2 border-gray-600 rounded-xl shadow-2xl overflow-hidden h-[60vh] max-h-[600px] flex flex-col"
+              className="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-700 p-4 border-b border-gray-600 flex justify-between items-center">
-                {editPlanStatus ? (
-                  <input
-                    type="text"
-                    defaultValue={editedPlan.name || ''}
-                    onChange={(e) => handleChange('name', e.target.value)}
-                    className="text-xl font-bold text-white bg-gray-600 px-2 py-1 rounded w-full"
-                  />
-                ) : (
-                  <h2 className="text-xl font-bold text-white truncate" >{activePlan.name}</h2>
-                )}
-                <div className="flex gap-2">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+                <div className="flex justify-between items-center">
                   {editPlanStatus ? (
-                    <>
-                      <button 
-                        onClick={()=>addPlanButton(editedPlan.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                      >
-                        Сохранить
-                      </button>
-                      <button 
-                        onClick={() => setEditPlanStatus(false)}
-                        className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
-                      >
-                        Отмена
-                      </button>
-                    </>
+                    <input
+                      type="text"
+                      defaultValue={editedPlan.name || ''}
+                      onChange={(e) => handleChange('name', e.target.value)}
+                      className="text-2xl font-bold bg-white/20 backdrop-blur px-3 py-1 rounded-lg w-full text-white placeholder-white/70"
+                    />
                   ) : (
-                    null
+                    <h2 className="text-2xl font-bold text-white">{activePlan.name}</h2>
                   )}
+                  <div className="flex gap-2">
+                    {editPlanStatus ? (
+                      <>
+                        <button 
+                          onClick={() => addPlanButton(editedPlan.id)}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button 
+                          onClick={() => setEditPlanStatus(false)}
+                          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => setEditPlanStatus(true)}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <img src={editSvg.src} alt="" className="w-5 h-5 invert" />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => delPlan(activePlan.id)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 p-6 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <DetailItem 
-                      label="type" 
-                      value={
-                        editPlanStatus ? (
-                          <select
-                            defaultValue={editedPlan.type || 'expense'}
-                            onChange={(e) => handleChange('type', e.target.value)}
-                            className="bg-gray-700 text-white px-2 py-1 rounded"
-                          >
-                            <option value="income">Доход</option>
-                            <option value="expense">Расход</option>
-                          </select>
-                        ) : (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    <div>
+                      <label className="text-sm text-gray-400">Type</label>
+                      {editPlanStatus ? (
+                        <select
+                          defaultValue={editedPlan.type || 'expense'}
+                          onChange={(e) => handleChange('type', e.target.value)}
+                          className="mt-1 w-full bg-gray-700 text-white px-3 py-2 rounded-lg"
+                        >
+                          <option value="income">Income</option>
+                          <option value="expense">Expense</option>
+                        </select>
+                      ) : (
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                             activePlan.type === 'income' 
-                              ? 'bg-green-900 text-green-100' 
-                              : 'bg-red-900 text-red-100'
+                              ? 'bg-green-900/50 text-green-300 border border-green-700' 
+                              : 'bg-red-900/50 text-red-300 border border-red-700'
                           }`}>
-                            {activePlan.type === 'income' ? 'income' : 'expense'}
+                            {activePlan.type === 'income' ? 'Income' : 'Expense'}
                           </span>
-                        )
-                      }
-                    />
-                          <button className="text-blue-400 text-sm" onClick={() => setActiveAddCategoryForm((prev)=> !prev)}>
-                          + add type
-                        </button>
-                    <DetailItem 
-                      label="Сумма" 
-                      value={
-                        editPlanStatus ? (
-                          <input
-                            type="number"
-                            defaultValue={editedPlan.totalAmount || 0}
-                            onChange={(e) => handleChange('totalAmount', Number(e.target.value))}
-                            className={`text-lg font-bold bg-gray-700 px-2 py-1 rounded w-full ${
-                              editedPlan.type === 'income' ? 'text-green-400' : 'text-red-400'
-                            }`}
-                          />
-                        ) : (
-                          <span className={`text-lg font-bold ${
-                            activePlan.type === 'income' ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            {activePlan.totalAmount}$
-                          </span>
-                        )
-                      }
-                    />
+                        </div>
+                      )}
+                    </div>
 
-                    <DetailItem 
-                      label="Периодичность" 
-                      value={
-                        editPlanStatus ? (
-                          <select
-                            defaultValue={editedPlan.frequency || 'monthly'}
-                            onChange={(e) => handleChange('frequency', e.target.value)}
-                            className="bg-gray-700 text-white px-2 py-1 rounded"
-                          >
-                            <option value="daily">daily</option>
-                            <option value="weekly">weekly</option>
-                            <option value="monthly">monthly</option>
-                            <option value="yearly">yearly</option>
-                          </select>
-                        ) : (
-                          <span className="bg-blue-900 text-blue-100 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    <div>
+                      <label className="text-sm text-gray-400">Amount</label>
+                      {editPlanStatus ? (
+                        <input
+                          type="number"
+                          defaultValue={editedPlan.totalAmount || 0}
+                          onChange={(e) => handleChange('totalAmount', Number(e.target.value))}
+                          className={`mt-1 w-full text-2xl font-bold bg-gray-700 px-3 py-2 rounded-lg ${
+                            editedPlan.type === 'income' ? 'text-green-400' : 'text-red-400'
+                          }`}
+                        />
+                      ) : (
+                        <p className={`mt-1 text-2xl font-bold ${
+                          activePlan.type === 'income' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          ${activePlan.totalAmount}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-gray-400">Frequency</label>
+                      {editPlanStatus ? (
+                        <select
+                          defaultValue={editedPlan.frequency || 'monthly'}
+                          onChange={(e) => handleChange('frequency', e.target.value)}
+                          className="mt-1 w-full bg-gray-700 text-white px-3 py-2 rounded-lg"
+                        >
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="yearly">Yearly</option>
+                        </select>
+                      ) : (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-900/50 text-blue-300 border border-blue-700">
                             {getFrequencyLabel(activePlan.frequency)}
                           </span>
-                        )
-                      }
-                    />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-4">
-                    <DetailItem 
-                      label="Дата создания" 
-                      value={new Date(activePlan.createdAt).toLocaleDateString()}
-                    />
+                    <div>
+                      <label className="text-sm text-gray-400">Created</label>
+                      <p className="mt-1 text-white">
+                        {activePlan.createdAt ? new Date(activePlan.createdAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
 
                     <div>
-                      <h4 className="text-sm font-medium text-gray-400 mb-1">Примечания</h4>
+                      <label className="text-sm text-gray-400">Notes</label>
                       {editPlanStatus ? (
                         <textarea
                           defaultValue={editedPlan.notes || ''}
                           onChange={(e) => handleChange('notes', e.target.value)}
-                          className="text-white bg-gray-700 p-3 rounded-lg w-full h-24"
+                          className="mt-1 w-full bg-gray-700 text-white p-3 rounded-lg h-24 resize-none"
+                          placeholder="Add notes..."
                         />
                       ) : (
-                        <p className="text-white bg-gray-700 p-3 rounded-lg">
-                          {activePlan.notes || 'Нет примечаний'}
+                        <p className="mt-1 text-white bg-gray-700/50 p-3 rounded-lg min-h-[6rem]">
+                          {activePlan.notes || 'No notes'}
                         </p>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {activePlan.categorys?.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-lg font-semibold text-white">Категории</h3>
-                      {editPlanStatus && (
-                        <button className="text-blue-400 text-sm" onClick={() => setActiveAddCategoryForm((prev)=> !prev)}>
-                          + add Cathegory
-                        </button>
-                      )}
-                    </div>
+                {/* Categories Section */}
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold text-white">Categories</h3>
+                    {editPlanStatus && (
+                      <button 
+                        onClick={() => setActiveAddCategoryForm(!activeAddCategoryForm)}
+                        className="text-blue-400 text-sm hover:text-blue-300"
+                      >
+                        + Add Category
+                      </button>
+                    )}
+                  </div>
+                    
                     {activeAddCategoryForm && editPlanStatus && (
-                      <div className="mb-4 p-4 bg-gray-700 rounded-lg">
-                        <div className="flex gap-4">
+                      <div className="mb-4 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <select 
-                            className="bg-gray-600 text-white px-2 py-1 rounded"
+                            className="bg-gray-700 text-white px-3 py-2 rounded-lg"
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                           >
-                            <option value="housing">Housing</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="food">Food</option>
-                            <option value="transport">Transportation</option>
-                            <option value="health">Health</option>
-                            <option value="clothing">Clothing</option>
-                            <option value="personal_care">Personal Care</option>
-                            <option value="entertainment">Entertainment</option>
-                            <option value="travel">Travel</option>
-                            <option value="hobbies">Hobbies</option>
-                            <option value="communication">Phone/Internet</option>
-                            <option value="subscriptions">Subscriptions</option>
-                            <option value="savings">Savings</option>
-                            <option value="investments">Investments</option>
-                            <option value="insurance">Insurance</option>
-                            <option value="family">Family</option>
-                            <option value="gifts">Gifts</option>
-                            <option value="charity">Charity</option>
-                            <option value="education">Education</option>
-                            <option value="taxes">Taxes</option>
-                            <option value="other">Other</option>
-                            <option value="another">Another</option>
+                            <option value="housing">🏠 Housing</option>
+                            <option value="utilities">⚡ Utilities</option>
+                            <option value="food">🍽️ Food</option>
+                            <option value="transport">🚗 Transportation</option>
+                            <option value="health">🏥 Health</option>
+                            <option value="clothing">👕 Clothing</option>
+                            <option value="personal_care">🧴 Personal Care</option>
+                            <option value="entertainment">🎬 Entertainment</option>
+                            <option value="travel">✈️ Travel</option>
+                            <option value="hobbies">🎨 Hobbies</option>
+                            <option value="communication">📱 Phone/Internet</option>
+                            <option value="subscriptions">📺 Subscriptions</option>
+                            <option value="savings">💰 Savings</option>
+                            <option value="investments">📈 Investments</option>
+                            <option value="insurance">🛡️ Insurance</option>
+                            <option value="family">👨‍👩‍👧‍👦 Family</option>
+                            <option value="gifts">🎁 Gifts</option>
+                            <option value="charity">❤️ Charity</option>
+                            <option value="education">📚 Education</option>
+                            <option value="taxes">🏛️ Taxes</option>
+                            <option value="other">📦 Other</option>
                           </select>
                           <input
                             type="number"
                             value={amount}
                             onChange={(e) => setAmount(Number(e.target.value))}
-                            className="bg-gray-600 text-white px-2 py-1 rounded w-24"
+                            className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
                             placeholder="Amount"
                           />
+                        </div>
+                        <div className="flex gap-2 mt-3">
                           <button 
-                            onClick={() => {
-                              const newCategory = {
-                                category,
-                                amount,
-                                id: Date.now()
-                              };
-                              const newCategories = [...(editedPlan.categorys || []), newCategory];
-                              handleChange('categorys', newCategories);
-                              setCategory('housing');
-                              setAmount(0);
-                              setActiveAddCategoryForm(false);
-                            }}
-                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                            onClick={addCategory}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
                           >
-                            Добавить
+                            Add Category
+                          </button>
+                          <button 
+                            onClick={() => setActiveAddCategoryForm(false)}
+                            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+                          >
+                            Cancel
                           </button>
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-2">
-                      {activePlan.categorys.map((cat, index) => (
-                        <span 
-                          key={index} 
-                          className={`inline-flex items-center px-3 py-1 rounded-full ${
-                            editPlanStatus ? 'bg-gray-600' : 'bg-gray-700'
-                          } text-gray-200 text-sm font-medium`}
+                    
+                    <div className="space-y-2">
+                      {!editPlanStatus ? (
+                        // Режим просмотра
+                        activePlan.categorys?.length > 0 ? (
+                          activePlan.categorys.map((cat: any) => (
+                            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                              <span className="text-white capitalize">{cat.category}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-green-400 font-medium">${cat.amount}</span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <p>No categories added to this plan</p>
+                          </div>
+                        )
+                      ) : (
+                        // Режим редактирования
+                        editedPlan.categorys?.length > 0 ? (
+                          editedPlan.categorys.map((cat: any) => (
+                            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                              <span className="text-white capitalize">{cat.category}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-green-400 font-medium">${cat.amount}</span>
+                                <button 
+                                  onClick={(e) => removeCategory(e, cat.id)}
+                                  className="text-red-400 hover:text-red-300"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <p>No categories added yet. Click "Add Category" to start.</p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                {/* Targets Section */}
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold text-white">Targets</h3>
+                    {editPlanStatus && (
+                      <button 
+                        onClick={() => setActiveAddTargetForm(!activeAddTargetForm)}
+                        className="text-purple-400 text-sm hover:text-purple-300"
+                      >
+                        + Add Target
+                      </button>
+                    )}
+                  </div>
+
+                  {activeAddTargetForm && editPlanStatus && (
+                    <div className="mb-4 p-4 bg-purple-900/20 border border-purple-700/30 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          value={target}
+                          onChange={(e) => setTarget(e.target.value)}
+                          className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
+                          placeholder="🎯 Target name (e.g., Emergency Fund, Vacation)"
+                        />
+                        <input
+                          type="number"
+                          value={targetAmount}
+                          onChange={(e) => setTargetAmount(Number(e.target.value))}
+                          className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
+                          placeholder="Target amount"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button 
+                          onClick={addTargetToEditedPlan}
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
                         >
-                          {editPlanStatus ? (
-                            <>
-                              <select name="" id=""  onChange={(e) => {
-                                  const newCategories = [...editedPlan.categorys];
-                                  newCategories[index].category = e.target.value;
-                                  handleChange('categorys', newCategories);
-                                }} className="bg-gray-500 px-1 rounded w-20"> 
-                                  <option value="housing">Housing</option>
-                                  <option value="utilities">Utilities</option>
-                                  <option value="food">Food</option>
-                                  <option value="transport">Transportation</option>
-                                  <option value="health">Health</option>
-                                  <option value="clothing">Clothing</option>
-                                  <option value="personal_care">Personal Care</option>
-                                  <option value="entertainment">Entertainment</option>
-                                  <option value="travel">Travel</option>
-                                  <option value="hobbies">Hobbies</option>
-                                  <option value="communication">Phone/Internet</option>
-                                  <option value="subscriptions">Subscriptions</option>
-                                  <option value="savings">Savings</option>
-                                  <option value="investments">Investments</option>
-                                  <option value="insurance">Insurance</option>
-                                  <option value="family">Family</option>
-                                  <option value="gifts">Gifts</option>
-                                  <option value="charity">Charity</option>
-                                  <option value="education">Education</option>
-                                  <option value="taxes">Taxes</option>
-                                  <option value="other">Other</option>
-                                  <option value="another">Another</option>
-                                </select>
-                              <input
-                                type="number"
-                                defaultValue={cat.amount}
-                                onChange={(e) => {
-                                  const newCategories = [...editedPlan.categorys];
-                                  newCategories[index].amount = Number(e.target.value);
-                                  handleChange('categorys', newCategories);
-                                }}
-                                className="bg-gray-500 px-1 rounded w-16"
-                              />
-                              $
-                            </>
-                          ) : (
-                            `${cat.category}: ${cat.amount}$`
-                          )}
-                        </span>
-                      ))}
-                      
+                          Add Target
+                        </button>
+                        <button 
+                          onClick={() => setActiveAddTargetForm(false)}
+                          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    {!editPlanStatus ? (
+                      // Режим просмотра
+                      activePlan.targets?.length > 0 ? (
+                        activePlan.targets.map((target: any) => (
+                          <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                            <span className="text-white">{target.target}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-purple-400 font-medium">${target.amount}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p>No targets set for this plan</p>
+                        </div>
+                      )
+                    ) : (
+                      // Режим редактирования
+                      editedPlan.targets?.length > 0 ? (
+                        editedPlan.targets.map((target: any) => (
+                          <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                            <span className="text-white">{target.target}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-purple-400 font-medium">${target.amount}</span>
+                              <button 
+                                onClick={(e) => removeTarget(e, target.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p>No targets added yet. Click "Add Target" to start.</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Plan Form */}
+        {activeForm && (
+          <div className="mb-8 animate-fade-in">
+            <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
+              <h2 className="text-xl font-semibold text-white mb-6">Create New Plan</h2>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Plan Name</label>
+                    <input 
+                      type="text" 
+                      value={planName}
+                      onChange={(e) => setPlanName(e.target.value)}
+                      className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Enter plan name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Total Amount</label>
+                    <input 
+                      type="number" 
+                      value={totalAmount}
+                      onChange={(e) => setTotalAmount(Number(e.target.value))}
+                      className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="type"
+                          value="income"
+                          checked={typeOfPlan === 'income'}
+                          onChange={() => setTypeOfPlan('income')}
+                          className="mr-2 text-blue-500"
+                        />
+                        <span className="text-gray-300">Income</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="type"
+                          value="expense"
+                          checked={typeOfPlan === 'expense'}
+                          onChange={() => setTypeOfPlan('expense')}
+                          className="mr-2 text-blue-500"
+                        />
+                        <span className="text-gray-300">Expense</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Frequency</label>
+                    <select
+                      value={frequency}
+                      onChange={(e) => setFrequency(e.target.value)}
+                      className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                    >
+                      <option value="once">One-time</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
+                </div>
+
+                {frequency === 'once' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
+                      <input
+                        type="date"
+                        onChange={(e) => setDate(prev => [e.target.value, ...prev])}
+                        className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
                     </div>
                     <div>
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-white w-[20%]">your targets</h3>
-                        {editPlanStatus && (
-                          <button className="text-blue-400 text-sm" onClick={() => setActiveAddTargetForm((prev)=> !prev)}>
-                            + add Target
-                          </button>
-                        )}
-                      </div>
-                      {activeAddTargetForm && editPlanStatus && (
-                        <div className="mb-4 p-4 bg-gray-700 rounded-lg">
-                          <div className="flex gap-4">
-                            <input
-                              type="text"
-                              value={target}
-                              onChange={(e) => setTarget(e.target.value)}
-                              className="bg-gray-600 text-white px-2 py-1 rounded w-48"
-                              placeholder="Название цели"
-                            />
-                            <input
-                              type="number"
-                              value={targetAmount}
-                              onChange={(e) => setTargetAmount(Number(e.target.value))}
-                              className="bg-gray-600 text-white px-2 py-1 rounded w-24"
-                              placeholder="Сумма"
-                            />
-                            <button 
-                              onClick={() => {
-                                const newTarget = {
-                                  target,
-                                  amount: targetAmount,
-                                  id: Date.now()
-                                };
-                                const newTargets = [...(editedPlan.targets || []), newTarget];
-                                handleChange('targets', newTargets);
-                                setTarget('');
-                                setTargetAmount(0);
-                                setActiveAddTargetForm(false);
-                              }}
-                              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                            >
-                              Добавить
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      { !editPlanStatus ?
-                        activePlan.targets?.map((target: {target: string, amount: number, id: number}) => (
-                          <div key={target.id} className="flex items-center justify-between px-4 py-2 border-b border-gray-400">
-                            <span className="text-white">{target.target}</span>
-                            <span className='text-white'>{`${target.amount}$`}</span>
-                          </div>
-                        )) 
-                        :
-                        activePlan.targets?.map((target: {target: string, amount: number, id: number}) => (
-                          <div key={target.id} className="flex items-center justify-between px-4 py-2 border-b border-gray-400">
-                            <input 
-                              type="text" 
-                              defaultValue={target.target} 
-                              onChange={(e) => {
-                                const newTargets = [...editedPlan.targets];
-                                const index = newTargets.findIndex(t => t.id === target.id);
-                                if (index !== -1) {
-                                  newTargets[index].target = e.target.value;
-                                  handleChange('targets', newTargets);
-                                }
-                              }}
-                              className="bg-gray-500 px-2 py-1 rounded text-white w-32"
-                            />
-                            <input 
-                              type="number" 
-                              defaultValue={target.amount} 
-                              onChange={(e) => {
-                                const newTargets = [...editedPlan.targets];
-                                const index = newTargets.findIndex(t => t.id === target.id);
-                                if (index !== -1) {
-                                  newTargets[index].amount = Number(e.target.value);
-                                  handleChange('targets', newTargets);
-                                }
-                              }}
-                              className="bg-gray-500 px-2 py-1 rounded text-white w-20"
-                            />
-                          </div>
-                          
-                        )) 
-                        
-                        
-                      }
-                      
+                      <label className="block text-sm font-medium text-gray-300 mb-2">End Date</label>
+                      <input
+                        type="date"
+                        onChange={(e) => setDate(prev => [...prev, e.target.value])}
+                        className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
                     </div>
                   </div>
                 )}
-                
-              </div>
-              <div className="bg-gray-700 p-4 border-t border-gray-600 flex justify-end gap-4">
-              <button className='  text-white rounded-lg transition-colors flex hover:opacity-100 opacity-60' onClick={() => setEditPlanStatus((prev)=> !prev)}>
-                <img src={editSvg.src} alt="" />
-              </button>
-              <button className='text-white rounded-lg transition-colors flex hover:scale-108 transition-transform  bg-red-600 p-2' onClick={() => delPlan(activePlan.id)}>
-                delete
-              </button>
-              <button
-                onClick={() => setActivePlanWindow(false)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-              >
-                close
-              </button>
-            </div>
-            </div>
-          </div>
-        )
-      }
-      
-      <div className="max-w-6xl mx-auto">
-      {
-        planIsSending ? 
-        <div className='w-[100%] flex justify-center'>
-          <p className='text-[green] font-[900] '>Plan is sending</p>
-        </div>
-        : null
-        
-      }
 
-        <div className="flex flex-wrap justify-center gap-4 mb-8 p-4 bg-gray-800 rounded-lg">
-{
-  doublePlansError && (
-    <div className="fixed bottom-6 right-6 z-50 animate-fade-in-up">
-      <div className="w-72 bg-white rounded-lg shadow-xl border-l-4 border-blue-300 overflow-hidden">
-        <div className="flex items-center justify-between bg-gray-300 px-4 py-3">
-          <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-blue-500 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="font-semibold text-blue-700">Ошибка плана</h3>
-          </div>
-          <button
-            onClick={() => setDoublePlansError(false)}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="px-4 py-3 text-sm text-white-700 bg-gray-700">
-          <p>Нельзя создать несколько активных планов с одинаковой периодичностью.</p>
-
-        </div>
-
-
-      </div>
-    </div>
-  )
-}
-          <button className={activePlansShow ? `btn-primary` : `btn-secondary`} onClick={() => setActivePlansShow(!activePlansShow)}>
-            Plans
-          </button>
-          <button
-            className={`btn-primary`}
-            onClick={()=> setActiveForm((prev)=>!prev)}
-          >
-            Add Plan
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('lasts')} 
-            className={`tab-btn ${activeTab === 'lasts' ? 'active' : ''}`}
-          >
-            Lasts
-          </button>
-          <button 
-            onClick={() => setActiveTab('global')} 
-            className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}
-          >
-            Global
-          </button>
-          <button 
-            onClick={() => setActiveTab('year')} 
-            className={`tab-btn ${activeTab === 'year' ? 'active' : ''}`}
-          >
-            Year
-          </button>
-          <button 
-            onClick={() => setActiveTab('month')} 
-            className={`tab-btn ${activeTab === 'month' ? 'active' : ''}`}
-          >
-            Month
-          </button>
-          <button 
-            onClick={() => setActiveTab('custom')} 
-            className={`tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
-          >
-            Custom
-          </button>
-
-        </div>
-          {activePlansShow && (
-
-          <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg max-w-4xl mx-auto transition-all duration-300">
-            <div>
-              {
-                  plans  ? 
-                  plans.map((item) => (
-
-                    (
-                      
-                  <div 
-                    key={item.id} 
-                    className="flex items-center justify-between p-4 mb-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow duration-200"
+                <div className="flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={addCateghoryButton} 
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                   >
-                    <div className="flex items-center gap-6">
+                    + Add Category
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={addTargetButton} 
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    + Add Target
+                  </button>
+                </div>
 
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        <span className="text-lg font-medium text-gray-900 dark:text-white">
-                          {item.name}
-                          
-                        </span>
-                        <span className={`text-lg font-semibold ${
-                          item.type === 'income' 
-                            ? 'text-green-600 dark:text-green-400' 
-                            : 'text-red-600 dark:text-red-400'
-                        }`}>
-                          {item.type === 'income' ? '+' : '-'}{item.totalAmount}$
-                        </span>
-                        <div className='text-[#5048f0]'>
-
-                        {item.frequency}
-                        </div>
-                        
+                {activecateghoryForm && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
+                    <div>
+                      <h3 className="text-white font-medium mb-3">Categories</h3>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {categorys.map((category) => (
+                          <div key={category.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">{category.category}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-400">${category.amount}</span>
+                              <button 
+                                type="button"
+                                onClick={(e) => removeCategory(e, category.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className='flex gap-4'>
-                    { activePlansStatus[item.frequency].status && !(activePlansStatus[item.frequency].id === item.id)  ?
-                       <label className="inline-flex items-center">
-                        <input
-                          type="checkbox"
-                          defaultChecked={false}
-                          onChange={(e) => addDoublePlansError(e)}
-                          className="form-checkbox h-5 w-5 rounded-[20px] focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700 opacity-[0.5]"
-                        />
-                      </label>
-                      :
-                      <label className="inline-flex items-center">
-                        <input
-                          type="checkbox"
-                          defaultChecked={getActivePlans().includes(item.id)}
-                          onChange={(e) => handleToggleActive(e, item.frequency, item.id)}
-                          className="form-checkbox h-5 w-5 rounded-[20px] focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-                        />
-                      </label>
-                    }
-
-                    <button
-                      onClick={() => {
-                        setActivePlanWindow((prev)=> !prev)
-                        setActivePlan(item)
-                      }}
-                      className="flex items-center justify-center p-2 text-sm font-medium text-white  rounded-lg opacity-50 hover:opacity-80 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
-                      aria-label="View details"
-                    >
-                      <img src={InfoSvg.src} alt="" className='w-5 h-5 '/>  
-                    </button>
+                    <div>
+                      <h3 className="text-white font-medium mb-3">Add Category</h3>
+                      <select 
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
+                      >
+                        <option value="housing">Housing</option>
+                        <option value="utilities">Utilities</option>
+                        <option value="food">Food</option>
+                        <option value="transport">Transportation</option>
+                        <option value="health">Health</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="personal_care">Personal Care</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="travel">Travel</option>
+                        <option value="hobbies">Hobbies</option>
+                        <option value="communication">Phone/Internet</option>
+                        <option value="subscriptions">Subscriptions</option>
+                        <option value="savings">Savings</option>
+                        <option value="investments">Investments</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="family">Family</option>
+                        <option value="gifts">Gifts</option>
+                        <option value="charity">Charity</option>
+                        <option value="education">Education</option>
+                        <option value="taxes">Taxes</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(Number(e.target.value))}
+                        className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
+                        placeholder="Amount"
+                      />
+                      <button 
+                        type="button"
+                        onClick={addCategory}
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      >
+                        Add
+                      </button>
                     </div>
                   </div>
-                    )
+                )}
 
-                ))
-                : null
-
-              }
-            </div>
-          </div>
-          )}
-
-
-{activeForm && (
-  <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg max-w-2xl mx-auto">
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="planName" className='opacity-50'>Name Of Plan</label>
-        <input 
-          type="text" 
-          id="planName"
-          name="planName"
-          className="form-input w-full"
-          onChange={(e) => setPlanName(e.target.value)}
-        />
-      </div>
-      <div className='flex gap-20'>
-      <div className="form-group">
-        <label className="form-label">Transaction Type</label>
-        <div className="flex space-x-4">
-          <label className="inline-flex items-center">
-            <input
-              type="radio"
-              name="transactionType"
-              value="income"
-              className="form-radio"
-              checked={typeOfPlan === 'income'}
-              onChange={() => setTypeOfPlan('income')}
-            />
-            <span className="ml-2">Income</span>
-          </label>
-          <label className="inline-flex items-center">
-            <input
-              type="radio"
-              name="transactionType"
-              value="expense"
-              className="form-radio"
-              checked={typeOfPlan === 'expense'}
-              onChange={() => setTypeOfPlan('expense')}
-            />
-            <span className="ml-2">Expense</span>
-          </label>
-        </div>
-      </div>
-        <div>
-        <label htmlFor="planName" className=''>Total Amount</label>
-        <input 
-          type="number" 
-          id="planName"
-          name="planName"
-          onChange={(e) => setTotalAmount(e.target.value)}
-          className="form-input w-full"
-        />
-        </div>
-        <div className="form-group w-[200px]">
-        <label className="form-label">Frequency</label>
-        <select
-          className="form-input w-full"
-          name="frequency"
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value)}
-        >
-          <option value="once">One-time</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
-        </select>
-      </div>
-
-      
-      </div>
-      {frequency == 'once' && ( 
-        <div>
-          <div className="form-group">
-        <label className="form-label">Date start plan</label>
-        <input
-          type="date"
-          name="date"
-          onChange={(e) => setDate(prev=>[e.target.value,...prev])}
-          className="form-input"
-        />
-      </div>
-        <div className="form-group">
-        <label className="form-label">Date end plan</label>
-        <input
-          type="date"
-          name="date"
-          onChange={(e) => setDate(prev=>[...prev,e.target.value])}
-          className="form-input"
-        />
-      </div>
-      </div>
-      )}
-      <div>
-        <label htmlFor="">add category plan </label>
-        <button 
-        onClick={addCateghoryButton} 
-        className="btn-secondary"
-      >
-        + Add Category
-      </button>
-      <button 
-        onClick={addTargetButton} 
-        className="btn-secondary ml-2"
-      >
-        + Add Target
-      </button>
-      {activecateghoryForm && (
-        
-        <div className='flex justify-between gap-20'>
-          <div className='w-1/2'>
-          <label htmlFor="">cathegorys</label>
-          <div className='flex flex-col border-1 border-gray-400 h-[90%] rounded-lg bg-[#444459]'>
-          {categorys.map((category) => (
-            <div key={category.id} className="flex items-center justify-between px-4 py-2 border-b border-gray-400">
-              <span className="text-white">{category.category}</span>
-              <span className='text-white'>{`${category.amount}$`}</span>
-              <button className="text-red-500" onClick={(e) => removeCategory(e,category.id)}>X</button>
-            </div>
-          ))}
-          </div>
-          </div>
-          <div className='w-1/2'>
-        <div className="form-group">
-        <label className="form-label">Category</label>
-        <select 
-          className="form-input w-full"
-          name="category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="housing">Housing</option>
-          <option value="utilities">Utilities</option>
-          <option value="food">Food</option>
-          <option value="transport">Transportation</option>
-          <option value="health">Health</option>
-          <option value="clothing">Clothing</option>
-          <option value="personal_care">Personal Care</option>
-          <option value="entertainment">Entertainment</option>
-          <option value="travel">Travel</option>
-          <option value="hobbies">Hobbies</option>
-          <option value="communication">Phone/Internet</option>
-          <option value="subscriptions">Subscriptions</option>
-          <option value="savings">Savings</option>
-          <option value="investments">Investments</option>
-          <option value="insurance">Insurance</option>
-          <option value="family">Family</option>
-          <option value="gifts">Gifts</option>
-          <option value="charity">Charity</option>
-          <option value="education">Education</option>
-          <option value="taxes">Taxes</option>
-          <option value="other">Other</option>
-          <option value="another">Another</option>
-
-        </select>
-      </div>
-      
-      <div className="form-group">
-        <label className="form-label">Amount</label>
-        <input
-          type="number"
-          name="amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="form-input"
-          placeholder="Enter amount"
-        />
-      </div>
-      <div className="form-group mt-[20px] !mb-[0px] justify-end flex w-[100%]">
-        <button className='btn-primary hover:!bg-[blue]' onClick={addCategory}>
-        add
-        </button>
-      </div>
-      
-      </div>
-        </div>
-      )
-
-      }
-      {
-        activeTargetForm && (
-          <div className='flex justify-between gap-20'>
-            <div className='w-1/2'>
-              <label htmlFor="">Цели</label>
-              <div className='flex flex-col border-1 border-gray-400 h-[90%] rounded-lg bg-[#444459]'>
-                {targets.map((target) => (
-                  <div key={target.id} className="flex items-center justify-between px-4 py-2 border-b border-gray-400">
-                    <span className="text-white">{target.target}</span>
-                    <span className='text-white'>{`${target.amount}$`}</span>
-                    <button className="text-red-500" onClick={(e) => removeTarget(e, target.id)}>X</button>
+                {activeTargetForm && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
+                    <div>
+                      <h3 className="text-white font-medium mb-3">Targets</h3>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {targets.map((target) => (
+                          <div key={target.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">{target.target}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-400">${target.amount}</span>
+                              <button 
+                                type="button"
+                                onClick={(e) => removeTarget(e, target.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-medium mb-3">Add Target</h3>
+                      <input
+                        type="text"
+                        value={target}
+                        onChange={(e) => setTarget(e.target.value)}
+                        className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
+                        placeholder="Target name"
+                      />
+                      <input
+                        type="number"
+                        value={targetAmount}
+                        onChange={(e) => setTargetAmount(Number(e.target.value))}
+                        className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
+                        placeholder="Target amount"
+                      />
+                      <button 
+                        type="button"
+                        onClick={addTarget}
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className='w-1/2'>
-              <div className="form-group">
-                <label className="form-label">Цель</label>
-                <input
-                  type="text"
-                  name="target"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="form-input"
-                  placeholder="Введите цель"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Сумма</label>
-                <input
-                  type="number"
-                  name="targetAmount"
-                  defaultValue={targetAmount}
-                  onChange={(e) => setTargetAmount(Number(e.target.value))}
-                  className="form-input"
-                  placeholder="Введите сумму"
-                />
-              </div>
-              <div className="form-group mt-[20px] !mb-[0px] justify-end flex w-[100%]">
-                <button className='btn-primary hover:!bg-[blue]' onClick={addTarget}>
-                  Добавить
-                </button>
-              </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                    rows={3}
+                    placeholder="Additional information..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveForm(false)}
+                    className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    onClick={submitPlan}
+                    disabled={loadingSending}
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingSending ? 'Creating...' : 'Create Plan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        )
-      }
-      </div>
-     
+        )}
 
-
-      <div className="form-group">
-        <label className="form-label">Notes</label>
-        <textarea
-          name="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="form-input"
-          rows={3}
-          placeholder="Additional information"
-        />
-      </div>
-
-      <div className="flex justify-end space-x-2 pt-4">
-        <button 
-          type="button" 
-          className="btn-cancel"
-          onClick={() => setActiveForm(false)}
-        >
-          Cancel
-        </button>
-        {
-          loadingSending ?(
-
-          
-          <button className='btn-primary' type='button'>loading...</button> 
-          )
-          :(
-
-          
-          <button 
-          type="submit" 
-          className="btn-primary"
-          onClick={submitPlan}
-        >
-          Save Plan
-        </button>
-          )
-        }
-
-      </div>
-    </form>
-  </div>
-)}
-
-        <div className="bg-gray-800 rounded-lg p-6">
+        {/* Analytics Content */}
+        <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
           {activeTab === 'global' && <GlobalsAnalytics gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
           {activeTab === 'month' && <MonthAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
           {activeTab === 'year' && <YearAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
@@ -1200,74 +1163,34 @@ export default function Analytics() {
       </div>
 
       <style jsx>{`
-          .bg-opacity-50 {
-            background-color: rgba(0, 0, 0, 0.5);
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
           }
-        .btn-primary {
-          background: #4f46e5;
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          transition: all 0.2s;
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
-        .btn-primary:hover {
-          background: #4338ca;
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        .btn-secondary {
-          background: #374151;
-          color: white;
-          padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
+
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
         }
-        .btn-secondary:hover {
-          background: #4b5563;
-        }
-        .btn-cancel {
-          background: #6b7280;
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-        }
-        .btn-cancel:hover {
-          background: #4b5563;
-        }
-        .tab-btn {
-          color: #d1d5db;
-          font-weight: 600;
-          padding: 0.5rem 1rem;
-          transition: all 0.2s;
-        }
-        .tab-btn:hover {
-          color: white;
-          opacity: 0.9;
-        }
-        .tab-btn.active {
-          color: white;
-          border-bottom: 2px solid #4f46e5;
-        }
-        .form-group {
-          margin-bottom: 1rem;
-        }
-        .form-label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: #e5e7eb;
-          font-size: 0.875rem;
-        }
-        .form-input {
-          width: 100%;
-          padding: 0.5rem 0.75rem;
-          background: #374151;
-          border: 1px solid #4b5563;
-          border-radius: 0.375rem;
-          color: white;
-        }
-        .form-input:focus {
-          outline: none;
-          border-color: #4f46e5;
-          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
         }
       `}</style>
     </div>
