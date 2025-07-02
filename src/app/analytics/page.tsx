@@ -312,7 +312,6 @@ export default function Analytics() {
 
   }, [doublePlansError])
   if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
-  if (isLoading) return <div className="text-center p-4">Loading...</div>;
   
   const gainTrans = transArray.filter((item) => item.type === 'gain');
   const lossTrans = transArray.filter((item) => item.type === 'loss');
@@ -341,7 +340,7 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Modern Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
+      <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between">

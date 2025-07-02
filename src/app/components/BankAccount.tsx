@@ -110,6 +110,7 @@ const BankAccount = () => {
       }
       getTrans()
     },[activeBank])
+    console.log(login)
     const deleteAccount = async (accountName: string, e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
@@ -151,7 +152,7 @@ const BankAccount = () => {
         e.stopPropagation(); 
     };
     return (
-        <div className={`absolute right-0 flex items-center h-full pr-3 z-50 w-max-[180px] h-[60%]   flex-col justify-start`}>
+        <div className={`absolute right-0 flex items-center h-full pr-3 z-50 w-max-[180px] h-[60%]   z-100 flex-col justify-start`}>
             <div 
                 className={`bg-gradient-to-r from-gray-800/80 to-gray-700/70 text-white px-3 w-[200px]   ${addBankAccountForm ? 'w-[250px]' : ''} m-[5px] py-1.5 rounded-lg shadow flex items-start justify-start gap-2 flex-col min-w-[180px] border border-gray-600 backdrop-blur-sm transition-all duration-200 hover:scale-100 cursor-pointer`} 
                 onClick={toggleAccountsVisibility}

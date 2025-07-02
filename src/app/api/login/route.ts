@@ -5,16 +5,16 @@ import { generateTokens } from '../auth/auth';
 
 interface User {
   _id: string;
-  login: string;
+  user: string;
   email: string;
-  password_hash: string;
+  pass_hash: string;
   active: number;
 }
 
 export async function POST(request: Request) {
   try {
     const { login, password } = await request.json();
-
+    console.log(1)
     if (!login || !password) {
       return NextResponse.json(
         { error: "Login and password are required" },
@@ -23,27 +23,27 @@ export async function POST(request: Request) {
     }
 
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
-    
+    console.log(2)
     try {
       await client.connect();
       const db = client.db('users');
-      
+      console.log(3)
       // Ищем пользователя в коллекции auth_users
       const user = await db.collection('users').findOne({
-        login: login
+        user: login
       }) as User | null;
       console.log(login)
       console.log(password)
-      console.log(user)
       if (!user) {
         return NextResponse.json(
           { error: "Incorrect login or password" },
           { status: 400 }
         );
       }
-
-      const isPasswordValid = await bcryptjs.compare(password, user.password_hash);
-      
+      console.log(4)
+      const isPasswordValid = await bcryptjs.compare(password, user.pass_hash);
+      console.log(5)
+      console.log(isPasswordValid)
       if (!isPasswordValid) {
         return NextResponse.json(
           { error: "Incorrect login or password" },
@@ -51,11 +51,11 @@ export async function POST(request: Request) {
         );
       }
 
-      const { password_hash, ...userWithoutPassword } = user;
+      const { pass_hash, ...userWithoutPassword } = user;
 
       const tokens = generateTokens({
         id: user._id.toString(),
-        login: user.login,
+        login: user.user,
         email: user.email
       });
 
@@ -64,14 +64,14 @@ export async function POST(request: Request) {
           success: true, 
           user: {
             id: user._id.toString(),
-            login: user.login,
+            user: user.user,
             email: user.email,
             active: user.active
           }
         },
         { status: 200 }
       );
-      
+      console.log(6)
       response.cookies.set('info_token', login, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
@@ -95,13 +95,13 @@ export async function POST(request: Request) {
         path: '/',
         sameSite: 'lax',
       });
-      
+      console.log(7)
       return response;
     } finally {
       await client.close();
     }
   } catch (error) {
-    console.error("Login error:", error);
+
     return NextResponse.json(
       { error: "An error occurred during login", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

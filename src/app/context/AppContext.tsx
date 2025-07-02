@@ -84,131 +84,126 @@ export function AppProvider({ children }: AppProviderProps) {
   const [moreGains, setMoreGains] = useState(0);
   const [moreLosses, setMoreLosses] = useState(0);
   const auth = useAuth();
+  
+  // Загружаем данные когда пользователь аутентифицирован
   useEffect(() => {
-    if(auth.user){
+    if(auth.user && auth.isAuthenticated){
       setLogin(auth.user.login)
     }
-  }, [auth.user])
-  // useEffect(() => {
-  //  const bankNameCookie = Cookies.get('activeBankName')
-  //  if(bankNameCookie){
+  }, [auth.user, auth.isAuthenticated])
 
-  //   const bank = bankNames.find((bank: any) => bank.name === bankNameCookie)
-  //   if(bank){
-  //     setActiveBank(bank)
-  //   }
-  //  }else{
-  //   setActiveBank(bankNames[0])
-  //  }
-  // }, [])
+  // Основная загрузка данных при аутентификации
   useEffect(() => {
-    async function gatBanks() {
-      if(login !== '' && bankNames.length === 0){
-      try {
-        const response = await fetch(`/api/getBankNamesRedis?login=${login}`, {
-          method: 'GET'
-        })
-        if (response.ok) {
-          const namesData = await response.json()
-          const trueData = namesData.value.bankAccounts || namesData.value
-          setBankNames(trueData)
-          
-          if(!trueData || trueData.length === 0){
-            setIsLoading(false)
-            return
-          }
-          
-          const activeBankName = Cookies.get('ActiveBankName')
-          if(activeBankName){
-            const activeBank = trueData.find((bank: any) => bank.name === activeBankName)
-            if(activeBank){
-              try{
-                const response = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`, {
-                  method: 'GET'
-                })
-                if(response.ok){
-                  const transData = await response.json()
-                  setTrans(transData.value)
-                  setBalance(activeBank.balance)  
-                  setCurrency(activeBank.currency)
-                  setActiveBank({name: activeBank.name, id: activeBank.id})
+    async function loadUserData() {
+      if(auth.isAuthenticated && auth.user && !auth.isLoading) {
+        const userLogin = auth.user.login;
+        setLogin(userLogin);
+        
+        // Загружаем банковские данные
+        if(bankNames.length === 0) {
+          try {
+            const response = await fetch(`/api/getBankNamesRedis?login=${userLogin}`, {
+              method: 'GET'
+            })
+            if (response.ok) {
+              const namesData = await response.json()
+              const trueData = namesData.value.bankAccounts || namesData.value
+              setBankNames(trueData)
+              
+              if(!trueData || trueData.length === 0){
+                setIsLoading(false)
+                return
+              }
+              
+              const activeBankName = Cookies.get('ActiveBankName')
+              if(activeBankName){
+                const activeBank = trueData.find((bank: any) => bank.name === activeBankName)
+                if(activeBank){
+                  try{
+                    const response = await fetch(`/api/getTransRedis?login=${userLogin}&bankName=${activeBank.name}`, {
+                      method: 'GET'
+                    })
+                    if(response.ok){
+                      const transData = await response.json()
+                      setTrans(transData.value)
+                      setBalance(activeBank.balance)  
+                      setCurrency(activeBank.currency)
+                      setActiveBank({name: activeBank.name, id: activeBank.id})
+                      setIsLoading(false)
+                    }
+                  }catch(e){
+                    console.log(e)
+                    setIsLoading(false)
+                  }
+                }
+              }else{
+                try{
+                  const response = await fetch(`/api/getTransRedis?login=${userLogin}&bankName=${trueData[0].name}`, {
+                    method: 'GET'
+                  })
+                  if(response.ok){
+                    const transData = await response.json()
+                    const someActiveBank = trueData[0]
+                    setTrans(transData.value)
+                    setBalance(someActiveBank.balance)
+                    setCurrency(someActiveBank.currency)
+                    setActiveBank({name: someActiveBank.name, id: someActiveBank.id})
+                    setIsLoading(false)
+                  }
+                }catch(e){
+                  console.log(e)
                   setIsLoading(false)
                 }
-              }catch(e){
-                console.log(e)
-                setIsLoading(false)
               }
-            }
-          }else{
-            try{
-              const response = await fetch(`/api/getTransRedis?login=${login}&bankName=${trueData[0].name}`, {
-                method: 'GET'
-              })
-              if(response.ok){
-                const transData = await response.json()
-                const someActiveBank = trueData[0]
-                setTrans(transData.value)
-                setBalance(someActiveBank.balance)
-                setCurrency(someActiveBank.currency)
-                setActiveBank({name: someActiveBank.name, id: someActiveBank.id})
-                setIsLoading(false)
-              }
-            }catch(e){
-              console.log(e)
+
+            } else {
               setIsLoading(false)
+              setError('Не удалось загрузить банковские счета')
             }
+          } catch(e) {
+            console.log(e)
+            setIsLoading(false)
+            setError('Ошибка при загрузке данных банковских счетов')
           }
-
-        } else {
-          setIsLoading(false)
-          setError('Не удалось загрузить банковские счета')
         }
-      } catch(e) {
-        console.log(e)
-        setIsLoading(false)
-        setError('Ошибка при загрузке данных банковских счетов')
-      }
-    }
-    }
-    gatBanks()
-  }, [login, bankNames.length])
-  useEffect(() => {
-    async function getPlans(){
-    try{
-      const res = await fetch(`api/getPlans?login=${login}`, {
-        method: 'GET'
-      })
-      if(res.ok){
-        const data = await res.json();
-        const activePlans = getActivePlans();
         
-        const activePlansStatus = data.plans.reduce((acc: ActivePlansStatus, plan: Plan) => {
-          if (activePlans.includes(plan.id)) {
-            acc[plan.frequency as keyof ActivePlansStatus] = {
-              status: true,
-              id: plan.id
-            };
-          }
-          return acc;
-        }, {
-          daily: { status: false, id: 0 },
-          weekly: { status: false, id: 0 },
-          monthly: { status: false, id: 0 },
-          yearly: { status: false, id: 0 }
-        });
+        // Загружаем планы
+        try{
+          const res = await fetch(`api/getPlans?login=${userLogin}`, {
+            method: 'GET'
+          })
+          if(res.ok){
+            const data = await res.json();
+            const activePlans = getActivePlans();
+            
+            const activePlansStatus = data.plans.reduce((acc: any, plan: any) => {
+              if (activePlans.includes(plan.id)) {
+                acc[plan.frequency] = {
+                  status: true,
+                  id: plan.id
+                };
+              }
+              return acc;
+            }, {
+              daily: { status: false, id: 0 },
+              weekly: { status: false, id: 0 },
+              monthly: { status: false, id: 0 },
+              yearly: { status: false, id: 0 }
+            });
 
-        setActivePlansStatus(activePlansStatus);
-        setPlans(data.plans);
-        setIsLoading(false)
+            setActivePlansStatus(activePlansStatus);
+            setPlans(data.plans);
+          }
+        }catch(e){
+          console.log(e)
+        }
       }
-    }catch(e){
-      console.log(e)
     }
-    }
-    if(login){
-      getPlans()
-    }
-  }, [login])
+    
+    loadUserData();
+  }, [auth.isAuthenticated, auth.user, auth.isLoading, bankNames.length])
+
+
   const getActivePlans = () => {
     const activePlans = localStorage.getItem('activePlans');
     return activePlans ? JSON.parse(activePlans) : [];

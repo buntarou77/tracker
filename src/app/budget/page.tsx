@@ -60,8 +60,10 @@ export default function BudgetPage() {
     activeBank,
     activePlan,
     setActivePlan,
+    currency,
     activePlansStatus,
     setPlans,
+    balance,
     setTrans,
     moreGains,
     moreLosses,
@@ -107,7 +109,6 @@ export default function BudgetPage() {
     
     const monthTransactions = (trans as any)[monthKey] || [];
 
-    // Расчет трат по категориям активного плана
     const categorySpending: Record<string, number> = {};
     
     monthTransactions.forEach((transaction: any) => {
@@ -115,7 +116,7 @@ export default function BudgetPage() {
         categorySpending[transaction.category] = (categorySpending[transaction.category] || 0) + transaction.amount;
       }
     });
-    console.log(categorySpending)
+
     const progress: Record<string, number> = {};
     if (activePlan.categorys) {
       activePlan.categorys.forEach((cat: any) => {
@@ -124,7 +125,7 @@ export default function BudgetPage() {
         progress[cat.category] = percentage;
       });
     }
-
+    console.log(progress)
     setCategoryProgress(progress);
   }, [activePlan, trans]);
 
@@ -136,24 +137,13 @@ export default function BudgetPage() {
     const currentMonth = new Date().getMonth() + 1;
     const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
     
-    // Получаем все транзакции текущего года
-    const yearTransactions: any[] = [];
     const monthTransactions = (trans as any)[monthKey] || [];
-    
-    if (trans && typeof trans === 'object') {
-      Object.entries(trans).forEach(([monthKey, transactions]) => {
-        if (monthKey.startsWith(currentYear.toString()) && Array.isArray(transactions)) {
-          yearTransactions.push(...transactions);
-        }
-      });
-    }
 
-    // Расчет общих сбережений
-    const totalSaved = yearTransactions
-      .filter((t: any) => t.category === 'savings' && t.type === 'gain')
+    const monthlySaved = monthTransactions
+      .filter((t: any) => t.type === 'gain')
       .reduce((sum: number, t: any) => sum + t.amount, 0);
 
-    // Расчет месячного баланса (доходы - расходы за текущий месяц)
+
     const monthlyIncome = monthTransactions
       .filter((t: any) => t.type === 'gain')
       .reduce((sum: number, t: any) => sum + t.amount, 0);
@@ -164,22 +154,22 @@ export default function BudgetPage() {
     
     const monthlyBalance = monthlyIncome - monthlyExpenses;
 
-    // Расчет прогресса и возможности покупки targets
+
     const progress: Record<number, number> = {};
     const canAffordTargets: Record<number, boolean> = {};
 
     if (activePlan.targets) {
       activePlan.targets.forEach((target: Target) => {
         if (!target.achieved) {
-          progress[target.id] = (totalSaved / target.amount) * 100;
-          canAffordTargets[target.id] = totalSaved >= target.amount;
+          progress[target.id] = (balance / target.amount) * 100;
+          canAffordTargets[target.id] = balance >= target.amount;
         }
       });
     }
-
+console.log(progress)
     setTargetsProgress(progress);
     setBudgetStatus({
-      totalSaved,
+      totalSaved: monthlySaved, 
       monthlyBalance,
       canAffordTargets
     });
@@ -204,7 +194,7 @@ export default function BudgetPage() {
     // Рекомендации по целям накопления
     if (activePlan?.targets) {
       const affordableTargets = activePlan.targets.filter((target: Target) => 
-        !target.achieved && budgetStatus.canAffordTargets[target.id]
+        target && budgetStatus.canAffordTargets[target.id]
       ).length;
       
       if (affordableTargets > 0) {
@@ -222,7 +212,7 @@ export default function BudgetPage() {
     }
 
     // Рекомендации по месячному балансу
-    if (budgetStatus.monthlyBalance < 0) {
+    if (balance < 0) {
       recommendations.push(
         `📉 Monthly expenses exceed income by $${Math.abs(budgetStatus.monthlyBalance)}. Review your spending.`
       );
@@ -242,45 +232,11 @@ export default function BudgetPage() {
     setAiRecommendations(recommendations);
   }, [categoryProgress, targetsProgress, budgetStatus, activePlan]);
 
-  const markTargetAsAchieved = async (planId: number, targetId: number) => {
-    try {
-      const response = await fetch('/api/updateTarget', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          login,
-          planId,
-          targetId,
-          achieved: true,
-          achievedDate: new Date()
-        })
-      });
-
-      if (response.ok) {
-        const updatedPlans = plans.map((plan: Plan) => 
-          plan.id === planId
-            ? {
-                ...plan,
-                targets: plan.targets?.map((target: Target) =>
-                  target.id === targetId
-                    ? { ...target, achieved: true, achievedDate: new Date() }
-                    : target
-                )
-              }
-            : plan
-        );
-        setPlans(updatedPlans);
-      }
-    } catch (error) {
-      console.error('Error updating target:', error);
-    }
-  };
 
   const claimTarget = async (planId: number, targetId: number, targetAmount: number) => {
     setClaimingTarget(targetId);
     
     try {
-      // Сначала списываем средства со сбережений (добавляем транзакцию расхода)
       const expenseResponse = await fetch('/api/addTransRedis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -299,13 +255,11 @@ export default function BudgetPage() {
         throw new Error('Failed to record expense');
       }
 
-      // Создаем обновленный план без удаляемого target
       const updatedPlan = {
         ...activePlan,
         targets: activePlan.targets?.filter((target: Target) => target.id !== targetId)
       };
 
-      // Обновляем план через rewritePlan
       const updateResponse = await fetch(`/api/rewritePlan?login=${login}&id=${planId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -313,7 +267,6 @@ export default function BudgetPage() {
       });
 
       if (updateResponse.ok) {
-        // Обновляем планы локально - удаляем target
         const updatedPlans = plans.map((plan: Plan) => 
           plan.id === planId
             ? {
@@ -324,12 +277,10 @@ export default function BudgetPage() {
         );
         setPlans(updatedPlans);
         
-        // Обновляем активный план если он тот же
         if (activePlan.id === planId) {
           setActivePlan(updatedPlan);
         }
 
-        // Обновляем транзакции
         const newTrans = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`);
         if (newTrans.ok) {
           const transData = await newTrans.json();
@@ -346,27 +297,7 @@ export default function BudgetPage() {
     }
   };
 
-  const categoryChartData = {
-    labels: Object.keys(categoryProgress),
-    datasets: [{
-      label: 'Budget Usage (%)',
-      data: Object.values(categoryProgress),
-      backgroundColor: Object.values(categoryProgress).map(progress => 
-        progress > 100 ? 'rgba(239, 68, 68, 0.8)' : 
-        progress > 80 ? 'rgba(251, 191, 36, 0.8)' : 
-        'rgba(34, 197, 94, 0.8)'
-      ),
-      borderWidth: 1
-    }]
-  };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-8">
@@ -382,7 +313,7 @@ export default function BudgetPage() {
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
               <h3 className="text-gray-400 text-sm mb-1">Budget Status</h3>
-              <p className="text-lg font-bold text-green-400">${budgetStatus.totalSaved} saved</p>
+              <p className="text-lg font-bold text-green-400">{balance}<span className="text-gray-300">{currency}</span> </p>
               <p className={`text-sm ${budgetStatus.monthlyBalance >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                 ${budgetStatus.monthlyBalance} this month
               </p>
@@ -489,7 +420,7 @@ export default function BudgetPage() {
                       )}
                     </div>
                   </div>
-                  {!target.achieved && (
+                  {target && (
                     <div className="mb-3">
                       <div className="w-full bg-gray-600 rounded-full h-3">
                         <div 
@@ -499,13 +430,13 @@ export default function BudgetPage() {
                       </div>
                     </div>
                   )}
-                                     {!target.achieved && (
+                    {target && (
                      <div className="flex justify-between items-center">
                        <div className="text-sm text-gray-400">
                          {budgetStatus.canAffordTargets[target.id] ? (
                            <span className="text-green-400">✅ Can afford this goal!</span>
                          ) : (
-                           <span>💰 Need ${(target.amount - budgetStatus.totalSaved).toFixed(0)} more</span>
+                           <span>💰 Need {(target.amount - balance).toFixed(0)}{currency} more</span>
                          )}
                        </div>
                        <div className="flex gap-2">
@@ -518,17 +449,6 @@ export default function BudgetPage() {
                              {claimingTarget === target.id ? 'Claiming...' : '🎯 Claim Goal'}
                            </button>
                          )}
-                         <button
-                           onClick={() => markTargetAsAchieved(activePlan.id, target.id)}
-                           className={`px-4 py-2 rounded-lg transition-colors ${
-                             targetsProgress[target.id] >= 100 
-                               ? 'bg-green-600 hover:bg-green-700 text-white' 
-                               : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                           }`}
-                           disabled={targetsProgress[target.id] < 100}
-                         >
-                           {targetsProgress[target.id] >= 100 ? 'Mark as Completed' : 'Not Ready'}
-                         </button>
                        </div>
                      </div>
                    )}

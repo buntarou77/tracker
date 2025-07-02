@@ -99,9 +99,10 @@ export default function RegisterForm() {
       if (result.success) {
         setLogin('' as string)
         deleteCookiesStartingWith('bank_account')
-        Cookies.set('info_token', result.user.login)
-        Cookies.set(`bank_account_${result.user.login}`, 0)
-        setLogin(data.login as string)
+        console.log(result)
+        Cookies.set('info_token', result.user.user)
+        Cookies.set(`bank_account_${result.user.user}`, 0)
+        setLogin(result.user.user as string)
         setSucces("вход прошел успешно");
       } else {
         setError('Ошибка при входе');
@@ -113,6 +114,7 @@ export default function RegisterForm() {
       setIsLoading(false);
     }
   };
+  console.log(login)
   const activeReg = ()=>{
     setReg(true)
     setLog(false)
