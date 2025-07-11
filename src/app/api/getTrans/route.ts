@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const login = searchParams.get('login');
     const bankName = searchParams.get('bankName');
-    console.log(login, bankName)
+
     if (!login || !bankName) {
         return NextResponse.json(
             { error: 'Параметры login и bankName обязательны' },

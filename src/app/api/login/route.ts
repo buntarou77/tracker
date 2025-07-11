@@ -14,7 +14,7 @@ interface User {
 export async function POST(request: Request) {
   try {
     const { login, password } = await request.json();
-    console.log(1)
+
     if (!login || !password) {
       return NextResponse.json(
         { error: "Login and password are required" },
@@ -23,27 +23,21 @@ export async function POST(request: Request) {
     }
 
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
-    console.log(2)
     try {
       await client.connect();
       const db = client.db('users');
-      console.log(3)
       // Ищем пользователя в коллекции auth_users
       const user = await db.collection('users').findOne({
         user: login
       }) as User | null;
-      console.log(login)
-      console.log(password)
+
       if (!user) {
         return NextResponse.json(
           { error: "Incorrect login or password" },
           { status: 400 }
         );
       }
-      console.log(4)
       const isPasswordValid = await bcryptjs.compare(password, user.pass_hash);
-      console.log(5)
-      console.log(isPasswordValid)
       if (!isPasswordValid) {
         return NextResponse.json(
           { error: "Incorrect login or password" },
@@ -71,7 +65,7 @@ export async function POST(request: Request) {
         },
         { status: 200 }
       );
-      console.log(6)
+
       response.cookies.set('info_token', login, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
@@ -95,7 +89,7 @@ export async function POST(request: Request) {
         path: '/',
         sameSite: 'lax',
       });
-      console.log(7)
+
       return response;
     } finally {
       await client.close();

@@ -37,32 +37,30 @@ const CURRENCIES = [
   { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', flag: '🇧🇷' }
 ];
 
-
 const exchangeRateCache: Record<string, { rates: Record<string, number>; timestamp: number }> = {};
 
-const fetchExchangeRates = async (baseCurrency: string): Promise<Record<string, number> | null> => {
+const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record<string, number>, nextTimeUpdate?: string } | null> => {
   
   try {
     const cached = exchangeRateCache[baseCurrency];
     if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) {
-      return cached.rates;
+      return { rates: cached.rates };
     }
 
-    const response = await fetch(`/api/getExchangeRate?base=${baseCurrency}`); 
+    const response = await fetch(`/api/getExchangeRate?base=${baseCurrency}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log(data)
     if (data.result === 'success') {
       
       exchangeRateCache[baseCurrency] = {
         rates: data.conversion_rates,
         timestamp: Date.now()
       };
-      return data.conversion_rates;
+      return { rates: data.conversion_rates, nextTimeUpdate: data.time_next_update_utc };
     } else {
       throw new Error(`API error: ${data['error-type']}`);
     }
@@ -87,14 +85,26 @@ export default function ConvertPage() {
   const [favoriteRates, setFavoriteRates] = useState<string[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [exchangeRates, setExchangeRates] = useState<Record<string, Record<string, number>>>({});
+  const [nextTimeUpdateRates, setNextTimeUpdateRates] = useState<string>('')
   
-  // Budget converter state
   const [budgetPercentage, setBudgetPercentage] = useState(50);
   const [budgetFromCurrency, setBudgetFromCurrency] = useState(currency || 'USD');
   const [budgetToCurrency, setBudgetToCurrency] = useState('EUR');
   const [budgetExchangeRate, setBudgetExchangeRate] = useState<number>(0);
 
-  // Load conversion history from localStorage
+  const calculateRate = (from: string, to: string): number => {
+    if (exchangeRates[from]?.[to]) {
+      return exchangeRates[from][to];
+    }
+    
+    const baseCurrency = Object.keys(exchangeRates)[0];
+    if (baseCurrency && exchangeRates[baseCurrency]?.[from] && exchangeRates[baseCurrency]?.[to]) {
+      return exchangeRates[baseCurrency][from] / exchangeRates[baseCurrency][to];
+    }
+    
+    return 0;
+  };
+
   useEffect(() => {
     const savedHistory = localStorage.getItem('conversionHistory');
     if (savedHistory) {
@@ -107,32 +117,28 @@ export default function ConvertPage() {
     }
   }, []);
 
-  // Get exchange rate
   useEffect(() => {
     if (fromCurrency && toCurrency) {
       const getRate = async () => {
         setIsLoadingRates(true);
-        
-        // Try to get from cached rates first
         if (exchangeRates[fromCurrency]?.[toCurrency]) {
           setExchangeRate(exchangeRates[fromCurrency][toCurrency]);
           setIsLoadingRates(false);
           return;
         }
-
-        // Fetch fresh rates
-        const rates = await fetchExchangeRates(fromCurrency);
-        if (rates && rates[toCurrency]) {
-          setExchangeRate(rates[toCurrency]);
+        const newExchangeRate = calculateRate(fromCurrency, toCurrency);
+        if (newExchangeRate > 0) {
+          setExchangeRate(newExchangeRate);
           setExchangeRates(prev => ({
             ...prev,
-            [fromCurrency]: rates
+            [fromCurrency]: {
+              ...prev[fromCurrency],
+              [toCurrency]: newExchangeRate
+            }
           }));
-          setLastUpdated(new Date().toLocaleString('en-US'));
-        } else {
-          // Fallback to 1 if API fails
-          setExchangeRate(1);
         }
+          setLastUpdated(new Date().toLocaleString('en-US'));
+        
         setIsLoadingRates(false);
       };
 
@@ -140,63 +146,39 @@ export default function ConvertPage() {
     }
   }, [fromCurrency, toCurrency, exchangeRates]);
 
-  // Get budget exchange rate
   useEffect(() => {
     if (budgetFromCurrency && budgetToCurrency) {
-      const getRate = async () => {
-        // Try to get from cached rates first
-        if (exchangeRates[budgetFromCurrency]?.[budgetToCurrency]) {
-          setBudgetExchangeRate(exchangeRates[budgetFromCurrency][budgetToCurrency]);
-          return;
-        }
-
-        // Fetch fresh rates if not cached
-        const rates = await fetchExchangeRates(budgetFromCurrency);
-        if (rates && rates[budgetToCurrency]) {
-          setBudgetExchangeRate(rates[budgetToCurrency]);
-          setExchangeRates(prev => ({
-            ...prev,
-            [budgetFromCurrency]: rates
-          }));
-        } else {
-          setBudgetExchangeRate(1);
-        }
-      };
-
-      getRate();
+      const rate = calculateRate(budgetFromCurrency, budgetToCurrency);
+      if (rate > 0) {
+        setBudgetExchangeRate(rate);
+      }
     }
   }, [budgetFromCurrency, budgetToCurrency, exchangeRates]);
-
-  // Update budget currencies when main currency changes
+  
   useEffect(() => {
     if (currency) {
       setBudgetFromCurrency(currency);
     }
   }, [currency]);
 
-  // Preload popular exchange rates on component mount
   useEffect(() => {
     const preloadRates = async () => {
-      const popularCurrencies = ['USD', 'EUR', 'GBP'];
-      
-      for (const curr of popularCurrencies) {
-        if (!exchangeRates[curr]) {
-          const rates = await fetchExchangeRates(curr);
-          if (rates) {
+        if(!exchangeRates[currency]){
+          const result = await fetchExchangeRates(currency);
+          if (result) {
             setExchangeRates(prev => ({
               ...prev,
-              [curr]: rates
+              [currency]: result.rates
             }));
+            setNextTimeUpdateRates(result.nextTimeUpdate || '')
           }
         }
       }
-    };
-
     preloadRates();
-  }, []); // Only run once on mount
-
-  // Convert on amount or currency change
+  }, [currency]);
+  
   useEffect(() => {
+    console.log('effect')
     if (fromAmount && exchangeRate) {
       const amount = parseFloat(fromAmount);
       if (!isNaN(amount)) {
@@ -246,7 +228,7 @@ export default function ConvertPage() {
       timestamp: new Date().toISOString()
     };
 
-    const newHistory = [conversion, ...conversionHistory.slice(0, 9)]; // Храним только 10 последних
+    const newHistory = [conversion, ...conversionHistory.slice(0, 9)];
     setConversionHistory(newHistory);
     localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
   };
@@ -268,7 +250,6 @@ export default function ConvertPage() {
   const getCurrentCurrencyInfo = (code: string) => {
     return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
   };
-
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { 
       minimumFractionDigits: 2,
@@ -287,10 +268,9 @@ export default function ConvertPage() {
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">💱 РОМАН ПИДООООР</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">💱 Exchange Rates</h1>
             <p className="text-gray-400">Real-time exchange rates and quick conversion</p>
           </div>
           <div className="bg-gray-800 rounded-lg p-4">
@@ -302,15 +282,12 @@ export default function ConvertPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Converter */}
           <div className="lg:col-span-2">
-            {/* Budget Converter */}
             <div className="bg-gradient-to-r from-purple-800 to-blue-800 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold text-white mb-6">💰 Budget Converter</h2>
               <p className="text-gray-300 text-sm mb-4">Convert a portion of your budget to another currency</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Budget Percentage Slider */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Budget Percentage: {budgetPercentage}%
@@ -330,7 +307,6 @@ export default function ConvertPage() {
                   </div>
                 </div>
 
-                {/* Currency Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Convert To</label>
                   <select
@@ -347,7 +323,6 @@ export default function ConvertPage() {
                 </div>
               </div>
 
-              {/* Budget Conversion Result */}
               <div className="bg-gray-900 bg-opacity-50 rounded-lg p-4 mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                   <div>
@@ -384,7 +359,6 @@ export default function ConvertPage() {
             <div className="bg-gray-800 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold text-white mb-6">Currency Converter</h2>
               
-              {/* From Currency */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">From</label>
                 <div className="flex gap-4">
@@ -409,7 +383,6 @@ export default function ConvertPage() {
                 </div>
               </div>
 
-              {/* Swap Button */}
               <div className="flex justify-center mb-4">
                                <button
                  onClick={swapCurrencies}
@@ -422,8 +395,7 @@ export default function ConvertPage() {
                 </button>
               </div>
 
-                             {/* To Currency */}
-               <div className="mb-6">
+                                            <div className="mb-6">
                  <label className="block text-sm font-medium text-gray-300 mb-2">To</label>
                 <div className="flex gap-4">
                   <select
@@ -447,7 +419,6 @@ export default function ConvertPage() {
                 </div>
               </div>
 
-              {/* Exchange Rate Info */}
                              <div className="bg-gray-700 rounded-lg p-4 mb-4">
                  <div className="flex justify-between items-center">
                    <div>
@@ -483,20 +454,30 @@ export default function ConvertPage() {
                    </button>
                    <button
                      onClick={async () => {
+                      if(new Date() < new Date(nextTimeUpdateRates)){
+                        alert('Rates is actual')
+                        return
+                      }else{
+                        
+
+                      
                        setIsLoadingRates(true);
-                       // Clear cache for current currency pair
-                       delete exchangeRateCache[fromCurrency];
-                       
-                       const rates = await fetchExchangeRates(fromCurrency);
-                       if (rates && rates[toCurrency]) {
-                         setExchangeRate(rates[toCurrency]);
-                         setExchangeRates(prev => ({
-                           ...prev,
-                           [fromCurrency]: rates
-                         }));
-                         setLastUpdated(new Date().toLocaleString('en-US'));
-                       }
+                        delete exchangeRateCache[fromCurrency];
+                        
+                        const result = await fetchExchangeRates(fromCurrency);
+                        if (result && result.rates[toCurrency]) {
+                          setExchangeRate(result.rates[toCurrency]);
+                          setExchangeRates(prev => ({
+                            ...prev,
+                            [fromCurrency]: result.rates
+                          }));
+                          setLastUpdated(new Date().toLocaleString('en-US'));
+                          if (result.nextTimeUpdate) {
+                            setNextTimeUpdateRates(result.nextTimeUpdate);
+                          }
+                        }
                        setIsLoadingRates(false);
+                      }
                      }}
                      disabled={isLoadingRates}
                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
@@ -506,7 +487,6 @@ export default function ConvertPage() {
                  </div>
                </div>
 
-              {/* Action Buttons */}
                              <div className="flex gap-4">
                  <button
                    onClick={addToHistory}
@@ -527,15 +507,14 @@ export default function ConvertPage() {
                </div>
             </div>
 
-                         {/* Popular Exchange Rates */}
              <div className="bg-gray-800 rounded-lg p-6">
                <h3 className="text-lg font-bold text-white mb-4">📈 Popular Exchange Rates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {['USD/EUR', 'USD/RUB', 'EUR/RUB', 'GBP/USD', 'USD/JPY', 'EUR/GBP'].map((pair) => {
                   const [from, to] = pair.split('/');
-                  const rate = exchangeRates[from]?.[to] || 1;
                   const fromInfo = getCurrentCurrencyInfo(from);
                   const toInfo = getCurrentCurrencyInfo(to);
+                  const rate = calculateRate(from, to);
                   
                   return (
                     <div
@@ -552,8 +531,10 @@ export default function ConvertPage() {
                             {fromInfo.flag} {from} → {toInfo.flag} {to}
                           </div>
                           <div className="text-xl font-bold text-blue-400">
-                            {rate === 1 && isLoadingRates ? (
+                            {rate === 0 && isLoadingRates ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                            ) : rate === 0 ? (
+                              'Loading...'
                             ) : (
                               formatNumber(rate)
                             )}
@@ -573,16 +554,14 @@ export default function ConvertPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-                         {/* Favorite Rates */}
              {favoriteRates.length > 0 && (
                <div className="bg-gray-800 rounded-lg p-6">
                  <h3 className="text-lg font-bold text-white mb-4">⭐ Favorite Rates</h3>
                 <div className="space-y-3">
                   {favoriteRates.map((pair) => {
                     const [from, to] = pair.split('/');
-                    const rate = exchangeRates[from]?.[to] || 1;
+                    const rate = calculateRate(from, to) || 0;
                     const fromInfo = getCurrentCurrencyInfo(from);
                     const toInfo = getCurrentCurrencyInfo(to);
                     
@@ -600,7 +579,7 @@ export default function ConvertPage() {
                             {fromInfo.flag} {from}/{to} {toInfo.flag}
                           </div>
                           <div className="text-blue-400 font-semibold">
-                            {formatNumber(rate)}
+                            {rate === 0 ? 'Loading...' : formatNumber(rate)}
                           </div>
                         </div>
                       </div>
@@ -610,7 +589,6 @@ export default function ConvertPage() {
               </div>
             )}
 
-                         {/* Conversion History */}
              <div className="bg-gray-800 rounded-lg p-6">
                <div className="flex justify-between items-center mb-4">
                  <h3 className="text-lg font-bold text-white">📋 Conversion History</h3>
@@ -668,40 +646,6 @@ export default function ConvertPage() {
                  </div>
                )}
             </div>
-
-                         {/* Quick Actions */}
-             <div className="bg-gray-800 rounded-lg p-6">
-               <h3 className="text-lg font-bold text-white mb-4">⚡ Quick Actions</h3>
-               <div className="space-y-3">
-                 <button
-                   onClick={() => {
-                     setFromCurrency(currency || 'USD');
-                     setFromAmount(balance.toString());
-                   }}
-                   className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm transition-colors"
-                 >
-                   💰 Convert Full Balance
-                 </button>
-                 <button
-                   onClick={() => {
-                     setFromAmount('1000');
-                   }}
-                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm transition-colors"
-                 >
-                   🔢 Convert 1000
-                 </button>
-                 <button
-                   onClick={() => {
-                     const randomCurrencies = CURRENCIES.filter(c => c.code !== fromCurrency);
-                     const randomTo = randomCurrencies[Math.floor(Math.random() * randomCurrencies.length)];
-                     setToCurrency(randomTo.code);
-                   }}
-                   className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg text-sm transition-colors"
-                 >
-                   🎲 Random Currency
-                 </button>
-               </div>
-             </div>
           </div>
         </div>
       </div>

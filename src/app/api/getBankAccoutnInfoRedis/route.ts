@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     try {
       await client.connect();
     } catch (redisError) {
-      console.log('Redis unavailable, fetching data directly from database');
+
       return await fetchFromDatabase(login, bankName);
     }
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const cachedData = await client.get(cacheKey);
     
     if (cachedData && cachedData !== 'null') {
-      console.log(`Data found in Redis for key: ${cacheKey}`);
+      
       
       const bankAccountData = JSON.parse(cachedData);
       await client.disconnect();
@@ -42,14 +42,14 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    console.log(`Cache empty, loading from database for key: ${cacheKey}`);
+    
     
     const dbResponse = await fetchFromDatabase(login, bankName);
     const dbData = await dbResponse.json();
     
     if (dbResponse.status === 200 && dbData.success && dbData.data) {
       await client.setex(cacheKey, 1500, JSON.stringify(dbData.data)); 
-      console.log(`Data cached for key: ${cacheKey}`);
+      
       
       await client.disconnect();
       

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         const bankNamesKey = `bankNames_${login}`;
         const deleteResult = await client.del(bankNamesKey);
         
-        console.log(`Deleted ${deleteResult} key(s) for bankAccounts_${login}`);
+  
         
         await client.quit();
         
@@ -32,8 +32,7 @@ export async function POST(request: NextRequest) {
             
             if (res.ok) {
                 const freshData = await res.json();
-                console.log(freshData)
-                console.log('revalidate')
+                
                 return NextResponse.json({
                     success: true,
                     message: 'Bank names cache invalidated and refreshed',

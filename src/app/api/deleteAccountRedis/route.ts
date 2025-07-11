@@ -30,7 +30,7 @@ export async function DELETE(request: NextRequest) {
         const result = await res.json();
 
         if (!res.ok) {
-            console.log('error')
+      
             await client.quit();
             return NextResponse.json(result, { status: res.status });
         }
@@ -51,7 +51,7 @@ export async function DELETE(request: NextRequest) {
                 }
                 
                 const updatedAccounts = bankAccounts.filter((account: any) => account.name !== accountName);
-                console.log(updatedAccounts)
+      
                 
                 if (updatedAccounts.length > 0) {
                     await client.setEx(bankAccountsKey, 60 * 60 * 24, JSON.stringify(updatedAccounts));

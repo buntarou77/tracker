@@ -124,6 +124,7 @@ export function AppProvider({ children }: AppProviderProps) {
                       method: 'GET'
                     })
                     if(response.ok){
+                      
                       const transData = await response.json()
                       setTrans(transData.value)
                       setBalance(activeBank.balance)  
@@ -132,7 +133,6 @@ export function AppProvider({ children }: AppProviderProps) {
                       setIsLoading(false)
                     }
                   }catch(e){
-                    console.log(e)
                     setIsLoading(false)
                   }
                 }
@@ -151,7 +151,6 @@ export function AppProvider({ children }: AppProviderProps) {
                     setIsLoading(false)
                   }
                 }catch(e){
-                  console.log(e)
                   setIsLoading(false)
                 }
               }
@@ -161,7 +160,6 @@ export function AppProvider({ children }: AppProviderProps) {
               setError('Не удалось загрузить банковские счета')
             }
           } catch(e) {
-            console.log(e)
             setIsLoading(false)
             setError('Ошибка при загрузке данных банковских счетов')
           }
@@ -195,7 +193,6 @@ export function AppProvider({ children }: AppProviderProps) {
             setPlans(data.plans);
           }
         }catch(e){
-          console.log(e)
         }
       }
     }

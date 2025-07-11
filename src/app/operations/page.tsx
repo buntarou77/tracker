@@ -15,23 +15,18 @@ export default function Operations() {
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            console.log('click')
             if (show && formRef.current && !formRef.current.contains(event.target as Node)) {
-                console.log('click outside')
                 setShow(false);
                 setShouldAnimate(false);
             }
         };
         if (show) {
-            console.log('listen')
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
-            console.log('remove listen')
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [show]);
-    
     
     const addTransaction = async (amount: any, category: any, date: any, type: any) => {
         try {
@@ -70,6 +65,7 @@ export default function Operations() {
             console.error('Error:', error);
         }
     };
+    
     const handleToggle = useCallback(() => {
         setShow(prev => !prev);
         setShouldAnimate(prev => !prev);
@@ -84,6 +80,8 @@ export default function Operations() {
       
         if (amount && category && date && login) {
             addTransaction(amount, category, date, transactionType);
+            setShow(false);
+            setShouldAnimate(false);
         }
     };
     
@@ -108,33 +106,25 @@ export default function Operations() {
                 setTrans(updatedTrans);
             }
         } catch(e) {
-            console.log(e);
         }
     };
     
     const loadMoreTransactions = async () => {
-        console.log('start load')
         if (!login || !activeBank.name || isLoadingMore) return;
-        console.log('start load 2')
         setIsLoadingMore(true);
         try {
             const nextSkip = monthSkip + 1;
             
-            
             const response = await fetch(`/api/loadmoreTrans?login=${login}&bankName=${activeBank.name}&monthSkip=${nextSkip}`, {
-                credentials: 'include' // Важно для передачи cookies с токенами
+                credentials: 'include'
             });
-            console.log('start load 3')
             if (response.ok) {
-
                 const data = await response.json();
                 const { monthKey, transactions } = data;
                 
                 if (transactions && transactions.length > 0) {
-                    console.log('start load 4')
                     const updatedTrans: any = { ...trans };
                     updatedTrans[monthKey] = transactions;
-                    console.log(updatedTrans)
                     setTrans(updatedTrans);
                     
                     setMonthSkip(nextSkip);
@@ -142,8 +132,7 @@ export default function Operations() {
                     setHasMoreTransactions(false);
                 }
             } else if (response.status === 401) {
-                // Токен истек, можно показать сообщение или перенаправить
-                console.log('Authentication required');
+                // Токен истек
             }
         } catch (error) {
             console.error('Error loading more transactions:', error);
@@ -161,233 +150,339 @@ export default function Operations() {
         return `${monthNames[parseInt(month) - 1]} ${year}`;
     };
 
+    const formatNumber = (num: number) => {
+        return new Intl.NumberFormat('en-US', { 
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2 
+        }).format(num);
+    };
+
+    const getCurrencySymbol = () => {
+        switch(currency) {
+            case 'RUB': return '₽';
+            case 'USD': return '$';
+            case 'EUR': return '€';
+            default: return currency;
+        }
+    };
+
+    const getCategoryIcon = (category: string) => {
+        const icons: { [key: string]: string } = {
+            housing: '🏠',
+            utilities: '💡',
+            food: '🍽️',
+            transport: '🚗',
+            health: '🏥',
+            clothing: '👕',
+            personal_care: '🧴',
+            entertainment: '🎬',
+            travel: '✈️',
+            hobbies: '🎨',
+            communication: '📱',
+            subscriptions: '📺',
+            savings: '💳',
+            investments: '📈',
+            insurance: '🛡️',
+            family: '👨‍👩‍👧‍👦',
+            gifts: '🎁',
+            charity: '❤️',
+            education: '📚',
+            taxes: '📋',
+            other: '📦'
+        };
+        return icons[category] || '📦';
+    };
+
     const renderTransactionsByMonth = () => {
         if (!trans || typeof trans !== 'object') {
-            return <p className='flex flex-col items-center'>You haven't added any transactions yet</p>;
+            return (
+                <div className="text-center py-12">
+                    <div className="text-6xl mb-4">📊</div>
+                    <p className="text-gray-400 text-lg">No transactions yet</p>
+                    <p className="text-gray-500 text-sm mt-2">Start by adding your first transaction</p>
+                </div>
+            );
         }
         
         const sortedMonths = Object.keys(trans).sort((a, b) => b.localeCompare(a));
         if (sortedMonths.length === 0) {
-            return <p className='flex flex-col items-center'>You haven't added any transactions yet</p>;
+            return (
+                <div className="text-center py-12">
+                    <div className="text-6xl mb-4">📊</div>
+                    <p className="text-gray-400 text-lg">No transactions yet</p>
+                    <p className="text-gray-500 text-sm mt-2">Start by adding your first transaction</p>
+                </div>
+            );
         }
         
         return sortedMonths.map(monthKey => {
             const monthTransactions = (trans as any)[monthKey];
             if (!monthTransactions || monthTransactions.length === 0) return null;
             
+            const monthTotal = monthTransactions.reduce((sum: number, item: any) => {
+                const amount = Number(item.numeralAmount || item.amount);
+                return item.type === 'gain' ? sum + amount : sum - amount;
+            }, 0);
+            
             return (
-                <div key={monthKey} className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-3 border-b border-gray-600 pb-2">
-                        {formatMonthYear(monthKey)}
+                <div key={monthKey} className="mb-8">
+                    <h3 className="text-xl font-bold text-white mb-4">
+                        📅 {formatMonthYear(monthKey)}
                     </h3>
-                    {monthTransactions
-                        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map((item: any, index: number) => (
-                            <div
-                                key={item.id || index}
-                                className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-[8px] p-[12px] mb-[10px] border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
-                            >
-                                <div className="flex flex-col text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Amount:</span>
-                                    <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                                        {item.numeralAmount || item.amount} {currency === "RUB" ? "₽" : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Category:</span>
-                                    <span className="capitalize text-gray-800 dark:text-gray-200">{item.category}</span>
-                                </div>
-                                <div className="flex flex-col text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Type:</span>
-                                    <span className={`${item.type === 'gain' ? '!text-[green]' : '!text-[gray]'}`}>
-                                        {item.type === 'gain' ? 'Income' : 'Expense'}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Date:</span>
-                                    <span className="text-gray-700 dark:text-gray-300">
-                                        {new Date(item.date).toLocaleDateString('en-US')}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => delTransaction(item.id, Number(item.numeralAmount || item.amount), item.type, item.date)}
-                                    className="ml-4 px-[10px] py-[5px] text-red-500 border border-red-500 rounded-[6px] cursor-pointer hover:bg-[orange] hover:text-white text-sm transition"
+                    
+                    <div className="space-y-3">
+                        {monthTransactions
+                            .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((item: any, index: number) => (
+                                <div
+                                    key={item.id || index}
+                                    className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-all duration-200 hover:shadow-lg"
                                 >
-                                    Delete
-                                </button>
-                            </div>
-                        ))
-                    }
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="text-2xl">
+                                                {getCategoryIcon(item.category)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className={`text-lg font-bold ${
+                                                        item.type === 'gain' ? 'text-green-400' : 'text-red-400'
+                                                    }`}>
+                                                        {item.type === 'gain' ? '+' : '-'}{formatNumber(Number(item.numeralAmount || item.amount))} {getCurrencySymbol()}
+                                                    </span>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                        item.type === 'gain' 
+                                                            ? 'bg-green-900 text-green-300' 
+                                                            : 'bg-red-900 text-red-300'
+                                                    }`}>
+                                                        {item.type === 'gain' ? '💰 Income' : '💸 Expense'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-gray-300 capitalize font-medium">
+                                                    {item.category.replace('_', ' ')}
+                                                </div>
+                                                <div className="text-gray-400 text-sm">
+                                                    {new Date(item.date).toLocaleDateString('en-US', {
+                                                        weekday: 'short',
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button
+                                            onClick={() => delTransaction(item.id, Number(item.numeralAmount || item.amount), item.type, item.date)}
+                                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                                            title="Delete transaction"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        }
+                    </div>
                 </div>
             );
         });
     };
     
     return (
-        <div className="w-[1200px] m-auto p-[40px] input">
-            <div className="flex flex-col items-center text-center space-y-[10px] mb-[40px]">
-                <h2 className="text-[24px] font-bold text-white">
-                    Welcome to your personal finance tracker!
-                </h2>
-                <h3 className="text-[16px] text-gray-300">
-                    Start adding financial transactions and track your budget distribution.
-                </h3>
-            </div>
-            <div className="w-full border border-white rounded-[5px] p-[20px] bg-[#1e1e1e] shadow-[0_0_20px_rgba(255,255,255,0.1)] relative">
-                <div className="mb-[20px] flex flex-row gap-[20px]">
-                    <button
-                        onClick={handleToggle}
-                        className="h-[40px] w-[40px] flex items-center justify-center text-[24px] font-bold bg-[#0a0a0a] text-[white] border-2 border-[#777777] rounded-[10px] hover:shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-shadow duration-300 cursor-pointer"
-                    >
-                        +
-                    </button>
-                    <p className="text-white">
-                        Your balance: {balance} {currency === "RUB" ? "₽" : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency}
-                    </p>
-                    <form
-                        ref={formRef}
-                        onSubmit={handleSubmit}
-                        className={`absolute top-[30px] left-[60px] flex flex-col items-center space-y-[16px] p-[28px] bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-600 rounded-[16px] shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-sm transition-all duration-500 min-w-[320px] ${
-                            show ? 'flex opacity-100 scale-100' : 'hidden opacity-0 scale-95'
-                        } ${shouldAnimate ? 'fadeIn' : ''}`}>
-                        {/* Заголовок формы */}
-                        <div className="w-full text-center mb-2">
-                            <h3 className="text-xl font-semibold text-white mb-1">Добавить транзакцию</h3>
-                            <div className="h-[2px] w-16 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
-                        </div>
+        <div className="min-h-screen bg-gray-900 p-4 md:p-8">
+            <div className="max-w-6xl mx-auto">
 
-                        {/* Тип транзакции */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-300 mb-3">Тип транзакции</label>
-                            <div className="flex gap-2 p-1 bg-gray-700/50 rounded-lg">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="lg:col-span-3">
+                        <div className="bg-gray-800 rounded-lg p-6">
+                            <div className="flex justify-end mb-6">
                                 <button
-                                    type="button"
-                                    onClick={() => setTransactionType('loss')}
-                                    className={`flex-1 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                                        transactionType === 'loss'
-                                            ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-600/50'
-                                    }`}
+                                    onClick={handleToggle}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
                                 >
-                                    💸 Расход
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setTransactionType('gain')}
-                                    className={`flex-1 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                                        transactionType === 'gain'
-                                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-600/50'
-                                    }`}
-                                >
-                                    💰 Доход
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add Transaction</span>
                                 </button>
                             </div>
+                            
+                            {renderTransactionsByMonth()}
+                            
+                            {trans && Object.keys(trans).length > 0 && hasMoreTransactions && (
+                                <div className="flex justify-center mt-8">
+                                    <button
+                                        onClick={loadMoreTransactions}
+                                        disabled={isLoadingMore}
+                                        className={`px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 ${
+                                            isLoadingMore 
+                                                ? 'opacity-50 cursor-not-allowed' 
+                                                : 'hover:shadow-lg'
+                                        }`}
+                                    >
+                                        {isLoadingMore ? (
+                                            <span className="flex items-center">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                                Loading...
+                                            </span>
+                                        ) : (
+                                            'Load More Transactions'
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {trans && Object.keys(trans).length > 0 && !hasMoreTransactions && (
+                                <div className="text-center mt-8">
+                                    <p className="text-gray-400">All transactions loaded</p>
+                                </div>
+                            )}
                         </div>
+                    </div>
 
-                        {/* Сумма */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Сумма</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    name="amount"
-                                    placeholder="Введите сумму..."
-                                    className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                                    required
-                                />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <span className="text-gray-400 text-sm">{currency === "RUB" ? "₽" : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency}</span>
+                    <div className="space-y-6">
+                        <div className="bg-gray-800 rounded-lg p-6">
+                            <h3 className="text-lg font-bold text-white mb-4">📊 Quick Stats</h3>
+                            <div className="space-y-4">
+                                <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-sm text-gray-400">Total Transactions</div>
+                                    <div className="text-2xl font-bold text-white">
+                                        {trans ? Object.values(trans).reduce((sum: number, monthTrans: any) => sum + monthTrans.length, 0) : 0}
+                                    </div>
+                                </div>
+                                <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-sm text-gray-400">Active Bank</div>
+                                    <div className="text-lg font-semibold text-blue-400">
+                                        {activeBank.name || 'No bank selected'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Категория */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Категория</label>
-                            <select
-                                name="category"
-                                id="category"
-                                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 cursor-pointer"
-                            >
-                                <option value="housing" className="bg-gray-800">🏠 Жилье</option>
-                                <option value="utilities" className="bg-gray-800">💡 Коммунальные услуги</option>
-                                <option value="food" className="bg-gray-800">🍽️ Еда</option>
-                                <option value="transport" className="bg-gray-800">🚗 Транспорт</option>
-                                <option value="health" className="bg-gray-800">🏥 Здоровье</option>
-                                <option value="clothing" className="bg-gray-800">👕 Одежда</option>
-                                <option value="personal_care" className="bg-gray-800">🧴 Личная гигиена</option>
-                                <option value="entertainment" className="bg-gray-800">🎬 Развлечения</option>
-                                <option value="travel" className="bg-gray-800">✈️ Путешествия</option>
-                                <option value="hobbies" className="bg-gray-800">🎨 Хобби</option>
-                                <option value="communication" className="bg-gray-800">📱 Связь/Интернет</option>
-                                <option value="subscriptions" className="bg-gray-800">📺 Подписки</option>
-                                <option value="savings" className="bg-gray-800">💳 Сбережения</option>
-                                <option value="investments" className="bg-gray-800">📈 Инвестиции</option>
-                                <option value="insurance" className="bg-gray-800">🛡️ Страхование</option>
-                                <option value="family" className="bg-gray-800">👨‍👩‍👧‍👦 Семья</option>
-                                <option value="gifts" className="bg-gray-800">🎁 Подарки</option>
-                                <option value="charity" className="bg-gray-800">❤️ Благотворительность</option>
-                                <option value="education" className="bg-gray-800">📚 Образование</option>
-                                <option value="taxes" className="bg-gray-800">📋 Налоги</option>
-                                <option value="other" className="bg-gray-800">📦 Другое</option>
-                            </select>
-                        </div>
-
-                        {/* Дата */}
-                        <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Дата</label>
-                            <input
-                                type="date"
-                                name="date"
-                                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                            />
-                        </div>
-
-                        {/* Кнопка отправки */}
-                        <button
-                            type="submit"
-                            className="w-full p-3 mt-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                {show && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <form
+                            ref={formRef}
+                            onSubmit={handleSubmit}
+                            className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                         >
-                             Добавить транзакцию
-                        </button>
-                    </form>
-                </div>
-                <div className="mt-[30px] border-1 border-[#6e6e6e] p-[10px] rounded-[10px] gap-[2px] flex flex-col">
-                    {renderTransactionsByMonth()}
-                    
-                    {trans && Object.keys(trans).length > 0 && hasMoreTransactions && (
-                        <div className="flex justify-center mt-6">
-                            <button
-                                onClick={loadMoreTransactions}
-                                disabled={isLoadingMore}
-                                className={`px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium transition-all duration-200 ${
-                                    isLoadingMore 
-                                        ? 'opacity-50 cursor-not-allowed' 
-                                        : 'hover:bg-indigo-700 hover:shadow-lg'
-                                }`}
-                            >
-                                {isLoadingMore ? (
-                                    <span className="flex items-center">
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Loading...
-                                    </span>
-                                ) : (
-                                    'Load More Transactions'
-                                )}
-                            </button>
-                        </div>
-                    )}
-                    
-                    {trans && Object.keys(trans).length > 0 && !hasMoreTransactions && (
-                        <div className="flex justify-center mt-6">
-                            <p className="text-gray-400 text-sm">All transactions loaded</p>
-                        </div>
-                    )}
-                </div>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-white">Add Transaction</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShow(false)}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Transaction Type</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTransactionType('loss')}
+                                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                transactionType === 'loss'
+                                                    ? 'bg-red-600 text-white'
+                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            💸 Expense
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTransactionType('gain')}
+                                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                transactionType === 'gain'
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            💰 Income
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Amount</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            name="amount"
+                                            placeholder="Enter amount..."
+                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            required
+                                            step="0.01"
+                                            min="0"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span className="text-gray-400">{getCurrencySymbol()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
+                                    <select
+                                        name="category"
+                                        className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    >
+                                        <option value="housing">🏠 Housing</option>
+                                        <option value="utilities">💡 Utilities</option>
+                                        <option value="food">🍽️ Food</option>
+                                        <option value="transport">🚗 Transport</option>
+                                        <option value="health">🏥 Health</option>
+                                        <option value="clothing">👕 Clothing</option>
+                                        <option value="personal_care">🧴 Personal Care</option>
+                                        <option value="entertainment">🎬 Entertainment</option>
+                                        <option value="travel">✈️ Travel</option>
+                                        <option value="hobbies">🎨 Hobbies</option>
+                                        <option value="communication">📱 Communication</option>
+                                        <option value="subscriptions">📺 Subscriptions</option>
+                                        <option value="savings">💳 Savings</option>
+                                        <option value="investments">📈 Investments</option>
+                                        <option value="insurance">🛡️ Insurance</option>
+                                        <option value="family">👨‍👩‍👧‍👦 Family</option>
+                                        <option value="gifts">🎁 Gifts</option>
+                                        <option value="charity">❤️ Charity</option>
+                                        <option value="education">📚 Education</option>
+                                        <option value="taxes">📋 Taxes</option>
+                                        <option value="other">📦 Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                                    <input
+                                        type="date"
+                                        name="date"
+                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                        className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                                >
+                                    Add Transaction
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
         </div>
     );

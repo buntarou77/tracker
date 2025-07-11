@@ -5,9 +5,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const login = searchParams.get('login');
   const bankName = searchParams.get('bankName');
-  
+  console.log(login)
+  console.log(bankName)
   if (!login || !bankName) {
-    console.log('failed to verify login or bankName1')
+    console.log('Missing login or bankName')
+    console.log(login)
+    console.log(bankName)
     return NextResponse.json({ error: 'Missing login or bankName' }, { status: 400 });
   }
 
@@ -57,7 +60,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ value: monthTrans }, { status: 200 });
       } else {
         await client.disconnect();
-        console.log('failed to fetch transactions from database2')
+        
         return NextResponse.json({ error: 'Failed to fetch transactions from database' }, { status: 400 });
       }
     } catch (fetchError) {
@@ -92,7 +95,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ value: monthTrans }, { status: 200 });
       } else {
-        console.log('failed to fetch transactions from database3')
+        
         return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 400 });
       }
     } catch (fallbackError) {

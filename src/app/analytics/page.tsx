@@ -13,10 +13,6 @@ import {
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import Cookies from 'js-cookie';
-import GlobalsAnalytics from './globals/globals';
-import MonthAnalitycs from './month/month';
-import YearAnalitycs from './year/year';
-import CustomAnalitycs from './custom/weak';
 import LastsAnalitycs from './lasts/lasts';
 import InfoSvg from '../resources/info-icon.svg';
 import editSvg from '../resources/edit-icon.svg';   
@@ -50,10 +46,7 @@ interface ActivePlansStatus {
   yearly: PlanStatus;
 }
 
-const convertTransToArray = (transObj: any) => {
-  if (!transObj || typeof transObj !== 'object') return [];
-  return Object.values(transObj).flat();
-};
+
 
 export default function Analytics() {
   ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, LineElement, Title, Tooltip, Legend);
@@ -105,8 +98,6 @@ export default function Analytics() {
   const [targetAmount, setTargetAmount] = useState<number>(0);
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
-
-  const transArray = convertTransToArray(trans);
 
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
@@ -192,7 +183,6 @@ export default function Analytics() {
         body: JSON.stringify(newPlan)
       })
     }catch(e){
-      console.log(e)
     }
     setPlanIsSending(true)
     setLoadingSending(false)
@@ -200,7 +190,6 @@ export default function Analytics() {
 
     const handleChange = (field: string, value: any)=>{
       setNewPlan({...newPlan, [field]: value})
-      console.log(newPlan)
   }
   const delPlan = async (id: number) => {
     const login = Cookies.get('info_token');
@@ -209,11 +198,9 @@ export default function Analytics() {
         method: 'DELETE'
       })
       if(res.ok){
-        console.log('plan deleted')
         setActivePlanWindow(false)
       }
     }catch(e){
-      console.log(e)
     }
   }
 
@@ -227,21 +214,16 @@ export default function Analytics() {
     if(res.ok){
       setPlans((prev: any[]) => prev.map((item: any) => item.id === id ? newPlan : item))
       setActivePlan(newPlan)
-      console.log('ok')
     }else{
-      console.log('not ok xdddd')
     }
     }catch(e){
-      console.log(e)
     }
     setEditPlanStatus(false);
   };
   const addCateghoryButton = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log(editedPlan)
     setActiveCateghoryForm((m) => !m);
   };
-
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
 
@@ -313,8 +295,9 @@ export default function Analytics() {
   }, [doublePlansError])
   if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
   
-  const gainTrans = transArray.filter((item) => item.type === 'gain');
-  const lossTrans = transArray.filter((item) => item.type === 'loss');
+  // Создаем пустые массивы для совместимости с LastsAnalitycs
+  const gainTrans: any[] = [];
+  const lossTrans: any[] = [];
     const addDoublePlansError = (e: React.ChangeEvent<HTMLInputElement>)=>{
     e.preventDefault();
     setDoublePlansError(true)
@@ -336,9 +319,9 @@ export default function Analytics() {
     setTarget('');
     setTargetAmount(0);
   };
-  console.log(activePlan)
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div style={{'z-index': 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Modern Header */}
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -349,7 +332,7 @@ export default function Analytics() {
               </h1>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setActivePlansShow(!activePlansShow)}
+                  onClick={() => setActivePlansShow(!activePlansShow)}  
                   className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-300 ${
                     activePlansShow 
                       ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-purple-500/25' 
@@ -377,22 +360,7 @@ export default function Analytics() {
               </div>
             </div>
 
-            {/* Modern Tab Navigation */}
-            <div className="mt-6 flex space-x-1 bg-gray-800/50 p-1 rounded-xl">
-              {['lasts', 'global', 'year', 'month', 'custom'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all duration-300 ${
-                    activeTab === tab
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
+
           </div>
         </div>
       </div>
@@ -1151,13 +1119,9 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Analytics Content */}
+        {/* Analytics Content - Only Lasts */}
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-          {activeTab === 'global' && <GlobalsAnalytics gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
-          {activeTab === 'month' && <MonthAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
-          {activeTab === 'year' && <YearAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
-          {activeTab === 'custom' && <CustomAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} />}
-          {activeTab === 'lasts' && <LastsAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={transArray} transObj={trans} lastsPlan={lastsPlan} />}
+          <LastsAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={[]} transObj={trans} lastsPlan={lastsPlan} />
         </div>
       </div>
 

@@ -125,7 +125,6 @@ export default function BudgetPage() {
         progress[cat.category] = percentage;
       });
     }
-    console.log(progress)
     setCategoryProgress(progress);
   }, [activePlan, trans]);
 
@@ -166,7 +165,6 @@ export default function BudgetPage() {
         }
       });
     }
-console.log(progress)
     setTargetsProgress(progress);
     setBudgetStatus({
       totalSaved: monthlySaved, 

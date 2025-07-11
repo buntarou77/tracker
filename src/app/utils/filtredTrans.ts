@@ -1,19 +1,4 @@
-const FiltredTransactions = (transactions: any[], method: string, payload: any[] = []) => {
-    if (method === 'global' && transactions.length > 0) {
-        const startBudget = transactions[0].balanceStatus;
-        const endBudget = transactions[transactions.length - 1].balanceStatus +
-            (transactions[transactions.length - 1].type === 'gain' ? transactions[transactions.length - 1].amount : -transactions[transactions.length - 1].amount);
-        const resultBudget = endBudget - startBudget;
-        const gainTransactions = transactions.filter((item: any) => item.type === 'gain');
-        const lossTransactions = transactions.filter((item: any) => item.type === 'loss');
-        return {
-            startBudget,
-            endBudget,
-            resultBudget,
-            lossTransactions,
-            gainTransactions
-        }
-    }
+const FiltredTransactions = (transactions: any[], payload: any[] = []) => {
     if (transactions.length > 0) {
         const startDate = payload[0];
         const endDate = payload[1];
@@ -46,15 +31,7 @@ const FiltredTransactions = (transactions: any[], method: string, payload: any[]
             const indexHour = Number(time);
             frequencyHours[indexHour] += 1;
         });
-        console.log({
-            frequencyHours,
-            filteredTransactions,
-            startBudget,
-            endBudget,
-            resultBudget,
-            lossTransactions,
-            gainTransactions
-        })
+        
         return {
             frequencyHours,
             filteredTransactions,
@@ -80,9 +57,17 @@ const filtredCategorys = (transactions: { category: string; amount: number }[]) 
             categorySums[category] = amount;
         }
     }
+    const categorysItems: { [key: string]: any[] } = {};
+    for(let i = 0; i < transactions.length; i++){
+        if(categorysItems[transactions[i].category]){
+            categorysItems[transactions[i].category].push(transactions[i])
+        }else{
+            categorysItems[transactions[i].category] = [transactions[i]]
+        }
+    }
     const sortCategory = Object.entries(categorySums).sort((a, b) => b[1] - a[1]);
     const categorys = Object.keys(categorySums);
     const categoryAmounts = Object.values(categorySums);
-    return { categorys, categoryAmounts, sortCategory };
+    return { categorys, categoryAmounts, sortCategory, categorysItems};
 }
 export {filtredCategorys, FiltredTransactions}

@@ -1,6 +1,5 @@
 const prepareBarData = (data, labelData)=>{
-    // console.log(data)
-    // console.log(labelData)
+    
     return {
         labels: labelData,
             datasets: [

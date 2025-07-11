@@ -38,7 +38,7 @@ const login = searchParams.get('login');
                 client.setEx(`bankNames_${login}`, 60 * 60 * 24, JSON.stringify(data))
                 return NextResponse.json({value: data})
             }else{
-              console.log('err1')
+  
                 return NextResponse.json({error: 'failed to connect database'}, {status: 500})
             }
         }catch(e){
@@ -54,7 +54,7 @@ const login = searchParams.get('login');
 
   } catch (error) {
     await client.disconnect();
-    console.log('err')
+    
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

@@ -25,10 +25,10 @@ export function useAuth() {
       });
 
       if (response.ok) {
-        console.log('Tokens refreshed successfully');
+
         return true;
       } else {
-        console.log('Refresh token invalid or expired');
+
         return false;
       }
     } catch (error) {
@@ -50,7 +50,7 @@ export function useAuth() {
           setUser(data);
           setIsAuthenticated(true);
         } else if (response.status === 401) {
-          console.log('Access token expired, trying to refresh...');
+  
           const refreshSuccess = await refreshTokens();
           
           if (refreshSuccess) {
@@ -63,7 +63,7 @@ export function useAuth() {
               const retryData = await retryResponse.json();
               setUser(retryData);
               setIsAuthenticated(true);
-              console.log('Authentication restored after token refresh');
+
             } else {
               setUser(null);
               setIsAuthenticated(false);

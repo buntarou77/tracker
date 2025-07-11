@@ -54,7 +54,7 @@ export default function YearAnalytics() {
           setError('Something went wrong');
         }
       } catch (e) {
-        console.log(e);
+  
         setError('Failed to fetch transactions');
       }
     }

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Cookies from 'js-cookie';
 import { useApp } from '../context/AppContext';
 
@@ -14,17 +15,22 @@ type BankAccountType = {
 };
 
 const BankAccount = () => {
+    const [mounted, setMounted] = useState(false);
     const login = Cookies.get('info_token');
     const cookieName = `bank_account_${login}`;
     const lastValue = useRef(Cookies.get(cookieName));
     const activeBankCookies = Cookies.get('ActiveBank')
     const [isAccountsVisible, setIsAccountsVisible] = useState(false);
     const [addBankAccountForm, setAddBankAccountForm] = useState(false);
-    // const [activeBank, setActiveBank] = useState<BankAccountType>({name: '', balance: '', currency: '', notes: '', active: false});
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
+    const [registerError, setRegisterError] = useState<boolean>(false)
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
     const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency} = useApp()
     console.log(activeBank)
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     useEffect(() => {
       if(login){
       if(activeBankCookies){
@@ -52,9 +58,48 @@ const BankAccount = () => {
       }, 7000)
       return ()=> clearTimeout(times)
     },[tooManyBankAccounts])
+
+    useEffect(()=>{
+      if(!registerError){
+        return;
+      }
+      const times = setTimeout(()=>{
+        setRegisterError(false)
+      }, 5000)
+      return ()=> clearTimeout(times)
+      
+    },[registerError])
+
     const toggleAccountsVisibility = () => {
         setIsAccountsVisible(!isAccountsVisible);
     };
+    const logout = async ()=>{
+      const logoutResponse = await fetch('api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
+      console.log(logoutResponse)
+      if(logoutResponse.ok){
+        const res = await fetch('api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
+        console.log(res)
+        if(!res.ok){
+          setRegisterError(true)
+        }else{
+          setTrans([])
+          setBankNames([])
+          setActiveBank({name: '', id: ''})
+          setBalance(0)
+          setCurrency('RUB')
+          Cookies.remove('ActiveBankName')
+          Cookies.remove('ActiveBank')
+          localStorage.removeItem('favoriteRates')
+          localStorage.removeItem('conversionHistory')
+          Cookies.remove('accessToken')
+          Cookies.remove('refreshToken')
+
+
+        }
+      }else{
+        setRegisterError(true)
+      }
+    }
     const addBankAccount = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
       if(bankNames.length >= 6){
@@ -79,14 +124,12 @@ const BankAccount = () => {
               })
               if(res.ok){
                 const bankNames = await res.json()
-                console.log(bankNames)
                 setBankNames(bankNames.freshData)
-                console.log('revalidate')
               }else{
                 throw 'error'
               }
             }catch(e){
-              console.log(e)
+
             }
             setBankNames([...bankNames, newAccount])
            }else{
@@ -94,10 +137,10 @@ const BankAccount = () => {
            }
           }
         }catch(error){
-          console.log(error)
         }
       }
     }
+
     useEffect(()=>{
       async function getTrans(){
         const response = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`, {
@@ -110,7 +153,7 @@ const BankAccount = () => {
       }
       getTrans()
     },[activeBank])
-    console.log(login)
+
     const deleteAccount = async (accountName: string, e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
@@ -121,7 +164,6 @@ const BankAccount = () => {
           
           if (response.ok) {
             const result = await response.json();
-            console.log(result)
             setBankNames(bankNames.filter(account => account.name !== accountName));
 
             if (activeBank.name === accountName) {
@@ -129,32 +171,34 @@ const BankAccount = () => {
               setBalance(0);
               setCurrency('RUB');
             }
-            console.log('Account successfully deleted:', result);
           } else {
             const errorData = await response.json();
             alert(`Error deleting account: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
-          console.log(error);
           alert('Error deleting account');
         }
       }
     };
+
     const bankToActive = (bank: BankAccountType) =>{
       setActiveBank({name: bank.name, id: bank.id || ''})
       setBalance(Number(bank.balance) || 0)
       setCurrency(bank.currency || 'RUB')
-      console.log(bank)
       Cookies.remove('ActiveBankName')
       Cookies.set('ActiveBankName', bank.name)
     }
+
     const handleAccountsClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation(); 
     };
-    return (
-        <div className={`absolute right-0 flex items-center h-full pr-3 z-50 w-max-[180px] h-[60%]   z-100 flex-col justify-start`}>
+
+    if (!mounted) return null;
+
+    const bankAccountContent = (
+        <div className={`fixed right-6 top-3 flex items-center h-auto pr-0 z-[999999] w-max-[180px] flex-col justify-start`}>
             <div 
-                className={`bg-gradient-to-r from-gray-800/80 to-gray-700/70 text-white px-3 w-[200px]   ${addBankAccountForm ? 'w-[250px]' : ''} m-[5px] py-1.5 rounded-lg shadow flex items-start justify-start gap-2 flex-col min-w-[180px] border border-gray-600 backdrop-blur-sm transition-all duration-200 hover:scale-100 cursor-pointer`} 
+                className={`bg-gradient-to-r from-gray-800/80 to-gray-700/70 text-white px-3 w-[200px]   ${addBankAccountForm ? 'w-[250px]' : ''} m-[5px] py-1.5 rounded-lg shadow flex items-start justify-start gap-2 flex-col min-w-[180px] border border-gray-600 backdrop-blur-sm transition-all duration-300 hover:scale-100 cursor-pointer`} 
                 onClick={toggleAccountsVisibility}
             >
                 <div className='flex items-center justify-start'>
@@ -182,7 +226,7 @@ const BankAccount = () => {
                 
                 {isAccountsVisible && (
                     <div 
-                        className="mt-2 w-full bg-[#232336] border border-gray-700 rounded-xl shadow-xl p-3 flex flex-col items-stretch animate-fade-in"
+                        className="mt-2 w-full bg-[#232336] border border-gray-700 rounded-xl shadow-xl p-3 flex flex-col items-stretch animate-fade-in z-[1000000] relative"
                         onClick={handleAccountsClick}
                     >
                         <h3 className="font-bold text-base text-white/80 mb-2 pl-1">Accounts</h3>
@@ -281,58 +325,70 @@ const BankAccount = () => {
                           + Add account
                         </button>
                       )}
+                      
+                      <button
+                        onClick={() => {logout()}}
+                        className="w-full mt-2 p-2 text-sm font-medium text-center text-white bg-red-600 hover:bg-red-700 transition-colors rounded-lg flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                      </button>
                     </div>
                 )}
             </div>
             {tooManyBankAccounts && (
-                <div className="fixed bottom-6 right-6 z-50 animate-fade-in-up">
-                  <div className="w-72 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-300 overflow-hidden">
-                    <div className="flex items-center justify-between bg-gray-300 px-4 py-3">
-                      <div className="flex items-center">
-                        <svg
-                          className="w-5 h-5 text-blue-500 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <h3 className="font-semibold text-blue-700">Notification</h3>
-                      </div>
-                      <button
-                        onClick={()=> setToManyBankAccounts(false)}
-                        className="text-gray-400 hover:text-gray-500"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
+                <div className="fixed bottom-6 right-6 z-[1000001] animate-fade-in-up">
+                    <div className="w-80 bg-slate-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-slate-600/50 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-600/50">
+                            <div className="flex items-center">
+                                <div className="w-2 h-2 bg-amber-400 rounded-full mr-3 animate-pulse"></div>
+                                <h3 className="font-medium text-slate-200 text-sm">Notification</h3>
+                            </div>
+                            <button
+                                onClick={() => setToManyBankAccounts(false)}
+                                className="text-slate-400 hover:text-slate-200 transition-colors duration-200 p-1 rounded-full hover:bg-slate-600/30"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="px-4 py-3">
+                            <p className="text-sm text-slate-300">Too many accounts. Maximum 6 accounts allowed.</p>
+                        </div>
                     </div>
-                    <div className="px-4 py-3 text-sm text-white bg-gray-700">
-                      <p>Too many accounts</p>
+                </div>
+            )}
+            
+            {registerError && (
+                <div className="fixed bottom-6 right-6 z-[1000001] animate-fade-in-up">
+                    <div className="w-80 bg-slate-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-slate-600/50 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-700/50 to-slate-600/50">
+                            <div className="flex items-center">
+                                <div className="w-2 h-2 bg-red-400 rounded-full mr-3 animate-pulse"></div>
+                                <h3 className="font-medium text-slate-200 text-sm">Error</h3>
+                            </div>
+                            <button
+                                onClick={() => setRegisterError(false)}
+                                className="text-slate-400 hover:text-slate-200 transition-colors duration-200 p-1 rounded-full hover:bg-slate-600/30"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="px-4 py-3">
+                            <p className="text-sm text-slate-300">Error registering account.</p>
+                        </div>
                     </div>
-                  </div>
                 </div>
             )}
         </div>
     );
+
+    return createPortal(bankAccountContent, document.body);
 };
 
 export default BankAccount;

@@ -6,15 +6,9 @@ export async function GET(request: NextRequest) {
     const baseCurrency = searchParams.get('base');
     
     const KONVERT_TOKEN = process.env.KONVERT_TOKEN;
-    console.log('KONVERT_TOKEN:', KONVERT_TOKEN)
+
     
-    if (!KONVERT_TOKEN) {
-      console.error('KONVERT_TOKEN не найден в переменных окружения');
-      return NextResponse.json(
-        { error: 'API token not configured' }, 
-        { status: 500 }
-      );
-    }
+
     
     if (!baseCurrency) {
       return NextResponse.json(
@@ -24,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
     
     const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/${KONVERT_TOKEN}/latest/${baseCurrency}`,
+      `https://v6.exchangerate-api.com/v6/46be24096b6927fd6c4bb7cc/latest/${baseCurrency}`,
       {
         headers: {
           'Accept': 'application/json',
@@ -42,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('Ответ от API получен:', data.result);
+    
     
     return NextResponse.json(data, { status: 200 });
     

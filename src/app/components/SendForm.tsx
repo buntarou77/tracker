@@ -7,6 +7,7 @@ import React, {  useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
 import { useApp } from '../context/AppContext';
+
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +17,7 @@ export default function RegisterForm() {
   const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
   const [activeButton, setActiveButton] = useState<boolean>(true);
   const {login, setLogin} = useApp()
+
   const regSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -26,7 +28,7 @@ export default function RegisterForm() {
     const repeatPassword = formData.get('repeatpassword') as string;
     
     if (password !== repeatPassword) {
-      setError('Пароли не совпадают');
+      setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
@@ -50,27 +52,25 @@ export default function RegisterForm() {
       const result = await response.json();
       
       if (!response.ok) {
-        console.log(result.error )
-        setError(result.error || 'Ошибка при регистрации');
+        setError(result.error || 'Registration error');
         return;
       }
       
       if (result.success) {
-        setSucces("регестрация прошла успешно");
+        setSucces("Registration successful");
       } else {
-        setError('Ошибка при регистрации');
+        setError('Registration error');
       }
     } catch (error) {
-      console.error(error);
-      setError('Произошла ошибка при отправке формы');
+      setError('An error occurred while submitting the form');
     } finally {
       setIsLoading(false);
     }
   };
+
   const logSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    console.log('logSubmit')
     setIsLoading(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
@@ -92,45 +92,46 @@ export default function RegisterForm() {
       const result = await response.json();
       
       if (!response.ok) {
-        console.log(result.error )
-        setError(result.error || 'Ошибка при входе');
+        setError(result.error || 'Login error');
         return;
       }
       if (result.success) {
         setLogin('' as string)
         deleteCookiesStartingWith('bank_account')
-        console.log(result)
         Cookies.set('info_token', result.user.user)
-        Cookies.set(`bank_account_${result.user.user}`, 0)
+        Cookies.set(`bank_account_${result.user.user}`, '0')
         setLogin(result.user.user as string)
-        setSucces("вход прошел успешно");
+        setSucces("Login successful");
       } else {
-        setError('Ошибка при входе');
+        setError('Login error');
       }
     } catch (error) {
-      console.error(error);
-      setError('Произошла ошибка при отправке формы');
+      setError('An error occurred while submitting the form');
     } finally {
       setIsLoading(false);
     }
   };
-  console.log(login)
+
   const activeReg = ()=>{
     setReg(true)
     setLog(false)
     setShouldAnimate(true);
+    setActiveButton(true);
   }
   const activeLog = ()=>{
     setLog(true)
     setReg(false);
     setShouldAnimate(true);
+    setActiveButton(false);
   }
+
   useEffect(() => {
     if (shouldAnimate) {
       const timer = setTimeout(() => setShouldAnimate(false), 300);
       return () => clearTimeout(timer);
     }
   }, [shouldAnimate]);
+
   useEffect(()=>{
     setTimeout(() => {
       setSucces('')
@@ -139,73 +140,249 @@ export default function RegisterForm() {
   },[success, error])
   
   if(reg){
-  return (
-    <div className="font-Merriweather w-[680px] input">
-      <h2 className="font-thin justify-center flex">Please register before using all the features of the tracker</h2>
-      {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
-      {success && (
-  <p className={`flex items-center justify-center text-4xl text-green-500 animate-fade-in  `}>
-    <svg className="w-[30px] h-[30px] " fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
-    Регистрация прошла успешно!
-  </p>
-)}
-      <div className='flex justify-center items-center h-[60vh] h-min-[350px] '>
-      <div   className='bg-[#242424] w-[60%]  h-[350px] flex-col items-center justify-center flex border-#2b2b2b-[2px]  rounded-[7px] flex transition-all duration-200'>
-        <div className='h-[40px] w-[408px] flex flex-row bg-[#414141] font-[Inter] rounded-b-[0] rounded-t-[7px]'>
-        <div className={`w-[50%] justify-center items-center flex ${ activeButton ? 'opacity-[1]' : 'opacity-[0.6]'  } hover:opacity-[0.8] cursor-pointer`} onClick={activeReg}>Register</div>
-        <div className='h-[28px] bg-[white] w-[1px] border-white-[0.1px] rounded-[20px] opacity-[0.5]'></div>
-        <div className='w-[50%] justify-center items-center flex opacity-[0.7] hover:opacity-[0.9] cursor-pointer' onClick={activeLog}>Login</div>
+    return (
+      <div className="w-full max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+            Welcome
+          </h2>
+          <p className="text-gray-400">Create an account to use all tracker features</p>
         </div>
-        <form onSubmit={regSubmit} className={`flex flex-col h-[60vh] justify-center items-center gap-[20px] ${shouldAnimate ? 'fadeIn' : ''}`}>
-            <p className='text-[20px] '>Регестрация вашего аккаунта</p> 
-          <div className="justify-center flex"><img src={LoginIcon.src} className=' w-[28px] h-[28px] mr-[8px]' alt="" /><input  type="text" className='bg-[#525252]  
-          p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]'  placeholder="login" name="login" required/></div>
-          <div className="justify-center flex"><img src={PasswordIcon.src} className='w-[28px] h-[28px] mr-[8px]' alt="" /><input type="password" className='bg-[#525252] 
-          p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]' placeholder="password" name="password" required/></div>
-          <div className="justify-center flex"><img src={PasswordIcon.src} className='w-[28px] h-[28px] mr-[8px]' alt="" /><input type="password" className='bg-[#525252]
-           p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]' placeholder="repeat password" name="repeatpassword" required/></div>
-          <div className="justify-center flex"><img src={EmailIcon.src}  className='w-[25px] h-[25px] mr-[10px]'alt="email"/><input type="email" className='bg-[#525252] 
-          p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]' placeholder="email" name="email" required/></div>
-          <div className="justify-center flex color-[#8a8a8a] w-max-[24px] h-[30px]"> 
-          <button type="submit" className='bg-[#8a8a8a] rounded-[4px] h-full p-1 w-[100px] font-[400] hover:transform-[scale(1.02)] cursor-pointer text-[#ffff] border-none font-["Inter"] transition-all duration-100'disabled={isLoading}>
-            {isLoading ? 'Отправка...' : 'Отправить'}   
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center backdrop-blur-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center backdrop-blur-sm flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Registration successful!
+          </div>
+        )}
+
+        <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
+          {/* Вкладки */}
+          <div className="flex bg-gray-900/50">
+            <button
+              onClick={activeReg}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 relative ${
+                activeButton 
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <span className="relative z-10">Register</span>
+              {activeButton && (
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-20"></div>
+              )}
+            </button>
+            <div className="w-px bg-gray-700"></div>
+            <button
+              onClick={activeLog}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 relative ${
+                !activeButton 
+                  ? 'text-white bg-gradient-to-r from-green-600 to-blue-600' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <span className="relative z-10">Login</span>
+              {!activeButton && (
+                <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-600 opacity-20"></div>
+              )}
             </button>
           </div>
-        </form>
-      </div>
-      </div>
-    </div>
-  );
-}else if(log){
-return(
-    <div className="font-Merriweather w-[680px] ">
-      <h2 className="font-thin justify-center flex">Please register before using all the features of the tracker</h2>
-      {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
-      {success ? <p className='text-[#00b900] mb-4 text-center'>вход прошел успешно!</p> : null}
-      <div className='flex justify-center items-center h-[60vh] h-min-[350px]'>
-      <div   className='bg-[#242424] w-[60%]  h-[350px] flex-col items-center justify-center flex border-#2b2b2b-[2px]  rounded-[7px] flex  transition-all duration-200'>
-        <div className='h-[40px] w-[408px] flex flex-row bg-[#414141] font-[Inter] rounded-b-[0] rounded-t-[7px]'>
-        <div className='w-[50%] justify-center items-center flex opacity-[0.7] hover:opacity-[0.9] cursor-pointer' onClick={activeReg}>Register</div>
-        <div className='h-[28px] bg-[white] w-[1px] border-white-[0.1px] rounded-[20px] opacity-[0.5]'></div>
-        <div className={`w-[50%] justify-center items-center flex ${ !activeButton ? 'opacity-[0.6]' : ''} hover:opacity-[0.8] cursor-pointer`} onClick={activeLog}>Login</div>
+
+          {/* Форма */}
+          <div className="p-8">
+            <form onSubmit={regSubmit} className={`space-y-6 ${shouldAnimate ? 'fadeIn' : ''}`}>
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-semibold text-white">Create Account</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={LoginIcon.src} className="w-5 h-5 text-gray-400" alt="login" />
+                  </div>
+                  <input
+                    type="text"
+                    name="login"
+                    placeholder="Username"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={PasswordIcon.src} className="w-5 h-5 text-gray-400" alt="password" />
+                  </div>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={PasswordIcon.src} className="w-5 h-5 text-gray-400" alt="repeat password" />
+                  </div>
+                  <input
+                    type="password"
+                    name="repeatpassword"
+                    placeholder="Repeat Password"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={EmailIcon.src} className="w-5 h-5 text-gray-400" alt="email" />
+                  </div>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
+          </div>
         </div>
-        <form onSubmit={logSubmit} className={`flex flex-col h-[60vh] justify-center items-center gap-[20px] ${shouldAnimate ? 'fadeIn' : ''}`}>
-            <p className='text-[20px] '>Login please</p> 
-          <div className="justify-center flex"><img src={LoginIcon.src} className='w-[28px] h-[28px] mr-[8px]' alt="" /><input type="text" className='bg-[#525252]
-           p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]'  placeholder="login" name="login" required/></div>
-          <div className="justify-center flex"><img src={PasswordIcon.src} className='w-[28px] h-[28px] mr-[8px]' alt="" /><input type="password" className='bg-[#525252] 
-           p-[5px] text-[black] transition-colors transition-shadow focus:bg-[#8a8a8a] duration-200 focus:shadow-[0_6px_6px_rgba(184,184,184,0.2)]' placeholder="password" name="password" required/></div>
-          <div className="justify-center flex color-[#8a8a8a] w-max-[24px] h-[30px]"> 
-          <button type="submit" className='bg-[#8a8a8a] rounded-[4px] h-full p-1 w-[100px] font-[400] hover:transform-[scale(1.02)] cursor-pointer text-[#ffff] border-none font-["Inter"] transition-all duration-100'disabled={isLoading}>
-            {isLoading ? 'Отправка...' : 'Отправить'}   
+      </div>
+    );
+  } else if(log) {
+    return (
+      <div className="w-full max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent mb-2">
+            Welcome Back!
+          </h2>
+          <p className="text-gray-400">Sign in to your account</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center backdrop-blur-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center backdrop-blur-sm flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Login successful!
+          </div>
+        )}
+
+        <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
+          {/* Вкладки */}
+          <div className="flex bg-gray-900/50">
+            <button
+              onClick={activeReg}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 relative ${
+                activeButton 
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <span className="relative z-10">Register</span>
+            </button>
+            <div className="w-px bg-gray-700"></div>
+            <button
+              onClick={activeLog}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 relative ${
+                !activeButton 
+                  ? 'text-white bg-gradient-to-r from-green-600 to-blue-600' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <span className="relative z-10">Login</span>
+              {!activeButton && (
+                <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-600 opacity-20"></div>
+              )}
             </button>
           </div>
-        </form>
+
+          {/* Форма */}
+          <div className="p-8">
+            <form onSubmit={logSubmit} className={`space-y-6 ${shouldAnimate ? 'fadeIn' : ''}`}>
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-semibold text-white">Sign In</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={LoginIcon.src} className="w-5 h-5 text-gray-400" alt="login" />
+                  </div>
+                  <input
+                    type="text"
+                    name="login"
+                    placeholder="Username"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src={PasswordIcon.src} className="w-5 h-5 text-gray-400" alt="password" />
+                  </div>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-gray-700/80 transition-all duration-300 backdrop-blur-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
-      </div>
-    </div>
-)
-}
+    );
+  }
 }

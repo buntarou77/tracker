@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         
         const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
         
-        console.log(currentMonthKey)
+  
         const pipeline = [
             { $match: { user: login } },
             { $unwind: "$banks" },
@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
             }
         ];
         const result = await db.collection('users').aggregate(pipeline).toArray();
-        console.log(result[0].currentMonth[0])
         const transactions = result[0]?.currentMonth || [];
         
         return NextResponse.json({
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
             count: transactions.length
         }, {status: 200});
     }catch(e){
-        console.log(e)
         return NextResponse.json({error: 'Error loading more transactions'}, {status: 500});
     } finally {
         await client.close();
