@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Cookies from 'js-cookie';
-import { useApp } from '../context/AppContext';
+import { useBankTransaction } from '../context/BankTransactionContext';
 
 type BankAccountType = {
   name: string;
@@ -17,15 +17,13 @@ type BankAccountType = {
 const BankAccount = () => {
     const [mounted, setMounted] = useState(false);
     const login = Cookies.get('info_token');
-    const cookieName = `bank_account_${login}`;
-    const lastValue = useRef(Cookies.get(cookieName));
     const activeBankCookies = Cookies.get('ActiveBank')
     const [isAccountsVisible, setIsAccountsVisible] = useState(false);
     const [addBankAccountForm, setAddBankAccountForm] = useState(false);
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const [registerError, setRegisterError] = useState<boolean>(false)
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
-    const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency} = useApp()
+    const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency} = useBankTransaction()
     console.log(activeBank)
     useEffect(() => {
         setMounted(true);

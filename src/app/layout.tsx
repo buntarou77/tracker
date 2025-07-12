@@ -1,7 +1,7 @@
 import { Inter, Roboto_Mono } from "next/font/google";
 import './globals.css'
 import Header from './components/Header';
-import { AppProvider } from './context/AppContext';
+import { ContextProviders } from './context/ContextProviders';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,10 +26,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
       <body className=" ">
-        <AppProvider>
+        <ContextProviders>
         <Header />
         <div>{children}</div>
-        </AppProvider>
+        </ContextProviders>
       </body>
     </html>
   );

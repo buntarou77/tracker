@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from 'redis';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   const data = await request.json();
   const { amount, category, date, login, type, bankName, balanceStatus } = data;
   
+  try {
+    const cookieHeader = cookies().toString();
+    const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
+      method: 'GET',
+      headers: { Cookie: cookieHeader },
+      cache: 'no-store',
+    });
+    if (!meRes.ok) {
+      return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
+    }
+    const me = await meRes.json();
+    if (!me.login || me.login !== login) {
+      return NextResponse.json({ error: 'Forbidden: login mismatch' }, { status: 403 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
+  }
+
   const client = createClient({ url: 'redis://127.0.0.1:6379' });
   
   try {
     await client.connect();
     
-    // First add to MongoDB (source of truth)
     const res = await fetch(`http://localhost:3000/api/addTrans`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -23,13 +41,11 @@ export async function POST(request: NextRequest) {
       await client.quit();
       return NextResponse.json(result, { status: res.status });
     }
-    
-    // If MongoDB update successful, update Redis cache
+
     try {
       const newBalance = result.newBalance;
       const monthKey = result.monthKey;
       
-      // Update transaction cache in Redis
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth();
@@ -50,14 +66,12 @@ export async function POST(request: NextRequest) {
       const isPrevMonth = (transYear === prevYear && transMonth === prevMonth);
       
       if (isCurrentMonth || isPrevMonth) {
-        // Update transactions cache
         const transRedisKey = `${login}_${bankName}_transactions`;
         const existingTrans = await client.get(transRedisKey);
         
         if (existingTrans) {
           const redisTransactions = JSON.parse(existingTrans);
           
-          // Create new transaction for Redis
           const newTransaction = {
             amount: Number(amount),
             category,
@@ -68,7 +82,6 @@ export async function POST(request: NextRequest) {
             balanceStatus
           };
           
-          // Add transaction to appropriate month
           if (!redisTransactions[monthKey]) {
             redisTransactions[monthKey] = [];
           }
@@ -78,11 +91,9 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // Update balance cache
       const balanceKey = `${login}_${bankName}_balance`;
       await client.setEx(balanceKey, 60 * 60 * 24, newBalance.toString());
       
-      // Update bankNames cache with new balance
       const bankNamesKey = `bankNames_${login}`;
       const bankNamesData = await client.get(bankNamesKey);
       
@@ -92,34 +103,27 @@ export async function POST(request: NextRequest) {
           const parsed = JSON.parse(bankNamesData);
           bankNames = parsed.bankAccounts || parsed || [];
         } catch (e) {
-          console.error('Error parsing bankNames Redis data:', e);
           bankNames = [];
         }
         
-        // Find and update the specific bank balance
         const bankIndex = bankNames.findIndex((bank: any) => bank.name === bankName);
         if (bankIndex !== -1) {
           bankNames[bankIndex].balance = newBalance;
           
-          // Save updated bankNames back to Redis
           await client.setEx(bankNamesKey, 60 * 60 * 24, JSON.stringify(bankNames));
         }
       }
       
     } catch (redisError) {
-      console.error('Redis cache update error:', redisError);
-      // Continue even if Redis fails - MongoDB is source of truth
     }
     
     await client.quit();
     return NextResponse.json(result, { status: 201 });
     
   } catch (error) {
-    console.error('Error in addTransRedis:', error);
     try {
       await client.quit();
     } catch (e) {
-      console.error('Error closing Redis connection:', e);
     }
     
     return NextResponse.json(

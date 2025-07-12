@@ -6,7 +6,7 @@ import LoginIcon from '../resources/login.svg';
 import React, {  useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
-import { useApp } from '../context/AppContext';
+import { useAuthContext } from '../context/AuthContext';
 
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function RegisterForm() {
   const [log, setLog] = useState<boolean>(false);
   const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
   const [activeButton, setActiveButton] = useState<boolean>(true);
-  const {login, setLogin} = useApp()
+  const {login, setLogin} = useAuthContext()
 
   const regSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

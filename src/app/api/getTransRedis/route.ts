@@ -1,17 +1,31 @@
 import { NextResponse } from 'next/server';
 import { createClient } from 'redis';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const login = searchParams.get('login');
   const bankName = searchParams.get('bankName');
-  console.log(login)
-  console.log(bankName)
   if (!login || !bankName) {
-    console.log('Missing login or bankName')
-    console.log(login)
-    console.log(bankName)
     return NextResponse.json({ error: 'Missing login or bankName' }, { status: 400 });
+  }
+
+  try {
+    const cookieHeader = cookies().toString();
+    const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
+      method: 'GET',
+      headers: { Cookie: cookieHeader },
+      cache: 'no-store',
+    });
+    if (!meRes.ok) {
+      return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
+    }
+    const me = await meRes.json();
+    if (!me.login || me.login !== login) {
+      return NextResponse.json({ error: 'Forbidden: login mismatch' }, { status: 403 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
   }
 
   const client = createClient({
@@ -37,8 +51,6 @@ export async function GET(request: Request) {
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Группируем транзакции по monthKey (YYYY-MM)
         const monthTrans: { [key: string]: any[] } = {};
         
         data.transactions.forEach((trans: any) => {
@@ -53,7 +65,6 @@ export async function GET(request: Request) {
           monthTrans[monthKey].push(trans);
         });
 
-        // Кэшируем данные (TTL 30 минут)
         await client.setEx(redisKey, 1800, JSON.stringify(monthTrans));
         
         await client.disconnect();
@@ -69,7 +80,6 @@ export async function GET(request: Request) {
     }
 
   } catch (redisError) {
-    // Если Redis недоступен, получаем данные напрямую из БД
     try {
       const response = await fetch(`http://localhost:3000/api/getTrans?login=${login}&bankName=${bankName}`, {
         method: 'GET'
@@ -77,8 +87,6 @@ export async function GET(request: Request) {
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Группируем транзакции по monthKey
         const monthTrans: { [key: string]: any[] } = {};
         
         data.transactions.forEach((trans: any) => {

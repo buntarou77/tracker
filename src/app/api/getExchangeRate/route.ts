@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-
+import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const baseCurrency = searchParams.get('base');
-    
+    try {
+      const cookieHeader = cookies().toString();
+      const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
+        method: 'GET',
+        headers: { Cookie: cookieHeader },
+        cache: 'no-store',
+      });
+      if (!meRes.ok) {
+        return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
+      }
+    } catch (e) {
+      return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
+    }
     const KONVERT_TOKEN = process.env.KONVERT_TOKEN;
 
     

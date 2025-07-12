@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Возвращаем данные пользователя
     return NextResponse.json({
       id: userData.id,
       login: userData.login,
