@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRefreshToken, generateTokens } from '../auth';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    const refreshToken = request.cookies.get('refreshToken')?.value;
+    const refreshToken = cookies().get('refreshToken')?.value;
 
     if (!refreshToken) {
       return NextResponse.json(

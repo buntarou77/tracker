@@ -4,7 +4,7 @@ import { Inter, Roboto_Mono } from "next/font/google";
 import Link from "next/link";
 import '../globals.css'
 import BankAccount from './BankAccount';
-import { useState } from 'react';
+import { memo } from 'react';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,8 +16,8 @@ const robotoMono = Roboto_Mono({
   subsets: ["latin"],
 });
 
-export default function Header() {
-  const [activeLink, setActiveLink] = useState('');
+export default memo(function Header() {
+
 
   return (
     <div className={`${inter.variable} ${robotoMono.variable} antialiased`}>
@@ -28,8 +28,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/'
-                onMouseEnter={() => setActiveLink('home')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">Home</span>
@@ -40,8 +38,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/operations'
-                onMouseEnter={() => setActiveLink('operations')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">Operations</span>
@@ -52,8 +48,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/analytics'
-                onMouseEnter={() => setActiveLink('analytics')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">Analytics</span>
@@ -64,8 +58,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/budget'
-                onMouseEnter={() => setActiveLink('budget')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">Budget</span>
@@ -76,8 +68,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/convert'
-                onMouseEnter={() => setActiveLink('convert')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">Convert</span>
@@ -88,8 +78,6 @@ export default function Header() {
               <Link 
                 className="group relative" 
                 href='/about'
-                onMouseEnter={() => setActiveLink('about')}
-                onMouseLeave={() => setActiveLink('')}
               >
                 <li className="relative px-4 py-2 text-gray-300 hover:text-white font-medium transition-all duration-300 cursor-pointer">
                   <span className="relative z-10">About</span>
@@ -97,16 +85,14 @@ export default function Header() {
                 </li>
               </Link>
             </ul>
-            
-            {/* Декоративная линия под навигацией */}
+          
             <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
           </nav>
         </div>
         
         <BankAccount />
-        {/* Placeholder for BankAccount positioning */}
         <div className="absolute right-0 top-2.5 w-[220px] h-[60%]"></div>
       </div>
     </div>
   );
-}
+});

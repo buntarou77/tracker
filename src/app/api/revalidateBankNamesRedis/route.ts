@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "redis";
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
     const data = await request.json();
@@ -25,9 +26,13 @@ export async function POST(request: NextRequest) {
         await client.quit();
         
         try {
+            const cookieHeader = cookies().toString();
             const res = await fetch(`http://localhost:3000/api/getBankNamesRedis?login=${encodeURIComponent(login)}`, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Cookie: cookieHeader 
+                }
             });
             
             if (res.ok) {
@@ -69,9 +74,13 @@ export async function POST(request: NextRequest) {
         }
         
         try {
+            const cookieHeader = cookies().toString();
             const res = await fetch(`http://localhost:3000/api/getBankNamesRedis?login=${encodeURIComponent(login)}`, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Cookie: cookieHeader 
+                }
             });
             
             if (res.ok) {

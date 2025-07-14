@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useBankTransaction } from '../context/BankTransactionContext';
 import { useAuth } from '../hooks/useAuth';
 
 interface ExchangeRate {
@@ -71,7 +71,7 @@ const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record
 };
 
 export default function ConvertPage() {
-  const { currency, balance } = useApp();
+  const { currency, balance, exchangeRates, setExchangeRates } = useBankTransaction();
   const { user } = useAuth();
 
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -84,7 +84,6 @@ export default function ConvertPage() {
   const [conversionHistory, setConversionHistory] = useState<ConversionHistory[]>([]);
   const [favoriteRates, setFavoriteRates] = useState<string[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [exchangeRates, setExchangeRates] = useState<Record<string, Record<string, number>>>({});
   const [nextTimeUpdateRates, setNextTimeUpdateRates] = useState<string>('')
   
   const [budgetPercentage, setBudgetPercentage] = useState(50);
@@ -178,7 +177,6 @@ export default function ConvertPage() {
   }, [currency]);
   
   useEffect(() => {
-    console.log('effect')
     if (fromAmount && exchangeRate) {
       const amount = parseFloat(fromAmount);
       if (!isNaN(amount)) {

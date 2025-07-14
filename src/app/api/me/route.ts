@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '../auth/auth';
-
+import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
-    const accessToken = request.cookies.get('accessToken')?.value;
-    
+    const accessToken = cookies().get('accessToken')?.value;
+    // console.log(accessToken)
     if (!accessToken) {
+      
+
+      console.log('bad4')
       return NextResponse.json(
         { error: 'Access token not found' },
         { status: 401 }

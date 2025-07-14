@@ -11,7 +11,10 @@ import {
   ArcElement
 } from 'chart.js';
 import { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { usePlan } from '../context/PlanContext';
+import { useUI } from '../context/UIContext';
+import { useBankTransaction } from '../context/BankTransactionContext';
+import { useAuthContext } from '../context/AuthContext';
 import Cookies from 'js-cookie';
 import LastsAnalitycs from './lasts/lasts';
 import InfoSvg from '../resources/info-icon.svg';
@@ -51,28 +54,24 @@ interface ActivePlansStatus {
 export default function Analytics() {
   ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, LineElement, Title, Tooltip, Legend);
 
-  const { 
-    trans, 
-    setTrans,
+  const {
     plans,
     setPlans,
-    login,
-    activeBank,
     activePlansStatus,
     setActivePlansStatus,
     storagePlans,
     setStoragePlans,
-    isLoading,
-    setIsLoading,
-    error,
-    setError,
-    loadingSending,
+  } = usePlan();
+  const {
     setLoadingSending,
     planIsSending,
-    setPlanIsSending
-  } = useApp();
+    error,
+    setError,
+    setPlanIsSending,
+  } = useUI();
+  const {login, setLogin} = useAuthContext();
+  const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, } = useBankTransaction();
 
-  const [activeTab, setActiveTab] = useState('lasts');
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
   const [activeTargetForm, setActiveTargetForm] = useState(false);
@@ -161,7 +160,6 @@ export default function Analytics() {
       alert('Enter total amount');
       return 
     }
-    const login = Cookies.get('info_token');
     const newPlan = {
       frequency,
       categorys: categorys,
@@ -192,7 +190,6 @@ export default function Analytics() {
       setNewPlan({...newPlan, [field]: value})
   }
   const delPlan = async (id: number) => {
-    const login = Cookies.get('info_token');
     try{
       const res = await fetch(`api/deletePlan?id=${id}&login=${login}`, {
         method: 'DELETE'

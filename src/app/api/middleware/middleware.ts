@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyAccessToken } from '../auth/auth';
+import { cookies } from 'next/headers';
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublicPath = ['/login', '/register'].includes(path);
-  const token = request.cookies.get('accessToken')?.value;
+  const token = cookies().get('accessToken')?.value;
   if (isPublicPath) {
     if (token) {
       return NextResponse.redirect(new URL('/dashboard', request.nextUrl));

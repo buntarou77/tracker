@@ -16,7 +16,7 @@ export default function RegisterForm() {
   const [log, setLog] = useState<boolean>(false);
   const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
   const [activeButton, setActiveButton] = useState<boolean>(true);
-  const {login, setLogin} = useAuthContext()
+  const {login, setLogin} = useAuthContext();
 
   const regSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

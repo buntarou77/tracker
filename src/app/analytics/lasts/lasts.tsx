@@ -6,7 +6,9 @@ import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { FiltredTransactions, filtredCategorys } from '../../utils/filtredTrans';
 import { preparePieTransactions, prepareBarTransactions, getMonth, prepareMonthBarData } from '@/app/utils/createData';
 import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } from '@/app/utils/prepareData';
-import { useApp } from '../../context/AppContext';
+import { useAuthContext } from '../../context/AuthContext';
+import { useBankTransaction } from '../../context/BankTransactionContext';
+import { usePlan } from '../../context/PlanContext';
 import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
 
@@ -30,7 +32,9 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
     BarElement
   );
 
-  const { login, activeBank, activePlansStatus, plans, trans: globalTrans, setTrans } = useApp();
+  const { login } = useAuthContext();
+  const { activeBank, trans: globalTrans, setTrans } = useBankTransaction();
+  const { activePlansStatus, plans } = usePlan();
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
@@ -638,10 +642,15 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
         </div>
       </div>
       
-      <div className='justify-center flex flex-col items-left pl-[300px] pr-[300px]'>
-        <div className='border-[2px] border-[#5e5e5e] rounded-[10px]'>
-          <p className='text-[20px] font-[800]'>Top 5 categories per month:</p>
-          <p className='text-[19px] flex items-center flex-col'>{showCategory}</p>
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-lg">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <h3 className="text-xl font-bold text-white">Top 5 Categories This Month</h3>
+          </div>
+          <div className="space-y-2">
+            {showCategory}
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { useApp } from '../context/AppContext';
+import { useAuthContext } from '../context/AuthContext';
+import { useBankTransaction } from '../context/BankTransactionContext';
 import Cookies from 'js-cookie';
 
 export default function Operations() {
@@ -11,7 +12,8 @@ export default function Operations() {
     const [monthSkip, setMonthSkip] = useState<number>(1);
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
     const [hasMoreTransactions, setHasMoreTransactions] = useState<boolean>(true);
-    const { trans, setTrans, balance, setBalance, activeBank, login, currency} = useApp();
+    const { login } = useAuthContext();
+    const { trans, setTrans, balance, setBalance, activeBank, currency } = useBankTransaction();
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

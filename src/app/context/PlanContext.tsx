@@ -2,15 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useAuthContext } from './AuthContext';
-
+import { useAuth } from '../hooks/useAuth';
 interface PlanContextType {
   plans: any[];
   activePlans: any[];
   activePlansStatus: any;
+  storagePlans: any[];
   
   setPlans: (plans: any[]) => void;
   setActivePlans: (activePlans: any[]) => void;
   setActivePlansStatus: (status: any) => void;
+  setStoragePlans: (storagePlans: any[]) => void;
 }
 
 const PlanContext = createContext<PlanContextType | undefined>(undefined);
@@ -22,6 +24,8 @@ interface PlanProviderProps {
 export function PlanProvider({ children }: PlanProviderProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [activePlans, setActivePlans] = useState<any[]>([]);
+  const [storagePlans, setStoragePlans] = useState<any[]>([]);
+  const [activePlan, setActivePlan] = useState<any>(null);
   const [activePlansStatus, setActivePlansStatus] = useState({
     daily: { status: false, id: 0 },
     weekly: { status: false, id: 0 },
@@ -29,14 +33,13 @@ export function PlanProvider({ children }: PlanProviderProps) {
     yearly: { status: false, id: 0 }
   });
   
-  const { login } = useAuthContext();
+  const { login, isAuthenticated} = useAuthContext();
 
   const getActivePlans = () => {
     const activePlans = localStorage.getItem('activePlans');
     return activePlans ? JSON.parse(activePlans) : [];
   };
 
-  // Загружаем планы при аутентификации
   useEffect(() => {
     async function loadPlans() {
       if (login) {
@@ -74,16 +77,19 @@ export function PlanProvider({ children }: PlanProviderProps) {
     }
     
     loadPlans();
-  }, [login]);
+  }, [login, isAuthenticated]);
 
   const contextValue = useMemo(() => ({
     plans,
     activePlans,
     activePlansStatus,
-    setPlans,
+    activePlan,
     setActivePlans,
+    setActivePlan,
     setActivePlansStatus,
-  }), [plans, activePlans, activePlansStatus]);
+    storagePlans,
+    setStoragePlans,
+  }), [plans, activePlans, activePlansStatus, storagePlans, activePlan, setActivePlan]);
 
   return (
     <PlanContext.Provider value={contextValue}>

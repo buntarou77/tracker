@@ -11,7 +11,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const cookieHeader = cookies().toString();
+    const cookieHeader = cookies().toString()
+    // console.log(cookieHeader)
     const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
       method: 'GET',
       headers: { Cookie: cookieHeader },

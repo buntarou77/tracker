@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useAuthContext } from '../context/AuthContext';
+import { useBankTransaction } from '../context/BankTransactionContext';
+import { usePlan } from '../context/PlanContext';
 import { useAuth } from '../hooks/useAuth';
 import {
   Chart as ChartJS,
@@ -53,23 +55,16 @@ interface Plan {
 }
 
 export default function BudgetPage() {
+  const { login } = useAuthContext();
+  const { trans, activeBank, currency, balance, setTrans } = useBankTransaction();
   const { 
     plans, 
-    trans, 
-    login, 
-    activeBank,
-    activePlan,
-    setActivePlan,
-    currency,
     activePlansStatus,
-    setPlans,
-    balance,
-    setTrans,
-    moreGains,
-    moreLosses,
-    setMoreGains,
-    setMoreLosses
-  } = useApp();
+    activePlans,
+    setActivePlans
+  } = usePlan();
+  
+  const [activePlan, setActivePlan] = useState<Plan | null>(null);
   
   const { user } = useAuth();
   const [categoryProgress, setCategoryProgress] = useState<Record<string, number>>({});
@@ -245,7 +240,7 @@ export default function BudgetPage() {
           category: 'savings',
           type: 'loss',
           date: new Date().toISOString().split('T')[0],
-          note: `Target claimed: ${activePlan.targets?.find((t: any) => t.id === targetId)?.target}`
+          note: `Target claimed: ${activePlan?.targets?.find((t: any) => t.id === targetId)?.target}`
         })
       });
 
@@ -255,7 +250,7 @@ export default function BudgetPage() {
 
       const updatedPlan = {
         ...activePlan,
-        targets: activePlan.targets?.filter((target: Target) => target.id !== targetId)
+        targets: activePlan?.targets?.filter((target: Target) => target.id !== targetId)
       };
 
       const updateResponse = await fetch(`/api/rewritePlan?login=${login}&id=${planId}`, {
@@ -275,8 +270,8 @@ export default function BudgetPage() {
         );
         setPlans(updatedPlans);
         
-        if (activePlan.id === planId) {
-          setActivePlan(updatedPlan);
+        if (activePlan?.id === planId) {
+          setActivePlan(updatedPlan as Plan);
         }
 
         const newTrans = await fetch(`/api/getTransRedis?login=${login}&bankName=${activeBank.name}`);

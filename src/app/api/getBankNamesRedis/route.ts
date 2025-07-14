@@ -8,7 +8,7 @@ const login = searchParams.get('login');
     url: 'redis://127.0.0.1:6379'
   });
   try {
-    const cookieHeader = cookies().toString();
+    const cookieHeader = cookies().toString()
     const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
       method: 'GET',
       headers: { Cookie: cookieHeader },
@@ -36,6 +36,7 @@ const login = searchParams.get('login');
             const data = await f.json();
             return NextResponse.json({ value: data}, { status: 200 });
         }else{
+          console.log('bad1')
             return NextResponse.json({error: 'Failed to fetch balance'}, { status: 400 });
         }
     }catch(e){
@@ -58,6 +59,7 @@ const login = searchParams.get('login');
                 return NextResponse.json({error: 'failed to connect database'}, {status: 500})
             }
         }catch(e){
+          console.log('bad2')
             return NextResponse.json({error: e}, { status: 400 });
         }
 

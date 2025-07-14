@@ -16,19 +16,22 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [login, setLogin] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const auth = useAuth();
 
   // Загружаем данные когда пользователь аутентифицирован
   useEffect(() => {
     if (auth.user && auth.isAuthenticated) {
       setLogin(auth.user.login);
+      setIsAuthenticated(auth.isAuthenticated);
     }
   }, [auth.user, auth.isAuthenticated]);
 
   const contextValue = useMemo(() => ({
     login,
     setLogin,
-  }), [login]);
+    isAuthenticated,
+  }), [login, isAuthenticated]);
 
   return (
     <AuthContext.Provider value={contextValue}>

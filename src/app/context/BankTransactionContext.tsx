@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import { useAuthContext } from './AuthContext';
-
 interface BankTransactionContextType {
   activeBank: { name: string; id: string };
   bankNames: any[];
@@ -30,10 +29,10 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
   const [trans, setTrans] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState('');
-  
-  const { login } = useAuthContext();
+ const [exchangeRates, setExchangeRates] = useState<any>({});
+  const { login, isAuthenticated } = useAuthContext();
 
-  // Основная загрузка данных при аутентификации
+  
   useEffect(() => {
     async function loadBankData() {
       if (login && bankNames.length === 0) {
@@ -95,14 +94,16 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     }
     
     loadBankData();
-  }, [login, bankNames.length]);
+  }, [login, bankNames.length, isAuthenticated]);
 
   const contextValue = useMemo(() => ({
     activeBank,
     bankNames,
     trans,
     balance,
+    exchangeRates,
     currency,
+    setExchangeRates,
     setActiveBank,
     setBankNames,
     setTrans,
