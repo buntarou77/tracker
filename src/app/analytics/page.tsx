@@ -320,7 +320,7 @@ export default function Analytics() {
 
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Modern Header */}
+
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
@@ -363,9 +363,9 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Main Content */}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Notification Toast */}
+
         {planIsSending && (
           <div className="fixed top-20 right-4 z-50 animate-slide-in">
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3">
@@ -377,7 +377,7 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Error Toast */}
+
         {doublePlansError && (
           <div className="fixed top-20 right-4 z-50 animate-slide-in">
             <div className="bg-red-500/90 backdrop-blur-lg text-white p-4 rounded-xl shadow-2xl max-w-sm">
@@ -401,7 +401,7 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Plans Section */}
+
         {activePlansShow && (
           <div className="mb-8 animate-fade-in">
             <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
@@ -477,7 +477,7 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Plan Details Modal */}
+
         {activePlanWindow && (
           <div 
             className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -635,7 +635,7 @@ export default function Analytics() {
                   </div>
                 </div>
 
-                {/* Categories Section */}
+
                 <div className="mt-6">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-semibold text-white">Categories</h3>

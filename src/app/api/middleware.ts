@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyAccessToken } from './auth/auth';
 import { cookies } from 'next/headers';
-import { config } from '../../../lib/config';
+import { config as appConfig } from '../../../lib/config';
 import jwt from 'jsonwebtoken';
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -24,10 +24,8 @@ export async function middleware(request: NextRequest) {
       { status: 401 }
     );
   }
-  const JWT_SECRET = config.jwt.secret;
-  const REFRESH_SECRET = config.jwt.refreshSecret;
-  const ACCESS_TOKEN_EXPIRES = config.jwt.accessTokenExpires;
-  const REFRESH_TOKEN_EXPIRES = config.jwt.refreshTokenExpires;
+  const JWT_SECRET = appConfig.jwt.secret;
+  const REFRESH_SECRET = appConfig.jwt.refreshSecret;
   try {
     jwt.verify(token, JWT_SECRET);
     jwt.verify(refreshToken, REFRESH_SECRET);
