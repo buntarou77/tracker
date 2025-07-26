@@ -9,7 +9,7 @@ interface PlanContextType {
   activePlansStatus: any;
   storagePlans: any[];
   
-  setPlans: (plans: any[]) => void;
+  setPlans: (plans: any[] | ((prev: any[]) => any[])) => void;
   setActivePlans: (activePlans: any[]) => void;
   setActivePlansStatus: (status: any) => void;
   setStoragePlans: (storagePlans: any[]) => void;
@@ -33,7 +33,7 @@ export function PlanProvider({ children }: PlanProviderProps) {
     yearly: { status: false, id: 0 }
   });
   
-  const { login, isAuthenticated} = useAuthContext();
+  const { login } = useAuthContext();
 
   const getActivePlans = () => {
     const activePlans = localStorage.getItem('activePlans');
@@ -77,19 +77,20 @@ export function PlanProvider({ children }: PlanProviderProps) {
     }
     
     loadPlans();
-  }, [login, isAuthenticated]);
+  }, [login]);
 
   const contextValue = useMemo(() => ({
     plans,
     activePlans,
     activePlansStatus,
     activePlan,
+    setPlans,
     setActivePlans,
     setActivePlan,
     setActivePlansStatus,
     storagePlans,
     setStoragePlans,
-  }), [plans, activePlans, activePlansStatus, storagePlans, activePlan, setActivePlan]);
+  }), [plans, activePlans, activePlansStatus, storagePlans, activePlan, setPlans, setActivePlans, setActivePlan, setActivePlansStatus, setStoragePlans]);
 
   return (
     <PlanContext.Provider value={contextValue}>

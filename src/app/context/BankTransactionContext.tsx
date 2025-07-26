@@ -6,15 +6,17 @@ import { useAuthContext } from './AuthContext';
 interface BankTransactionContextType {
   activeBank: { name: string; id: string };
   bankNames: any[];
-  trans: any[];
+  trans: Record<string, any[]>;
   balance: number;
   currency: string;
+  exchangeRates: any;
   
   setActiveBank: (bank: { name: string; id: string }) => void;
   setBankNames: (bankNames: any[]) => void;
-  setTrans: (trans: any[]) => void;
+  setTrans: (trans: Record<string, any[]> | ((prev: Record<string, any[]>) => Record<string, any[]>)) => void;
   setBalance: (balance: number) => void;
   setCurrency: (currency: string) => void;
+  setExchangeRates: (rates: any) => void;
 }
 
 const BankTransactionContext = createContext<BankTransactionContextType | undefined>(undefined);
@@ -26,11 +28,11 @@ interface BankTransactionProviderProps {
 export function BankTransactionProvider({ children }: BankTransactionProviderProps) {
   const [activeBank, setActiveBank] = useState({name: '', id: ''});
   const [bankNames, setBankNames] = useState<any[]>([]);
-  const [trans, setTrans] = useState<any[]>([]);
+  const [trans, setTrans] = useState<Record<string, any[]>>({});
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState('');
  const [exchangeRates, setExchangeRates] = useState<any>({});
-  const { login, isAuthenticated } = useAuthContext();
+  const { login } = useAuthContext();
 
   
   useEffect(() => {
@@ -60,7 +62,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
                   });
                   if (response.ok) {
                     const transData = await response.json();
-                    setTrans(transData.value);
+                    setTrans(transData.value || {});
                     setBalance(activeBank.balance);  
                     setCurrency(activeBank.currency);
                     setActiveBank({name: activeBank.name, id: activeBank.id});
@@ -77,7 +79,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
                 if (response.ok) {
                   const transData = await response.json();
                   const someActiveBank = trueData[0];
-                  setTrans(transData.value);
+                  setTrans(transData.value || {});
                   setBalance(someActiveBank.balance);
                   setCurrency(someActiveBank.currency);
                   setActiveBank({name: someActiveBank.name, id: someActiveBank.id});
@@ -94,7 +96,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     }
     
     loadBankData();
-  }, [login, bankNames.length, isAuthenticated]);
+  }, [login, bankNames.length]);
 
   const contextValue = useMemo(() => ({
     activeBank,

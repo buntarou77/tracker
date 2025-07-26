@@ -61,7 +61,8 @@ export default function BudgetPage() {
     plans, 
     activePlansStatus,
     activePlans,
-    setActivePlans
+    setActivePlans,
+    setPlans
   } = usePlan();
   
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
@@ -123,7 +124,7 @@ export default function BudgetPage() {
     setCategoryProgress(progress);
   }, [activePlan, trans]);
 
-  // Расчет прогресса targets и состояния бюджета
+
   useEffect(() => {
     if (!activePlan || !trans) return;
 
@@ -171,7 +172,7 @@ export default function BudgetPage() {
   useEffect(() => {
     const recommendations: string[] = [];
 
-    // Рекомендации по категориям
+
     Object.entries(categoryProgress).forEach(([category, progress]) => {
       if (progress > 100) {
         recommendations.push(
@@ -184,7 +185,7 @@ export default function BudgetPage() {
       }
     });
 
-    // Рекомендации по целям накопления
+
     if (activePlan?.targets) {
       const affordableTargets = activePlan.targets.filter((target: Target) => 
         target && budgetStatus.canAffordTargets[target.id]
@@ -204,7 +205,7 @@ export default function BudgetPage() {
       }
     }
 
-    // Рекомендации по месячному балансу
+
     if (balance < 0) {
       recommendations.push(
         `📉 Monthly expenses exceed income by $${Math.abs(budgetStatus.monthlyBalance)}. Review your spending.`
@@ -215,7 +216,7 @@ export default function BudgetPage() {
       );
     }
 
-    // Рекомендации по общим сбережениям
+
     if (budgetStatus.totalSaved < 1000) {
       recommendations.push(
         `🚨 Build emergency fund: You have $${budgetStatus.totalSaved} saved. Aim for at least $1,000.`

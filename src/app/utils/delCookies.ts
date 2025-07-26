@@ -1,5 +1,5 @@
 import Cookies from "js-cookie";
-function deleteCookiesStartingWith(prefix) {
+function deleteCookiesStartingWith(prefix: string) {
     const allCookies = Cookies.get(); 
 
     Object.keys(allCookies).forEach(cookieName => {

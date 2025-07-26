@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💰 Finance Tracker
 
-## Getting Started
+Персональное приложение для отслеживания финансов, планирования бюджета и аналитики расходов.
 
-First, run the development server:
+## 🚀 Возможности
+
+- 📊 Аналитика расходов и доходов
+- 🎯 Планирование бюджета с категориями
+- 💳 Управление банковскими счетами
+- 📈 Визуализация данных через графики
+- 🔐 Безопасная аутентификация
+- ⚡ Кэширование через Redis
+
+## 🛠️ Технологии
+
+- **Frontend:** Next.js 14, React 18, TypeScript
+- **Styling:** Tailwind CSS
+- **Charts:** Chart.js, React-Chartjs-2
+- **Database:** MongoDB
+- **Cache:** Redis
+- **Auth:** JWT, bcryptjs
+
+## 🚀 Быстрый старт
+
+### Вариант 1: С Docker (Рекомендуется)
+
+1. **Клонируйте репозиторий**
+   ```bash
+   git clone <your-repo-url>
+   cd my-next
+   ```
+
+2. **Запустите базы данных**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Установите зависимости**
+   ```bash
+   npm install
+   ```
+
+4. **Запустите приложение**
+   ```bash
+   npm run dev
+   ```
+
+5. **Откройте браузер**
+   ```
+   http://localhost:3000
+   ```
+
+### Вариант 2: Локальная установка
+
+1. **Установите MongoDB и Redis**
+   - MongoDB: https://docs.mongodb.com/manual/installation/
+   - Redis: https://redis.io/download
+
+2. **Запустите сервисы**
+   ```bash
+   # MongoDB
+   mongod
+   
+   # Redis (в другом терминале)
+   redis-server
+   ```
+
+3. **Установите зависимости и запустите приложение**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+## ⚙️ Конфигурация
+
+Приложение использует централизованную конфигурацию в `lib/config.ts`. Все настройки базы данных и приложения можно изменить там.
+
+### Переменные окружения (опционально)
+
+Создайте `.env.local` для переопределения настроек по умолчанию:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Скопируйте пример
+cp env.example .env.local
+
+# Отредактируйте .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Доступные переменные:
+- `MONGODB_URI` - URI подключения к MongoDB
+- `MONGODB_DB_NAME` - Название базы данных
+- `COLLECTION_NAME` - Название коллекции
+- `REDIS_URL` - URL подключения к Redis
+- `JWT_SECRET` - Секретный ключ для JWT токенов
+- `NEXT_PUBLIC_BASE_URL` - Базовый URL приложения
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🗄️ База данных
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### MongoDB
+- **База данных:** `users` (по умолчанию)
+- **Коллекция:** `users` (по умолчанию)
 
-## Learn More
+### Структура пользователя:
+```json
+{
+  "user": "username",
+  "email": "user@example.com",
+  "password_hash": "hashed_password",
+  "banks": [...],
+  "plans": [...],
+  "created_at": "2024-01-01T00:00:00.000Z"
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📁 Структура проекта
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/
+│   ├── api/          # API роуты
+│   ├── components/   # React компоненты
+│   ├── context/      # React Context
+│   ├── hooks/        # Кастомные хуки
+│   ├── utils/        # Утилиты
+│   └── ...
+lib/
+├── config.ts         # Централизованная конфигурация
+└── ...
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🤝 Разработка
 
-## Deploy on Vercel
+```bash
+# Запуск в режиме разработки
+npm run dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Сборка для продакшена
+npm run build
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Запуск продакшн версии
+npm start
+
+# Линтинг
+npm run lint
+```
+
+## 📝 Лицензия
+
+MIT License

@@ -1,5 +1,5 @@
-const prepareBarTransactions = (data, yearData = '2025')=>{
-    const monthsGainAmounts = {};
+const prepareBarTransactions = (data: any[], yearData = '2025')=>{
+    const monthsGainAmounts: Record<string, number> = {};
     for (let i = 0; i < data.length; i++) {
       const { amount, date } = data[i];
       const month = date.split('-')[1];
@@ -52,8 +52,8 @@ const prepareBarTransactions = (data, yearData = '2025')=>{
         data: Object.values(monthsGainAmounts),
     }
 }
-const prepareMonthBarData= (data)=>{
-    const monthsGainAmounts = {};
+const prepareMonthBarData= (data: any[])=>{
+    const monthsGainAmounts: Record<number, number> = {};
 
     for (let i = 0; i < data.length; i++) {
       const { amount, date , numeralAmount} = data[i];
@@ -66,16 +66,16 @@ const prepareMonthBarData= (data)=>{
     }
 
 }
-const preparePieTransactions = (data)=>{
-        const gainCategorySums = {};
-    data.forEach(({ category, amount }) => {
+const preparePieTransactions = (data: any[])=>{
+        const gainCategorySums: Record<string, number> = {};
+    data.forEach(({ category, amount }: { category: string; amount: number }) => {
       gainCategorySums[category] = (gainCategorySums[category] || 0) + amount;
     });
     const Categorys = Object.keys(gainCategorySums);   
     const Amounts = Object.values(gainCategorySums);
     return {Categorys, Amounts}
 }
-const getMonth = (monthIndex)=>{
+const getMonth = (monthIndex: number)=>{
   const months = [
     'January',
     'February', 

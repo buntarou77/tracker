@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { serialize, parse } from 'cookie';
 import { NextApiResponse } from 'next';
+import { config } from '../../../../lib/config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secure-secret';
-const REFRESH_SECRET = `${JWT_SECRET}-refresh`;
-const ACCESS_TOKEN_EXPIRES = '15m';
-const REFRESH_TOKEN_EXPIRES = '7d';
+const JWT_SECRET = config.jwt.secret;
+const REFRESH_SECRET = config.jwt.refreshSecret;
+const ACCESS_TOKEN_EXPIRES = config.jwt.accessTokenExpires;
+const REFRESH_TOKEN_EXPIRES = config.jwt.refreshTokenExpires;
 
 interface TokenPayload {
   id: string;

@@ -165,7 +165,7 @@ export default function RegisterForm() {
         )}
 
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
-          {/* Вкладки */}
+
           <div className="flex bg-gray-900/50">
             <button
               onClick={activeReg}
@@ -196,7 +196,7 @@ export default function RegisterForm() {
             </button>
           </div>
 
-          {/* Форма */}
+
           <div className="p-8">
             <form onSubmit={regSubmit} className={`space-y-6 ${shouldAnimate ? 'fadeIn' : ''}`}>
               <div className="text-center mb-6">
@@ -302,7 +302,7 @@ export default function RegisterForm() {
         )}
 
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-700/50 overflow-hidden">
-          {/* Вкладки */}
+
           <div className="flex bg-gray-900/50">
             <button
               onClick={activeReg}
@@ -330,7 +330,7 @@ export default function RegisterForm() {
             </button>
           </div>
 
-          {/* Форма */}
+
           <div className="p-8">
             <form onSubmit={logSubmit} className={`space-y-6 ${shouldAnimate ? 'fadeIn' : ''}`}>
               <div className="text-center mb-6">

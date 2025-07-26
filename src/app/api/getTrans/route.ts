@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from 'mongodb';
 import { cookies } from 'next/headers';
+import { config } from '../../../../lib/config';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     
 
     async function getTransactions() {
-        const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+        const client = new MongoClient(config.mongodb.uri);
         try {
             await client.connect();
             const db = client.db('users');

@@ -128,7 +128,7 @@ export default function ConvertPage() {
         const newExchangeRate = calculateRate(fromCurrency, toCurrency);
         if (newExchangeRate > 0) {
           setExchangeRate(newExchangeRate);
-          setExchangeRates(prev => ({
+          setExchangeRates((prev: any) => ({
             ...prev,
             [fromCurrency]: {
               ...prev[fromCurrency],
@@ -165,7 +165,7 @@ export default function ConvertPage() {
         if(!exchangeRates[currency]){
           const result = await fetchExchangeRates(currency);
           if (result) {
-            setExchangeRates(prev => ({
+            setExchangeRates((prev: any) => ({
               ...prev,
               [currency]: result.rates
             }));
@@ -465,7 +465,7 @@ export default function ConvertPage() {
                         const result = await fetchExchangeRates(fromCurrency);
                         if (result && result.rates[toCurrency]) {
                           setExchangeRate(result.rates[toCurrency]);
-                          setExchangeRates(prev => ({
+                          setExchangeRates((prev: any) => ({
                             ...prev,
                             [fromCurrency]: result.rates
                           }));

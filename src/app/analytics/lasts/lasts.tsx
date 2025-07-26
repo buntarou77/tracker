@@ -1,6 +1,6 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { FiltredTransactions, filtredCategorys } from '../../utils/filtredTrans';
@@ -13,13 +13,20 @@ import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
 
 interface LastsAnalyticsProps {
-  lossTrans: any[];
-  gainTrans: any[];
-  trans: any[];
-  transObj?: any;
+  trans: Record<string, any[]>;
+  activeBank: {
+    name: string;
+    [key: string]: any;
+  };
+  setTrans: (trans: Record<string, any[]> | ((prev: Record<string, any[]>) => Record<string, any[]>)) => void;
+  activePlansStatus: {
+    [key: string]: { status: boolean; id: number };
+  };
+  plans: any[];
+  login: string;
 }
 
-export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }: LastsAnalyticsProps) {
+export default memo(function LastsAnalytics({trans, activeBank, setTrans, activePlansStatus, plans, login}: LastsAnalyticsProps) {
   ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -32,9 +39,6 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
     BarElement
   );
 
-  const { login } = useAuthContext();
-  const { activeBank, trans: globalTrans, setTrans } = useBankTransaction();
-  const { activePlansStatus, plans } = usePlan();
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
@@ -58,12 +62,12 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
   const [modalTitle, setModalTitle] = useState('');
   const [modalTransactions, setModalTransactions] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
-  
+  const globalTrans = trans;
 
   const isMonthLoaded = (year: number, month: number) => {
     if (!globalTrans || typeof globalTrans !== 'object') return false;
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    return globalTrans.hasOwnProperty(monthKey) && globalTrans[monthKey]?.length > 0;
+    return globalTrans.hasOwnProperty(monthKey) && globalTrans[monthKey as keyof typeof globalTrans]?.length > 0;
   };
 
   const loadMonth = async (monthSkip: number) => {
@@ -95,8 +99,8 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
   
   const getMonthTransactions = (year: number, month: number) => {
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    if (globalTrans && globalTrans[monthKey]) {
-      return globalTrans[monthKey];
+    if (globalTrans && globalTrans[monthKey as keyof typeof globalTrans]) {
+      return globalTrans[monthKey as keyof typeof globalTrans];
     }
     return [];
   };
@@ -238,40 +242,40 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
     }
   };
 
-  const handlePreviousMonth = async (e: React.MouseEvent) => {
+  const handlePreviousMonth = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (new Date().getMonth() - monthOffset === 0) {
       setMonthOffset(-1);
     }
     setMonthOffset(prev => prev + 1);
   };
-  const handleNextMonth = (e: React.MouseEvent) => {
+  const handleNextMonth = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (monthOffset > 0) {
       setMonthOffset(prev => prev - 1);
     }
   };
 
-  const openModal = (title: string, transactions: any[]) => {
+  const openModal = (title: string, transactions: any[]): void => {
     console.log('Opening modal:', title, transactions);
     setModalTitle(title);
     setModalTransactions(transactions);
     setModalOpen(true);
   };
 
-  const closeModal = () => {
+  const closeModal = (): void => {
     console.log('Closing modal');
     setModalOpen(false);
     setModalTitle('');
     setModalTransactions([]);
   };
 
-  const showCategoryTransactions = (categoryName: string) => {
-    const categoryTrans = filteredTrans.filter(t => t.category === categoryName);
+  const showCategoryTransactions = (categoryName: string): void => {
+    const categoryTrans = filteredTrans.filter((t: any) => t.category === categoryName);
     openModal(`${categoryName} transactions`, categoryTrans);
   };
 
-  const showTypeTransactions = (type: string) => {
+  const showTypeTransactions = (type: string): void => {
     const typeTrans = type === 'gains' ? filteredGainTrans : filteredLossTrans;
     openModal(`${type} transactions`, typeTrans);
   };
@@ -311,21 +315,23 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
   const typeDatas = preparePieData([filteredGainTrans.length, filteredLossTrans.length], ['gains', 'losses']);
   const { data: lineData, options: lineOptions } = prepareLineData([gains, losses], allDates);
   const { categorys, categoryAmounts, sortCategory } = filtredCategorys(filteredTrans);
+  const categorysArray = categorys as string[];
+  const categoryAmountsArray = categoryAmounts as number[];
   
-  const showCategory = sortCategory.slice(0, 5).map((item, index) => (
+  const showCategory = sortCategory.slice(0, 5).map((item: [string, number], index: number) => (
     <div key={item[0]}>
       <span className='font-[700]'>{index + 1}</span>. {item[0]} - {item[1]}
     </div>
   ));
   
-  const gainCategorys = preparePieTransactions(filteredGainTrans).Categorys;
-  const gainAmounts = preparePieTransactions(filteredGainTrans).Amounts;
+  const gainCategorys = preparePieTransactions(filteredGainTrans).Categorys as string[];
+  const gainAmounts = preparePieTransactions(filteredGainTrans).Amounts as number[];
   const gainDoughnutData = prepareDoughnutData(gainAmounts, gainCategorys);
   
-  const lossCategorys = preparePieTransactions(filteredLossTrans).Categorys;
-  const lossAmounts = preparePieTransactions(filteredLossTrans).Amounts;
+  const lossCategorys = preparePieTransactions(filteredLossTrans).Categorys as string[];
+  const lossAmounts = preparePieTransactions(filteredLossTrans).Amounts as number[];
   const lossDoughnutData = prepareDoughnutData(lossAmounts, lossCategorys);
-  const categoryDoughnutData = prepareDoughnutData(categoryAmounts, categorys);
+  const categoryDoughnutData = prepareDoughnutData(categoryAmountsArray, categorysArray);
   
   useEffect(() => {
     if (activePlan && activePlan.type === 'expense') {
@@ -520,13 +526,13 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
           <div className='w-[50%] p-4'>
             <h3 className='text-white text-lg font-bold mb-4'>Categories</h3>
             <div className='grid grid-cols-2 gap-2 max-h-[350px] w-[100%] overflow-y-auto'>
-              {categorys.map((category, index) => (
+              {categorysArray.map((category, index) => (
                 <button
                   key={index}
                   onClick={() => showCategoryTransactions(category)}
                   className='bg-gray-700 hover:bg-gray-600 text-white p-2 rounded text-sm transition-colors text-left'
                 >
-                  {category}: {categoryAmounts[index]}$
+                  {category}: {categoryAmountsArray[index]}$
                 </button>
               ))}
             </div>
@@ -663,16 +669,18 @@ export default function LastsAnalytics({ lossTrans, gainTrans, trans, transObj }
       />
     </div>
   );
-}
+});
 
 
-const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal, mounted }: {
+interface TransactionModalProps {
   modalOpen: boolean;
   modalTitle: string;
   modalTransactions: any[];
   closeModal: () => void;
   mounted: boolean;
-}) => {
+}
+
+const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal, mounted }: TransactionModalProps) => {
   if (!mounted || !modalOpen) return null;
 
   return createPortal(

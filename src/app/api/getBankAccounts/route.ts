@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       await client.connect();
       const db = client.db('users');
       const result = await db.collection('users').findOne({ user: login }, {projection: {banks: 1, _id: 0}});
-      return result.banks 
+      return result?.banks || [] 
     } catch (error) {
       console.error('Ошибка при получении банковских счетов:', error);
       throw error;

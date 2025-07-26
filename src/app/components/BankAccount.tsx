@@ -87,7 +87,7 @@ const BankAccount = () => {
         if(!res.ok){
           setRegisterError(true)
         }else{
-          setTrans([])
+          setTrans({})
           setBankNames([])
           setActiveBank({name: '', id: ''})
           setBalance(0)
@@ -98,8 +98,6 @@ const BankAccount = () => {
           localStorage.removeItem('conversionHistory')
           Cookies.remove('accessToken')
           Cookies.remove('refreshToken')
-
-
         }
       }else{
         setRegisterError(true)

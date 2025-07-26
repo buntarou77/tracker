@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { config } from '../../../../lib/config';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const baseCurrency = searchParams.get('base');
     try {
       const cookieHeader = cookies().toString();
-      const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
+      const meRes = await fetch(`${config.app.baseUrl}/api/me`, {
         method: 'GET',
         headers: { Cookie: cookieHeader },
         cache: 'no-store',
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
     }
-    const KONVERT_TOKEN = process.env.KONVERT_TOKEN;
+    const KONVERT_TOKEN = config.konvert.token;
 
     
 
@@ -28,9 +29,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/46be24096b6927fd6c4bb7cc/latest/${baseCurrency}`,
+      `https://v6.exchangerate-api.com/v6/${KONVERT_TOKEN}/latest/${baseCurrency}`,
       {
         headers: {
           'Accept': 'application/json',

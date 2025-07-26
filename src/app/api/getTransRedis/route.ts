@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from 'redis';
 import { cookies } from 'next/headers';
+import { config } from '../../../../lib/config';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   }
 
   const client = createClient({
-    url: 'redis://127.0.0.1:6379'
+    url: config.redis.url
   });
 
   try {

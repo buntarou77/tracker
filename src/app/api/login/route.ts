@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import { MongoClient } from 'mongodb';
 import { generateTokens } from '../auth/auth';
+import { config } from '../../../../lib/config';
 
 interface User {
   _id: string;
@@ -22,12 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const client = new MongoClient(config.mongodb.uri);
     try {
       await client.connect();
-      const db = client.db('users');
+      const db = client.db(config.mongodb.dbName);
       // Ищем пользователя в коллекции auth_users
-      const user = await db.collection('users').findOne({
+      const user = await db.collection(config.mongodb.collectionName).findOne({
         user: login
       }) as User | null;
 

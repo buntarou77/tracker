@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import bcryptjs from 'bcryptjs'
 import { MongoClient } from 'mongodb'
+import { config } from '../../../../lib/config'
 
 interface User {
   _id?: string;
@@ -21,14 +22,14 @@ export async function POST(request: Request) {
       )
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017')
+    const client = new MongoClient(config.mongodb.uri)
     
     try {
       await client.connect()
-      const db = client.db('users')
+      const db = client.db(config.mongodb.dbName)
       
       // Проверяем существует ли пользователь
-      const existingUser = await db.collection('users').findOne({
+      const existingUser = await db.collection(config.mongodb.collectionName).findOne({
         $or: [
           { email: email },
           { user: login }
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       const hashedPassword = await bcryptjs.hash(password, salt)
 
       // Создаем пользователя в коллекции auth_users
-      const authResult = await db.collection('users').insertOne({
+      const authResult = await db.collection(config.mongodb.collectionName).insertOne({
         email,
         user: login,
         password_hash: hashedPassword,

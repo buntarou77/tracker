@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from 'redis';
 import { cookies } from 'next/headers';
+import { config } from '../../../../lib/config';
 
 export async function POST(request: NextRequest) {
   const data = await request.json();
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
   }
 
-  const client = createClient({ url: 'redis://127.0.0.1:6379' });
+  const client = createClient({ url: config.redis.url });
   
   try {
     await client.connect();

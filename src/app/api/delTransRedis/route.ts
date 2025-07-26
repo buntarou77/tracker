@@ -7,20 +7,9 @@ export async function POST(request: Request) {
     const login = searchParams.get('login');
     const bankName = searchParams.get('bankName');
     
-    // Проверка авторизации через /api/me
     try {
-        const cookieHeader = cookies().toString();
-        const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
-            method: 'GET',
-            headers: { Cookie: cookieHeader },
-            cache: 'no-store',
-        });
-        if (!meRes.ok) {
-            return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
-        }
-        const me = await meRes.json();
-        if (!me.login || me.login !== login) {
-            return NextResponse.json({ error: 'Forbidden: login mismatch' }, { status: 403 });
+        if (!login) {
+            return NextResponse.json({ error: 'Forbidden: login required' }, { status: 403 });
         }
     } catch (e) {
         return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
@@ -44,13 +33,13 @@ export async function POST(request: Request) {
         const cachedTrans = await client.get(redisKey);
         
         if (cachedTrans) {
-            // Возвращаем кэшированные данные
+
             const value = JSON.parse(cachedTrans);
             await client.disconnect();
             return NextResponse.json({ value }, { status: 200 });
         }
 
-        // Если кэш отсутствует, получаем данные из БД
+
         try {
             const response = await fetch(`http://localhost:3000/api/getTrans?login=${login}&bankName=${bankName}`, {
                 method: 'GET'
@@ -59,7 +48,7 @@ export async function POST(request: Request) {
             if (response.ok) {
                 const data = await response.json();
                 
-                // Группируем транзакции по monthKey (YYYY-MM)
+
                 const monthTrans: { [key: string]: any[] } = {};
                 
                 data.transactions.forEach((trans: any) => {
@@ -74,7 +63,7 @@ export async function POST(request: Request) {
                     monthTrans[monthKey].push(trans);
                 });
                 
-                // Кэшируем данные (TTL 30 минут)
+
                 await client.setEx(redisKey, 1800, JSON.stringify(monthTrans));
                 
                 await client.disconnect();
@@ -89,7 +78,7 @@ export async function POST(request: Request) {
         }
 
     } catch (redisError) {
-        // Если Redis недоступен, получаем данные напрямую из БД
+
         try {
             const response = await fetch(`http://localhost:3000/api/getTrans?login=${login}&bankName=${bankName}`, {
                 method: 'GET'
@@ -98,7 +87,7 @@ export async function POST(request: Request) {
             if (response.ok) {
                 const data = await response.json();
                 
-                // Группируем транзакции по monthKey
+
                 const monthTrans: { [key: string]: any[] } = {};
                 
                 data.transactions.forEach((trans: any) => {

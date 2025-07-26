@@ -63,6 +63,7 @@ export default function Analytics() {
     setStoragePlans,
   } = usePlan();
   const {
+    loadingSending,
     setLoadingSending,
     planIsSending,
     error,
@@ -75,24 +76,24 @@ export default function Analytics() {
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
   const [activeTargetForm, setActiveTargetForm] = useState(false);
-  const [categorys, setCategorys] = useState([]);
+  const [categorys, setCategorys] = useState<any[]>([]);
   const [typeOfPlan, setTypeOfPlan] = useState('expense');
   const [category, setCategory] = useState('food');
   const [amount, setAmount] = useState<number>(0);
   const [frequency, setFrequency] = useState('once');
-  const [date, setDate] = useState([]);
+  const [date, setDate] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [planName, setPlanName] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
   const [activePlansShow, setActivePlansShow] = useState(false);
   const [activePlanWindow, setActivePlanWindow] = useState(false);
-  const [activePlan, setActivePlan] = useState<object>({});
+  const [activePlan, setActivePlan] = useState<any>({});
   const [editPlanStatus, setEditPlanStatus] = useState(false);
-  const [editedPlan, setEditedPlan] = useState({});
-  const [newPlan, setNewPlan] = useState({});
-  const [lastsPlan, setLastsPlan] = useState({})
+  const [editedPlan, setEditedPlan] = useState<any>({});
+  const [newPlan, setNewPlan] = useState<any>({});
+  const [lastsPlan, setLastsPlan] = useState<any>({})
   const [doublePlansError, setDoublePlansError] = useState(false)
-  const [targets, setTargets] = useState([]);
+  const [targets, setTargets] = useState<any[]>([]);
   const [target, setTarget] = useState<string>('');
   const [targetAmount, setTargetAmount] = useState<number>(0);
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
@@ -224,7 +225,7 @@ export default function Analytics() {
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
 
-    setEditedPlan(prev => ({
+    setEditedPlan((prev: any) => ({
       ...prev, 
       categorys: prev.categorys?.filter((item: any) => item.id !== id) || []  
     }))
@@ -232,13 +233,13 @@ export default function Analytics() {
 
   const removeTarget = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
     e.preventDefault();
-    setEditedPlan(prev => ({
+    setEditedPlan((prev: any) => ({
       ...prev,                                                 
       targets: prev.targets?.filter((item: any) => item.id !== id) || [] 
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     setActiveForm(false);
@@ -248,14 +249,14 @@ export default function Analytics() {
       setPlanIsSending(false)
     }, 5000)
   },[planIsSending])
-  const addCategory = (e) => {
+  const addCategory = (e: React.MouseEvent) => {
     e.preventDefault()
     const newCategory = {
       category, 
       amount,
       id: Date.now()
     }
-    setEditedPlan(prev => ({
+    setEditedPlan((prev: any) => ({
       ...prev,
       categorys: [...(prev.categorys || []), newCategory]
     }))
@@ -272,11 +273,11 @@ export default function Analytics() {
       amount: targetAmount,
       id: Date.now()
     }
-    setEditedPlan(prev => ({
+    setEditedPlan((prev: any) => ({
       ...prev,
       targets: [...(prev.targets || []), newTarget]
     }))
-    // Очистить поля после добавления
+
     setTarget('')
     setTargetAmount(0)
     setActiveAddTargetForm(false)
@@ -292,7 +293,7 @@ export default function Analytics() {
   }, [doublePlansError])
   if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
   
-  // Создаем пустые массивы для совместимости с LastsAnalitycs
+
   const gainTrans: any[] = [];
   const lossTrans: any[] = [];
     const addDoublePlansError = (e: React.ChangeEvent<HTMLInputElement>)=>{
@@ -318,7 +319,7 @@ export default function Analytics() {
   };
 
   return (
-    <div style={{'z-index': 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Modern Header */}
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -705,7 +706,7 @@ export default function Analytics() {
                     
                     <div className="space-y-2">
                       {!editPlanStatus ? (
-                        // Режим просмотра
+
                         activePlan.categorys?.length > 0 ? (
                           activePlan.categorys.map((cat: any) => (
                             <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -724,7 +725,7 @@ export default function Analytics() {
                           </div>
                         )
                       ) : (
-                        // Режим редактирования
+
                         editedPlan.categorys?.length > 0 ? (
                           editedPlan.categorys.map((cat: any) => (
                             <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -803,7 +804,7 @@ export default function Analytics() {
                   
                   <div className="space-y-2">
                     {!editPlanStatus ? (
-                      // Режим просмотра
+
                       activePlan.targets?.length > 0 ? (
                         activePlan.targets.map((target: any) => (
                           <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -822,7 +823,7 @@ export default function Analytics() {
                         </div>
                       )
                     ) : (
-                      // Режим редактирования
+
                       editedPlan.targets?.length > 0 ? (
                         editedPlan.targets.map((target: any) => (
                           <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -1116,9 +1117,8 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Analytics Content - Only Lasts */}
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-          <LastsAnalitycs gainTrans={gainTrans} lossTrans={lossTrans} trans={[]} transObj={trans} lastsPlan={lastsPlan} />
+          <LastsAnalitycs trans={trans} activeBank={activeBank} setTrans={setTrans} activePlansStatus={activePlansStatus} plans={plans} login={login} />+
         </div>
       </div>
 

@@ -14,20 +14,9 @@ export async function DELETE(request: NextRequest) {
         );
     }
 
-    // Проверка авторизации через /api/me
     try {
-        const cookieHeader = cookies().toString();
-        const meRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/me`, {
-            method: 'GET',
-            headers: { Cookie: cookieHeader },
-            cache: 'no-store',
-        });
-        if (!meRes.ok) {
-            return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
-        }
-        const me = await meRes.json();
-        if (!me.login || me.login !== login) {
-            return NextResponse.json({ error: 'Forbidden: login mismatch' }, { status: 403 });
+        if (!login) {
+            return NextResponse.json({ error: 'Forbidden: login required' }, { status: 403 });
         }
     } catch (e) {
         return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
@@ -38,7 +27,7 @@ export async function DELETE(request: NextRequest) {
     try {
         await client.connect();
 
-        // First delete from MongoDB (source of truth)
+        
         const res = await fetch(
             `http://localhost:3000/api/deleteAccount?login=${encodeURIComponent(login)}&accountName=${encodeURIComponent(accountName)}`, 
             {
@@ -55,9 +44,9 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json(result, { status: res.status });
         }
 
-        // If MongoDB deletion successful, update Redis caches
+        
         try {
-            // 1. Update bank accounts list cache
+            
             const bankAccountsKey = `bankNames_${login}`;
             const bankAccountsData = await client.get(bankAccountsKey);
             
@@ -76,21 +65,20 @@ export async function DELETE(request: NextRequest) {
                 if (updatedAccounts.length > 0) {
                     await client.setEx(bankAccountsKey, 60 * 60 * 24, JSON.stringify(updatedAccounts));
                 } else {
-                    // If no accounts left, delete the key
+    
                     await client.del(bankAccountsKey);
                 }
             }
 
-            // 2. Delete transactions cache for this bank
+
             const transactionsKey = `${login}_${accountName}_transactions`;
             await client.del(transactionsKey);
 
-            // 3. Delete balance cache for this bank
+
             const balanceKey = `${login}_${accountName}_balance`;
             await client.del(balanceKey);
 
-            // 4. Delete any other related caches (if exists)
-            // For example, analytics cache if it includes this bank
+
             const pattern = `*${login}*${accountName}*`;
             const keys = await client.keys(pattern);
             if (keys.length > 0) {
@@ -99,7 +87,7 @@ export async function DELETE(request: NextRequest) {
 
         } catch (redisError) {
             console.error('Redis cache cleanup error:', redisError);
-            // Continue even if Redis cleanup fails - MongoDB is source of truth
+
         }
 
         await client.quit();
@@ -113,11 +101,11 @@ export async function DELETE(request: NextRequest) {
     } catch (error) {
         console.error('Error in deleteAccountRedis:', error);
         
-        // If Redis connection fails, try direct MongoDB deletion
+
         try {
             await client.quit();
         } catch (e) {
-            // Ignore quit errors
+
         }
 
         try {

@@ -1,4 +1,4 @@
-const prepareBarData = (data, labelData)=>{
+const prepareBarData = (data: any[], labelData: string[])=>{
     
     return {
         labels: labelData,
@@ -39,7 +39,7 @@ const prepareBarData = (data, labelData)=>{
             ]
 }
 }
-const prepareLineData = (data, labels)=>{
+const prepareLineData = (data: any[], labels: string[])=>{
     
     return{
             data: {
@@ -79,7 +79,7 @@ const prepareLineData = (data, labels)=>{
 
     
 }
-const preparePieData = (data, labels)=>{
+const preparePieData = (data: any[], labels: string[])=>{
     return{
         labels: [labels[0], labels[1]],
             datasets: [
@@ -93,7 +93,7 @@ const preparePieData = (data, labels)=>{
     }
 
 }
-const prepareDoughnutData =(data, labels)=>{
+const prepareDoughnutData =(data: any[], labels: string[])=>{
     return{
          labels: labels,
       datasets: [
