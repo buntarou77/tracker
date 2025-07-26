@@ -315,7 +315,7 @@ export default function BudgetPage() {
           </div>
         </div>
         )}
-        {/* Plan Selector */}
+
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-4">Select Active Plan</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -343,7 +343,7 @@ export default function BudgetPage() {
           </div>
         </div>
 
-        {/* Categories Progress */}
+
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-white mb-6">Category Budget Progress</h2>
           {activePlan?.categorys && activePlan?.categorys.length > 0 && activePlan? (
@@ -387,7 +387,7 @@ export default function BudgetPage() {
           )}
         </div>
 
-        {/* Targets Progress */}
+
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-white mb-6">Savings Goals Progress</h2>
           {activePlan?.targets && activePlan?.targets.length > 0 && activePlan ? (
