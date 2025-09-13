@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from 'mongodb';
-import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
