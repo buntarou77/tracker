@@ -98,7 +98,16 @@ export default function Analytics() {
   const [targetAmount, setTargetAmount] = useState<number>(0);
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
+  const [canShowAnalytics, setCanShowAnalytics] = useState(false);
 
+
+  useEffect(()=>{
+    if(plans.length <= 0){
+      setCanShowAnalytics(false);
+    }else{
+      setCanShowAnalytics(true);
+    }
+  })
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
@@ -317,10 +326,18 @@ export default function Analytics() {
     setTarget('');
     setTargetAmount(0);
   };
+  if(!canShowAnalytics) { 
+    return (
+      <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="text-center text-white text-2xl font-bold">No plans found</div>
+      </div>
+    )
+    
+  }  
 
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-
+      
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">

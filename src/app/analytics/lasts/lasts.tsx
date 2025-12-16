@@ -47,7 +47,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   const [filteredLossTrans, setFilteredLossTrans] = useState<any[]>([]);
   const [month, setMonth] = useState<string>('');
   const [monthOffset, setMonthOffset] = useState(0);
-  const [expanseProgress, setExpanseProgress] = useState(0);
+  const [expenseProgress, setExpenseProgress] = useState(0);
   const [incomeProgress, setIncomeProgress] = useState(0);
   const [moreLosses, setMoreLosses] = useState(0);
   const [moreGains, setMoreGains] = useState(0);
@@ -63,13 +63,11 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   const [modalTransactions, setModalTransactions] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
   const globalTrans = trans;
-
   const isMonthLoaded = (year: number, month: number) => {
     if (!globalTrans || typeof globalTrans !== 'object') return false;
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
     return globalTrans.hasOwnProperty(monthKey) && globalTrans[monthKey as keyof typeof globalTrans]?.length > 0;
   };
-
   const loadMonth = async (monthSkip: number) => {
     if (!login || !activeBank.name || isLoadingMonth) return;
     
@@ -228,15 +226,12 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
     const totalLosses = lossTrans.reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
     const monthResult = totalGains - totalLosses;
     
-
-    const startBudgetValue = filteredCurrentTrans[0].balanceStatus
-    
+    const startBudgetValue = filteredCurrentTrans[0]?.balanceStatus || [];
     setStartBudget(startBudgetValue);
     setEndBudget(startBudgetValue + monthResult);
     setMonthRes(monthResult);
     
     const monthName = getMonth(month - 1);
-    console.log(monthName)
     if (monthName) {
       setMonth(monthName);
     }
@@ -398,8 +393,8 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                 {/* Header with plan status */}
                 <div className='flex flex-row items-center space-x-2'>
                   <span className='text-white font-medium text-xs'>Plan:</span>
-                  <p className={`font-bold text-sm ${activePlan.type === 'expense' ? (expanseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
-                    {`${Math.max(0, Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress))}%`}
+                  <p className={`font-bold text-sm ${activePlan.type === 'expense' ? (expenseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
+                    {`${Math.max(0, Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress))}%`}
                   </p>
                 </div>
                 
@@ -410,7 +405,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                     {/* Progress fill */}
                     <div 
                       style={{ 
-                        width: `${Math.min(100, Math.max(0, Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress)))}%` 
+                        width: `${Math.min(100, Math.max(0, Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress)))}%` 
                       }} 
                       className={`
                         absolute top-0 left-0 h-full rounded-md transition-all duration-500 ease-out
@@ -425,7 +420,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                     </div>
                     
                     {/* Overflow indicator */}
-                    {(activePlan.type === 'expense' ? expanseProgress : incomeProgress) > 100 && (
+                    {(activePlan.type === 'expense' ? expenseProgress : incomeProgress) > 100 && (
                       <div className='absolute top-0 right-0 h-full w-1 bg-red-500 rounded-r-md shadow-sm'></div>
                     )}
                   </div>
@@ -433,7 +428,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                   {/* Progress text overlay */}
                   <div className='absolute inset-0 flex items-center justify-center'>
                     <span className='text-white font-semibold text-xs drop-shadow'>
-                      {Math.round(activePlan.type === 'expense' ? expanseProgress : incomeProgress)}%
+                      {Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress)}%
                     </span>
                   </div>
                 </div>
