@@ -6,8 +6,6 @@ import Cookies from 'js-cookie';
 import { useBankTransaction } from '../context/BankTransactionContext';
 import { useAuthContext } from '../context/AuthContext';  
 import { useUI } from '../context/UIContext';
-import { cookies } from 'next/headers';
-
 type BankAccountType = {
   name: string;
   balance: string;
@@ -26,6 +24,7 @@ const BankAccount = () => {
     const [redirect, setRedirect] = useState<boolean>(false)
     const {isAccountsVisible, setIsAccountsVisible, addBankAccountForm, setAddBankAccountForm} = useUI();
     const { login, setLogin } = useAuthContext(); 
+    const [incorrectBalanceStatus, setIncorrectBalanceStatus] = useState<boolean>(false)
     const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency, setHasMore, setNextCursor, trans } = useBankTransaction();
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const renders = useRef(0);
@@ -55,8 +54,11 @@ const BankAccount = () => {
         setCurrency(bank.currency || 'RUB')
       }else if(bankNames && bankNames.length > 0){
         const firstBank = bankNames[0]
+        const balance = firstBank.balance
+        console.log(balance)
+        console.log(typeof balance)
+        changeBalance(balance)
         setActiveBank({name: firstBank.name, id: firstBank.id})
-        setBalance(firstBank?.balance?.toFixed(2) || 0)
         setCurrency(firstBank.currency || 'RUB')           
         Cookies.set('ActiveBankId', JSON.stringify(firstBank.id || ''))
       }else{
@@ -72,7 +74,14 @@ const BankAccount = () => {
       }, 7000)
       return ()=> clearTimeout(times)
     },[tooManyBankAccounts])
-
+    function changeBalance(newBalance: number | string){
+      const numberBalance = Number(newBalance)
+      if(Number(newBalance) % 1 > 0){
+        setBalance(Number(numberBalance.toFixed(2)))
+      }else{
+        setBalance(numberBalance)
+      }
+    }
     useEffect(()=>{
       if(!registerError){
         return;
