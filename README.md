@@ -9,7 +9,6 @@
 - 💳 Управление банковскими счетами
 - 📈 Визуализация данных через графики
 - 🔐 Безопасная аутентификация
-- ⚡ Кэширование через Redis
 
 ## 🛠️ Технологии
 
@@ -17,7 +16,6 @@
 - **Styling:** Tailwind CSS
 - **Charts:** Chart.js, React-Chartjs-2
 - **Database:** MongoDB
-- **Cache:** Redis
 - **Auth:** JWT, bcryptjs
 
 ## 🚀 Быстрый старт
@@ -52,17 +50,13 @@
 
 ### Вариант 2: Локальная установка
 
-1. **Установите MongoDB и Redis**
-   - MongoDB: https://docs.mongodb.com/manual/installation/
-   - Redis: https://redis.io/download
+1. **Установите MongoDB**
+- MongoDB: https://docs.mongodb.com/manual/installation/
 
-2. **Запустите сервисы**
+2. **Запустите сервис**
    ```bash
    # MongoDB
    mongod
-   
-   # Redis (в другом терминале)
-   redis-server
    ```
 
 3. **Установите зависимости и запустите приложение**
@@ -90,7 +84,6 @@ cp env.example .env.local
 - `MONGODB_URI` - URI подключения к MongoDB
 - `MONGODB_DB_NAME` - Название базы данных
 - `COLLECTION_NAME` - Название коллекции
-- `REDIS_URL` - URL подключения к Redis
 - `JWT_SECRET` - Секретный ключ для JWT токенов
 - `NEXT_PUBLIC_BASE_URL` - Базовый URL приложения
 

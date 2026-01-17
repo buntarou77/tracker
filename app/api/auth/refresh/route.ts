@@ -1,0 +1,62 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyRefreshToken, generateTokens } from '../auth';
+import { cookies } from 'next/headers';
+
+export async function POST(request: NextRequest) {
+  try {
+    const refreshToken = cookies().get('refreshToken')?.value;
+
+    if (!refreshToken) {
+      return NextResponse.json(
+        { error: 'Refresh token is required' },
+        { status: 401 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid or expired refresh token' },
+        { status: 401 }
+      );
+    }
+
+    const tokens = generateTokens({
+      id: decoded.id,
+      login: decoded.login
+      });
+
+    const response = NextResponse.json(
+      { success: true },
+      { status: 200 }
+    );
+
+    response.cookies.set('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 15 * 60,
+      domain: 'localhost',
+      path: '/',
+      sameSite: 'lax',
+    });
+
+    response.cookies.set('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60,
+      domain: 'localhost',
+      path: '/',
+      sameSite: 'lax',
+    });
+
+    return response;
+
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Invalid refresh token:' + error},
+      { status: 401 }
+    );
+  }
+}

@@ -1,51 +1,42 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
-  // Включаем экспериментальные функции для оптимизации
   experimental: {
     optimizePackageImports: ['@heroicons/react'],
   },
-  
-  // Настройки для статической генерации
-  output: 'standalone',
-  
-  // Настройки изображений
+
+  ...(isProd && {
+    output: 'standalone',
+  }),
+
+  reactStrictMode: false,
+
   images: {
     domains: ['localhost'],
-    unoptimized: true
+    unoptimized: true,
   },
-  
-  // Настройки компиляции
+
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: isProd,
   },
-  
-  // Настройки для статических страниц
+
   generateBuildId: async () => {
-    return 'finance-tracker-build'
+    return 'finance-tracker-build';
   },
-  
-  // Настройки заголовков безопасности
+
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
