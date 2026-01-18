@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-    const { name, amount, category, color } = data;
+    const { name, amount, categorys, color } = data;
 
-    if (!name || !amount || !category) {
+    if (!name || !amount || !categorys) {
         return NextResponse.json(
             { error: 'Missing required fields: name, amount, category' },
             { status: 400 }

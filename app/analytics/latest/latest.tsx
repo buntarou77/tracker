@@ -1,11 +1,12 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { filtredCategorys } from '../../utils/filtredTrans';
 import { preparePieTransactions, getMonth, prepareMonthBarData } from '@/app/utils/createData';
 import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } from '@/app/utils/prepareData';
+import { useBankTransaction } from '@/app/context/BankTransactionContext';
 import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
 
@@ -35,7 +36,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
     Legend,
     BarElement
   );
-
+  const {balance} = useBankTransaction()
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
@@ -141,7 +142,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
     const totalLosses = lossTrans.reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
     const monthResult = totalGains - totalLosses;
     
-    const startBudgetValue = monthTransactions.length > 0 ? monthTransactions[0]?.balanceStatus : 0;
+    const startBudgetValue = monthTransactions.reduce((acc, item)=> item.type === 'loss' ? acc - item.amount: acc + item.amount , balance)
     setStartBudget(startBudgetValue);
     setEndBudget(startBudgetValue + monthResult);
     setMonthRes(monthResult);
@@ -328,7 +329,7 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   const lossAmounts = preparePieTransactions(filteredLossTrans).Amounts as number[];
   const lossDoughnutData = prepareDoughnutData(lossAmounts, lossCategorys);
   const categoryDoughnutData = prepareDoughnutData(categoryAmountsArray, categorysArray);
-  
+  console.log(startBudget)
   useEffect(() => {
     if (activePlan && activePlan.type === 'expense') {
       setExpenseProgress((monthRes / activePlan.totalAmount) * 100);

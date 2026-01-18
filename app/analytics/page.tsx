@@ -175,15 +175,13 @@ export default function Analytics() {
     }
     const newPlan = {
       frequency,
-      categorys: categorys,
+      categorys: editedPlan.categorys,
       name: planName,
       totalAmount: Number(totalAmount),
       type: typeOfPlan,
       targets: targets,
       date,
-      login,
       notes,
-      id: Date.now()
     };
     console.log(newPlan)
     try{
@@ -994,13 +992,12 @@ console.log(editedPlan)
                     + Add Target
                   </button>
                 </div>
-
                 {activecateghoryForm && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
                     <div>
                       <h3 className="text-white font-medium mb-3">Categories</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {categorys.map((category) => (
+                        {editedPlan?.categorys?.map((category) => (
                           <div key={category.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
                             <span className="text-gray-300">{category.category}</span>
                             <div className="flex items-center gap-2">
