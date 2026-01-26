@@ -33,7 +33,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const data = await request.json()
-    const { transactionId, bankId, amount, balance, type } = data;    
+    const { transactionId, bankId, amount, balance, type, includeUpdatedBank } = data;    
 
     if (!transactionId || !bankId) {
         return NextResponse.json(
@@ -43,17 +43,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
-
+    const session = client.startSession()
     try {
         await client.connect();
         const db = client.db('users');
-        
+        session.startTransaction()
         const result = await db.collection('transactions').findOneAndDelete(
             { 
                 id: Number(transactionId),
                 userId: userId,
                 bankId: bankId
-            }
+            },
+            {session}
         );
 
         if (!result?.value) {
@@ -68,14 +69,16 @@ export async function DELETE(request: NextRequest) {
         const newBalance = type === 'loss' 
             ? Number(balance) + Number(amount)
             : Number(balance) - Number(amount);
-
+        
+        const gainAmount = type === 'loss' ? Number(amount) - Number(amount) * 2 : Number(amount)
+        const lossAmount = type === 'loss' ? Number(amount): Number(amount) - Number(amount) * 2 
         const bankUpdateResult = await db.collection('bankAccounts').findOneAndUpdate(
             { 
                 id: bankId,
                 userId: userId
             },
-            { $set: { balance: newBalance } },
-            { returnDocument: 'after' }
+            { $inc: {'balance' : gainAmount, 'stats.netBalance': gainAmount,  'stats.totalGains': gainAmount, 'stats.totalLoss': lossAmount, 'stats.totalTransactions': -1}},
+            { returnDocument: 'after' , session}
         );
 
         if (!bankUpdateResult?.value) {
@@ -85,23 +88,27 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        return NextResponse.json(
-            { 
-                success: true,
-                message: 'Transaction deleted successfully',
-                deletedTransaction: deletedTransaction,
-                newBalance: newBalance,
-                updatedBank: bankUpdateResult.value
-            },
-            { status: 200 }
-        );
+        const responseData: any = { 
+            success: true,
+            message: 'Transaction deleted successfully',
+            deletedTransaction: deletedTransaction,
+            newBalance: newBalance
+        };
+
+        if (includeUpdatedBank) {
+            responseData.updatedBank = bankUpdateResult.value;
+        }
+        await session.commitTransaction()
+        return NextResponse.json(responseData, { status: 200 });
 
     } catch (error) {
+        await session.abortTransaction()
         return NextResponse.json(
             { error: 'Failed to delete transaction' },
             { status: 500 }
         );
     } finally {
+        session.endSession()
         await client.close();
     }
 }

@@ -3,12 +3,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useAuthContext } from './AuthContext';
 import { useAuth } from '../hooks/useAuth';
+import { getPlanType } from '../types/shared/plan';
 interface PlanContextType {
   plans: any[];
   activePlans: any[];
   activePlansStatus: any;
   storagePlans: any[];
-  
+  activeMonthPlan: PlanType;
+
+  setActiveMonthPlan: (activeMonthPlan: PlanType) => void;
   setPlans: (plans: any[] | ((prev: any[]) => any[])) => void;
   setActivePlans: (activePlans: any[]) => void;
   setActivePlansStatus: (status: any) => void;
@@ -25,7 +28,7 @@ export function PlanProvider({ children }: PlanProviderProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [activePlans, setActivePlans] = useState<any[]>([]);
   const [storagePlans, setStoragePlans] = useState<any[]>([]);
-  const [activePlan, setActivePlan] = useState<any>(null);
+  const [activeMonthPlan, setActiveMonthPlan] = useState<getPlanType>({})
   const [activePlansStatus, setActivePlansStatus] = useState({
     daily: { status: false, id: 0 },
     weekly: { status: false, id: 0 },
@@ -36,27 +39,28 @@ export function PlanProvider({ children }: PlanProviderProps) {
   const { login } = useAuthContext();
 
   const getActivePlans = () => {
-    const activePlans = localStorage.getItem('activePlans');
-    return activePlans ? JSON.parse(activePlans) : [];
+    const activePlansStorageData = localStorage.getItem('activePlansIds');
+    return activePlansStorageData ? JSON.parse(activePlansStorageData) : [];
   };
 
   useEffect(() => {
     async function loadPlans() {
       if (login) {
         try {
-          const res = await fetch(`api/getPlans?login=${login}`, {
+          const res = await fetch(`api/getPlans?`, {
             method: 'GET'
           });
           
           if (res.ok) {
             const data = await res.json();
-            const activePlans = getActivePlans();
-            
-            const activePlansStatus = data.plans.reduce((acc: any, plan: any) => {
-              if (activePlans.includes(plan.id)) {
+            const activePlansIdsData = getActivePlans();
+            console.log('plansData')
+            console.log(data.plans)
+            const activePlansStatusData = data.plans.reduce((acc: any, plan: any) => {
+              if (activePlansIdsData.includes(plan.id)) {
                 acc[plan.frequency] = {
                   status: true,
-                  id: plan.id
+                  id: plan._id
                 };
               }
               return acc;
@@ -66,9 +70,22 @@ export function PlanProvider({ children }: PlanProviderProps) {
               monthly: { status: false, id: 0 },
               yearly: { status: false, id: 0 }
             });
-
-            setActivePlansStatus(activePlansStatus);
-            setPlans(data.plans);
+            console.log('212121')
+            console.log(activePlansIdsData)
+            console.log(activePlansStatusData)
+            setActivePlansStatus(activePlansStatusData);
+            console.log('monthly')
+            console.log(activePlansStatusData.monthly)
+            if(activePlansStatusData.monthly.status){
+              console.log(1)
+              setActiveMonthPlan(plans.find((item)=> item.id === activePlansStatusData['monthly'].id))
+            }
+            setPlans(data.plans.map((item: getPlanType)=> {
+              return{
+                ...item,
+                id: item._id
+              }
+            }));
           }
         } catch(e) {
         }
@@ -82,14 +99,14 @@ export function PlanProvider({ children }: PlanProviderProps) {
     plans,
     activePlans,
     activePlansStatus,
-    activePlan,
+    activeMonthPlan,
+    setActiveMonthPlan,
     setPlans,
     setActivePlans,
-    setActivePlan,
     setActivePlansStatus,
     storagePlans,
     setStoragePlans,
-  }), [plans, activePlans, activePlansStatus, storagePlans, activePlan, setPlans, setActivePlans, setActivePlan, setActivePlansStatus, setStoragePlans]);
+  }), [plans, activePlans, activePlansStatus, storagePlans, setPlans, activeMonthPlan, setActiveMonthPlan, setActivePlans, setActivePlansStatus, setStoragePlans]);
 
   return (
     <PlanContext.Provider value={contextValue}>

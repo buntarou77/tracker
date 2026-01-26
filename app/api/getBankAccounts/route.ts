@@ -11,52 +11,70 @@ interface TokenPayload {
 }
 
 export async function GET(request: NextRequest) {
-    const cookieStore = cookies();
-    const token = cookieStore.get('accessToken')?.value;
-    
-    if (!token) {
-        return NextResponse.json(
-            { error: 'Unauthorized' },
-            { status: 401 }
-        );
+  const cookieStore = cookies();
+  const token = cookieStore.get('accessToken')?.value;
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let userId: string;
+  try {
+    const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    userId = verified.id;
+  } catch {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const sortBy = searchParams.get('sortBy') || 'createdAt';
+  const sortOrder = searchParams.get('sortOrder') === 'desc' ? -1 : 1;
+  const includeStats = searchParams.get('includeStats') === 'true';
+  const currency = searchParams.get('currency');
+
+  const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+
+  try {
+    await client.connect();
+    const db = client.db('users');
+
+    const projection: Record<string, 0 | 1> = {
+      _id: 1,
+      name: 1,
+      currency: 1,
+      createdAt: 1
+    };
+
+    if (includeStats) {
+      projection.stats = 1;
     }
 
-    let userId: string;
-    try {
-        const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
-        userId = verified.id;
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Invalid token' },
-            { status: 401 }
-        );
+    const filter: Record<string, any> = { userId };
+    if (currency) {
+      filter.currency = currency;
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const bankAccounts = await db
+      .collection('bankAccounts')
+      .find(filter, { projection })
+      .sort({ [sortBy]: sortOrder })
+      .toArray();
 
-    try {
-        await client.connect();
-        const db = client.db('users');
+    return NextResponse.json(
+      {
+        success: true,
+        banks: bankAccounts,
+        count: bankAccounts.length
+      },
+      { status: 200 }
+    );
 
-        const bankAccounts = await db.collection('bankAccounts').find({
-            userId: userId
-        }).toArray();
-
-        return NextResponse.json(
-            { 
-                success: true,
-                banks: bankAccounts,
-                count: bankAccounts.length
-            },
-            { status: 200 }
-        );
-
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Failed to retrieve bank accounts' },
-            { status: 500 }
-        );
-    } finally {
-        await client.close();
-    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to retrieve bank accounts' },
+      { status: 500 }
+    );
+  } finally {
+    await client.close();
+  }
 }

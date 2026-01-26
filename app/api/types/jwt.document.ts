@@ -1,10 +1,10 @@
-interface Payload{
+export interface Payload{
     login: string | null,
     id: string | null
 }
-interface VerifyJwtResult{
+
+export interface VerifyJwtResult{
     error: string,
     ok: boolean
     payload: Payload
 }
-

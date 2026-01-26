@@ -33,7 +33,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const data = await request.json();
-    const { planId } = data;
+    const { planId, includeRemainingPlans } = data;
 
     if (!planId) {
         return NextResponse.json(
@@ -53,20 +53,28 @@ export async function DELETE(request: NextRequest) {
             userId: userId
         });
 
-        if (!result?.value) {
+        if (!result.value) {
             return NextResponse.json(
                 { error: 'Plan not found' },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json(
-            { 
-                success: true,
-                message: 'Plan deleted successfully'
-            },
-            { status: 200 }
-        );
+        const responseData: any = { 
+            success: true,
+            message: 'Plan deleted successfully',
+            deletedPlan: result.value
+        };
+
+        if (includeRemainingPlans) {
+            const remainingPlans = await db.collection('plans')
+                .find({ userId: userId })
+                .toArray();
+            responseData.remainingPlans = remainingPlans;
+            responseData.planCount = remainingPlans.length;
+        }
+
+        return NextResponse.json(responseData, { status: 200 });
 
     } catch (error) {
         return NextResponse.json(

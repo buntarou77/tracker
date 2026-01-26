@@ -34,6 +34,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const bankId = searchParams.get('bankId');
+    const deleteBankData = searchParams.get('deleteData') === 'true'; // Удалить все транзакции банка
 
     if (!bankId) {
         return NextResponse.json(
@@ -72,6 +73,12 @@ export async function DELETE(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        if (deleteBankData) {
+            await db.collection('transactions').deleteMany(
+                { userId: userId, bankId: bankId }
+            );
+        }
         
         const result = await db.collection('bankAccounts').deleteOne(
             { id: bankId, userId: userId }
@@ -92,7 +99,8 @@ export async function DELETE(request: NextRequest) {
             { 
                 success: true, 
                 message: 'Bank account deleted successfully',
-                remainingBanks: remainingBanks
+                remainingBanks: remainingBanks,
+                deletedTransactions: deleteBankData
             },
             { status: 200 }
         );

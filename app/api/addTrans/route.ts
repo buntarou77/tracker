@@ -101,11 +101,7 @@ export async function POST(request: NextRequest) {
     session.startTransaction()
     const db = mongoClient.db('users');
     console.log('session')
-    try{
     const result = await db.collection('transactions').insertOne(newTransaction, {session})
-    }catch(e){
-      console.error(e)
-    }
     console.log('trans1')
     if (!result.acknowledged) {
       console.log('12')
@@ -117,8 +113,8 @@ export async function POST(request: NextRequest) {
 
       const update =
         type === 'loss'
-          ? { $inc: { balance: -amount } }
-          : { $inc: { balance: amount } };
+          ? { $inc: {'balance' : -amount, 'stats.netBalance': -amount,  'stats.totalGains': -amount, 'stats.totalLoss': amount, 'stats.totalTransactions': 1} }
+          : { $inc: {'balance' : amount, 'stats.netBalance': amount,  'stats.totalGains': amount, 'stats.totalLoss': -amount, 'stats.totalTransactions': 1} }
 
       const balanceResult = await db
         .collection('bankAccounts')

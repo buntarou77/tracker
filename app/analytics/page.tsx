@@ -137,8 +137,11 @@ export default function Analytics() {
 
   const handleToggleActive = (e: React.ChangeEvent<HTMLInputElement>, frequency: keyof ActivePlansStatus, itemId: number) => {
     const isChecked = e.target.checked;
-    
-
+    if(activePlansStatus[frequency].status && activePlansStatus[frequency].id !== itemId){
+      alert('error')
+      return 
+    }
+    console.log(frequency)
     setActivePlansStatus((prev: ActivePlansStatus) => ({
       ...prev,
       [frequency]: {
@@ -146,9 +149,11 @@ export default function Analytics() {
         id: isChecked ? itemId : 0
       }
     }));
-
     changeActivePlan(itemId, isChecked);
-  };
+    let activePlansIds = JSON.parse(localStorage.getItem('activePlanIds') ?? '[]')
+    activePlansIds = [...activePlansIds, itemId]
+    localStorage.setItem('activePlansIds', JSON.stringify(activePlansIds))
+  }; 
 
   useEffect(() => {
     if (activePlanWindow) {
@@ -165,6 +170,7 @@ export default function Analytics() {
     setLoadingSending(true)
     if(planName === ''){
       alert('Enter plan name');
+      setLoadingSending(false)
       return
     }else if(Number(totalAmount) === 0){
       alert('Enter total amount');
@@ -173,25 +179,28 @@ export default function Analytics() {
       alert('total Amount is number')
       return 
     }
+    console.log(targets)
     const newPlan = {
       frequency,
       categorys: editedPlan.categorys,
       name: planName,
-      totalAmount: Number(totalAmount),
+      amount: Number(totalAmount),
       type: typeOfPlan,
       targets: targets,
       date,
       notes,
     };
+    console.log('new plan log')
     console.log(newPlan)
     try{
-      await fetch('api/addPlan', {
+      const request = await fetch('api/addPlan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(newPlan)
       })
+      if(!request.ok) throw new Error('failed to add plan')
     }catch(e){
     }
     setPlanIsSending(true)
@@ -233,6 +242,7 @@ export default function Analytics() {
     e.preventDefault();
     setActiveCateghoryForm((m) => !m);
   };
+  console.log(activePlansStatus)
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
 
@@ -277,7 +287,7 @@ export default function Analytics() {
       categorys: [...(prev.categorys || []), newCategory]
     }))
   }
-console.log(editedPlan)
+// console.log(editedPlan)
   const addTargetToEditedPlan = (e: React.MouseEvent) => {
     e.preventDefault()
     if (!target.trim() || targetAmount <= 0) {
@@ -456,7 +466,7 @@ console.log(editedPlan)
                             <span className={`text-sm font-semibold ${
                               item.type === 'income' ? 'text-green-400' : 'text-red-400'
                             }`}>
-                              {item.type === 'income' ? '+' : '-'}${item.totalAmount}
+                              {item.type === 'income' ? '+' : '-'}${item.amount}
                             </span>
                             <span className="text-xs text-gray-500">•</span>
                             <span className="text-sm text-blue-400 capitalize">{item.frequency}</span>
@@ -991,7 +1001,7 @@ console.log(editedPlan)
                   >
                     + Add Target
                   </button>
-                </div>
+                </div>  
                 {activecateghoryForm && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
                     <div>
@@ -1144,7 +1154,7 @@ console.log(editedPlan)
         )}
 
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-          <LastsAnalitycs trans={trans} activeBank={activeBank} setTrans={setTrans} activePlansStatus={activePlansStatus} plans={plans} login={login} />+
+          <LastsAnalitycs trans={trans} activeBank={activeBank} activePlansStatus={activePlansStatus} plans={plans} login={login} />+
         </div>
       </div>
 

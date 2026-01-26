@@ -9,22 +9,9 @@ import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } 
 import { useBankTransaction } from '@/app/context/BankTransactionContext';
 import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
-
-interface LastsAnalyticsProps {
-  trans: any[];
-  activeBank: {
-    name: string;
-    [key: string]: any;
-  };
-  setTrans: (trans: any[] | ((prev: any[]) => any[])) => void;
-  activePlansStatus: {
-    [key: string]: { status: boolean; id: number };
-  };
-  plans: any[];
-  login: string;
-}
-
-export default memo(function LastsAnalytics({trans, activeBank, setTrans, activePlansStatus, plans, login}: LastsAnalyticsProps) {
+import { usePlan } from '@/app/context/PlanContext';
+import { useAuthContext } from '@/app/context/AuthContext';
+export default memo(function LastsAnalytics() {
   ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -36,6 +23,10 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
     Legend,
     BarElement
   );
+  const {trans, setTrans, activeBank, } = useBankTransaction()
+  const {setActiveMonthPlan, activeMonthPlan, activePlansStatus, setActivePlansStatus, plans, setPlans} = usePlan()
+  const {login}  = useAuthContext()
+
   const {balance} = useBankTransaction()
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
@@ -54,14 +45,11 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   const [prevMonthLoss, setPrevMonthLoss] = useState(0);
   const [prevMonthGain, setPrevMonthGain] = useState(0);
   const [isLoadingMonth, setIsLoadingMonth] = useState(false);
-  const [activePlan, setActivePlan] = useState<any>(null);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalTransactions, setModalTransactions] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
-  const globalTrans = trans;
-
   const loadMonth = async (offset: number) => {
     if (!login || !activeBank.id || isLoadingMonth) return;
     
@@ -101,19 +89,19 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
     
-    return globalTrans.filter((transaction: any) => {
+    return trans.filter((transaction: any) => {
       const transDate = new Date(transaction.date);
       return transDate >= startDate && transDate <= endDate;
     });
   };
 
   const isMonthLoaded = (year: number, month: number): boolean => {
-    if (!globalTrans || globalTrans.length === 0) return false;
+    if (!trans || trans.length === 0) return false;
     
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
     
-    return globalTrans.some((transaction: any) => {
+    return trans.some((transaction: any) => {
       const transDate = new Date(transaction.date);
       return transDate >= startDate && transDate <= endDate;
     });
@@ -174,11 +162,11 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
       }
       
       const active = activePlanId ? plans.find((plan: any) => plan.id === activePlanId) : null;
-      setActivePlan(active || null);
+      setActiveMonthPlan(active || null);
       
     } catch (error) {
       console.error('Error processing active plan:', error);
-      setActivePlan(null);
+      setActiveMonthPlan(null);
     } finally {
       setIsLoadingPlan(false);
     }
@@ -191,13 +179,13 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   }, [login, activePlansStatus]);
   
   useEffect(() => {
-    if (globalTrans && globalTrans.length > 0) {
+    if (trans && trans.length > 0) {
       loadMonthData(monthOffset);
       if (login) {
         loadActivePlan();
       }
     }
-  }, [globalTrans, monthOffset]);
+  }, [trans, monthOffset]);
 
   useEffect(()=>{
     if(month == ''){
@@ -234,10 +222,10 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
       setPrevMonthGain(prevGainTrans.reduce((acc: number, item: any) => acc + Number(item.amount || 0), 0));
     };
     
-    if (globalTrans && globalTrans.length > 0) {
+    if (trans && trans.length > 0) {
       loadPrevMonthData();
     }
-  }, [globalTrans, monthOffset]);
+  }, [trans, monthOffset]);
 
   const handlePreviousMonth = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -331,12 +319,12 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
   const categoryDoughnutData = prepareDoughnutData(categoryAmountsArray, categorysArray);
   console.log(startBudget)
   useEffect(() => {
-    if (activePlan && activePlan.type === 'expense') {
-      setExpenseProgress((monthRes / activePlan.totalAmount) * 100);
-    } else if (activePlan && activePlan.type === 'income') {
-      setIncomeProgress((monthRes / activePlan.totalAmount) * 100);
+    if (activeMonthPlan && activeMonthPlan.type === 'expense') {
+      setExpenseProgress((monthRes / activeMonthPlan.totalAmount) * 100);
+    } else if (activeMonthPlan && activeMonthPlan.type === 'income') {
+      setIncomeProgress((monthRes / activeMonthPlan.totalAmount) * 100);
     }
-  }, [filteredTrans, activePlan, monthRes]);
+  }, [filteredTrans, activeMonthPlan, monthRes]);
 
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
@@ -390,12 +378,12 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
               <div className='flex items-center justify-center py-4 '>
                 <span className='text-gray-400 text-xs '>Loading plan...</span>
               </div>
-            ) : activePlan ? 
+            ) : activeMonthPlan ? 
               <div className='w-[280px] flex flex-col items-center justify-center space-y-2'>
                 <div className='flex flex-row items-center space-x-2'>
                   <span className='text-white font-medium text-xs'>Plan:</span>
-                  <p className={`font-bold text-sm ${activePlan.type === 'expense' ? (expenseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
-                    {`${Math.max(0, Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress))}%`}
+                  <p className={`font-bold text-sm ${activeMonthPlan.type === 'expense' ? (expenseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
+                    {`${Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress))}%`}
                   </p>
                 </div>
                 
@@ -403,11 +391,11 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                   <div className='relative w-full h-5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg border border-gray-500 shadow-md overflow-hidden'>
                     <div 
                       style={{ 
-                        width: `${Math.min(100, Math.max(0, Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress)))}%` 
+                        width: `${Math.min(100, Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress)))}%` 
                       }} 
                       className={`
                         absolute top-0 left-0 h-full rounded-md transition-all duration-500 ease-out
-                        ${activePlan.type === 'expense' 
+                        ${activeMonthPlan.type === 'expense' 
                           ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-md shadow-emerald-500/30' 
                           : 'bg-gradient-to-r from-blue-500 to-blue-400 shadow-md shadow-blue-500/30'
                         }
@@ -416,25 +404,25 @@ export default memo(function LastsAnalytics({trans, activeBank, setTrans, active
                       <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-md'></div>
                     </div>
                     
-                    {(activePlan.type === 'expense' ? expenseProgress : incomeProgress) > 100 && (
+                    {(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress) > 100 && (
                       <div className='absolute top-0 right-0 h-full w-1 bg-red-500 rounded-r-md shadow-sm'></div>
                     )}
                   </div>
                   
                   <div className='absolute inset-0 flex items-center justify-center'>
                     <span className='text-white font-semibold text-xs drop-shadow'>
-                      {Math.round(activePlan.type === 'expense' ? expenseProgress : incomeProgress)}%
+                      {Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress)}%
                     </span>
                   </div>
                 </div>
                 
                 <div className='flex items-center space-x-1'>
-                  <div className={`w-2 h-2 rounded-full ${activePlan.type === 'expense' ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
+                  <div className={`w-2 h-2 rounded-full ${activeMonthPlan.type === 'expense' ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
                   <span className='text-gray-300 text-xs capitalize'>
-                    {activePlan.type}
+                    {activeMonthPlan.type}
                   </span>
                   <span className='text-gray-400 text-xs'>
-                    ({activePlan.totalAmount}$)
+                    ({activeMonthPlan.totalAmount}$)
                   </span>
                 </div>
               </div> : (
