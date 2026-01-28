@@ -54,15 +54,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bankAccountId = Date.now().toString();
     
     const newBank = {
-      id: bankAccountId,
       userId: userId,
       name: name.trim(),
       notes,
       currency,
       balance: Number(balance),
+      stats: {
+        totalGains: 0,
+        netBalance: Number(balance),
+        totalLoss: 0,
+        totalTransactions: 0
+      },
       createdAt: new Date()
     };
 
@@ -74,11 +78,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
     return NextResponse.json(
       { 
         success: true,
-        bank: newBank
+        bank: {...result, id: JSON.stringify(result.insertedId)}
       },
       { status: 201 }
     );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
@@ -49,20 +49,6 @@ export async function DELETE(request: NextRequest) {
         await client.connect();
         const db = client.db('users');
         
-        const bankAccount = await db.collection('bankAccounts').findOne(
-            { 
-                id: bankId,
-                userId: userId
-            }
-        );
-        
-        if (!bankAccount) {
-            return NextResponse.json(
-                { error: 'Bank account not found' },
-                { status: 404 }
-            );
-        }
-        
         const bankCount = await db.collection('bankAccounts').countDocuments(
             { userId: userId }
         );
@@ -81,12 +67,19 @@ export async function DELETE(request: NextRequest) {
         }
         
         const result = await db.collection('bankAccounts').deleteOne(
-            { id: bankId, userId: userId }
+            { _id: new ObjectId(bankId), userId: userId }
         );
+
+        if(!result.acknowledged){
+            return NextResponse.json(
+                {error: 'Failed to delete bank account'},
+                {status: 500}
+            )
+        }
 
         if (result.deletedCount === 0) {
             return NextResponse.json(
-                { error: 'Failed to delete bank account' },
+                { error: 'Bank account not found' },
                 { status: 500 }
             );
         }

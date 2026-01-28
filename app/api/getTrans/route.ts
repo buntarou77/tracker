@@ -90,10 +90,13 @@ export async function GET(request: NextRequest) {
             if (type) {
                 query.type = type;
             }
-
+            console.log(bankId)
             const request = await db.collection('transactions').find(query).sort({date: -1}).limit(limit + 1).toArray();
-
+            const transactionsAll = await db.collection('transactions').find({userId: userId, bankId: bankId}).toArray()
+            // console.log(transactionsAll)
             const trans = request.slice(0, limit);
+            // console.log('trans')
+            // console.log(trans)
             const result = {
                 ok: true,
                 data: trans,

@@ -55,12 +55,13 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
           const response = await fetch(`/api/getBankNames`, {
             method: 'GET'
           });
-          
+          console.log(response)
           if (!response.ok) {
             return 
           }
             const namesData = await response.json();
-            const trueData = namesData.bankAccounts || namesData.value;
+            console.log(namesData)
+            const trueData = namesData.banks;
             setBankNames(trueData)
             if (!trueData || trueData.length === 0) {
               return;

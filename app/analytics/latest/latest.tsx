@@ -320,9 +320,9 @@ export default memo(function LastsAnalytics() {
   console.log(startBudget)
   useEffect(() => {
     if (activeMonthPlan && activeMonthPlan.type === 'expense') {
-      setExpenseProgress((monthRes / activeMonthPlan.totalAmount) * 100);
+      setExpenseProgress((monthRes / activeMonthPlan.amount) * 100);
     } else if (activeMonthPlan && activeMonthPlan.type === 'income') {
-      setIncomeProgress((monthRes / activeMonthPlan.totalAmount) * 100);
+      setIncomeProgress((monthRes / activeMonthPlan.amount) * 100);
     }
   }, [filteredTrans, activeMonthPlan, monthRes]);
 
@@ -422,7 +422,7 @@ export default memo(function LastsAnalytics() {
                     {activeMonthPlan.type}
                   </span>
                   <span className='text-gray-400 text-xs'>
-                    ({activeMonthPlan.totalAmount}$)
+                    ({activeMonthPlan.amount}$)
                   </span>
                 </div>
               </div> : (

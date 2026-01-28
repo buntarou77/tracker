@@ -187,17 +187,17 @@ const BankAccount = () => {
       getTrans()
     },[activeBank])
 
-    const deleteAccount = async (accountName: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    const deleteAccount = async (accountId: string,accountName: string,  e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
         try {
-          const response = await fetch(`/api/deleteAccount?login=${encodeURIComponent(login || '')}&accountName=${encodeURIComponent(accountName)}`, {
+          const response = await fetch(`/api/deleteAccount?&bankId=${accountId}`, {
             method: 'DELETE'
           });
           
           if (response.ok) {
             setBankNames(bankNames.filter(account => account.name !== accountName));
-            if (activeBank.name === accountName) {
+            if (activeBank.id === accountId) {
               setActiveBank({name: '', id: ''});
               setBalance(0);
               setCurrency('RUB');
@@ -223,7 +223,7 @@ const BankAccount = () => {
     const handleAccountsClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation(); 
     };
-    
+    console.log(bankNames)
     if (!mounted) return null;
     if(!login) return null
     const bankAccountContent = (
@@ -280,7 +280,7 @@ const BankAccount = () => {
                                         </div>
                                         
                                         <button
-                                            onClick={(e) => deleteAccount(account.name, e)}
+                                            onClick={(e) => deleteAccount(account.id,account.name,  e)}
                                             className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/50 transform hover:scale-110 active:scale-95"
                                             title="Delete account"
                                         >

@@ -110,12 +110,21 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
       const update =
         type === 'loss'
-          ? { $inc: {'balance' : -amount, 'stats.netBalance': -amount,  'stats.totalGains': -amount, 'stats.totalLoss': amount, 'stats.totalTransactions': 1} }
-          : { $inc: {'balance' : amount, 'stats.netBalance': amount,  'stats.totalGains': amount, 'stats.totalLoss': -amount, 'stats.totalTransactions': 1} }
-
+          ? { $inc: {'balance' : -numeralAmount, 'stats.netBalance': -numeralAmount,  'stats.totalGains': -numeralAmount, 'stats.totalLoss': numeralAmount, 'stats.totalTransactions': 1} }
+          : { $inc: {'balance' : numeralAmount, 'stats.netBalance': numeralAmount,  'stats.totalGains': numeralAmount, 'stats.totalLoss': -numeralAmount, 'stats.totalTransactions': 1} }
+    try{
+      const balanceResult = await db
+        .collection('bankAccounts')
+        .findOneAndUpdate(
+          { userId, id: bankId },
+          update,
+          { returnDocument: 'after', session }
+        );
+    }catch(e){
+      console.log(e)
+    }
       const balanceResult = await db
         .collection('bankAccounts')
         .findOneAndUpdate(
@@ -124,6 +133,8 @@ export async function POST(request: NextRequest) {
           { returnDocument: 'after', session }
         );
         console.log('trans2')
+        console.log(bankId)
+        console.log(userId)
       await session.commitTransaction()
     return NextResponse.json(
       { 
