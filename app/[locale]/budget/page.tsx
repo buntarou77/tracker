@@ -124,7 +124,7 @@ export default function BudgetPage() {
     setCategoryProgress(progress);
   }, [activePlan, trans]);
 
-
+  console.log(activePlan)
   useEffect(() => {
     if (!activePlan || !trans) return;
 
@@ -274,7 +274,7 @@ export default function BudgetPage() {
         if (activePlan?.id === planId) {
           setActivePlan(updatedPlan as Plan);
         }
-        console.log('getTrans: budget 277')
+        console.log('getTrans', {component: 'app/bankTransactionsContext/278'})
         const newTrans = await fetch(`/api/getTrans?bankId=${activeBank.id}`);
         if (newTrans.ok) {
           const transData = await newTrans.json();
@@ -316,7 +316,7 @@ export default function BudgetPage() {
         )}
 
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Select Active Plan</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Select plan</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plans.map((plan: any) => (
               <div 
@@ -333,7 +333,7 @@ export default function BudgetPage() {
                   <span className={`text-sm ${
                     plan.type === 'income' ? 'text-green-400' : 'text-red-400'
                   }`}>
-                    ${plan.totalAmount}
+                    ${plan.amount}
                   </span>
                   <span className="text-xs text-gray-400 capitalize">{plan.frequency}</span>
                 </div>

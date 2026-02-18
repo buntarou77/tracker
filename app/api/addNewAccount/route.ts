@@ -44,9 +44,6 @@ export async function POST(request: NextRequest) {
       userId: userId,
       name: name
     });
-    console.log(name)
-    console.log(userId)
-    console.log(bankExists)
     if (bankExists) {
       return NextResponse.json(
         { error: 'Bank account with this name already exists' },

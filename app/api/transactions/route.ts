@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from');
     const category = searchParams.get('category');
     const type = searchParams.get('type');
+    const paginationState = searchParams.get('pagination') === 'true';
 
     if (!bankId) {
         return NextResponse.json(
@@ -95,11 +96,31 @@ export async function GET(request: NextRequest) {
             }
 
             const request = await db.collection('transactions').find(query).sort({date: -1}).toArray();
+            let pagination: string = ''
+            if(paginationState){
+                const newQuery: any = {
+                    userId: userId,
+                    bankId: bankId,
+                }
+                newQuery.date = {
+                    $lte: new Date(to || new Date())
+                }
+                if (category) {
+                    newQuery.category = category;
+                }
 
+                if (type) {
+                    newQuery.type = type;
+                }
+                const newRequest = await db.collection('transactions').find(newQuery).sort({date: -1}).limit(1).toArray()
+
+                pagination = newRequest.length > 0 ? `${newRequest[0].date}` : '';
+            }
             const result = {
                 ok: true,
-                data: request,
+                data: request.map(item=> ({...item, id: item._id, _id: undefined})),
                 meta: {
+                    cursor: pagination,
                     returnedCount: request.length,
                     range: {
                         from: from,
@@ -107,7 +128,6 @@ export async function GET(request: NextRequest) {
                     },
                 }
             }
-
             return result;
         } catch (error) {
             throw error;
@@ -119,7 +139,7 @@ export async function GET(request: NextRequest) {
     try {
         const transactions = await getTransactions();
         return NextResponse.json(
-            { transactions },
+            { ...transactions },
             { status: 200 }
         );
     } catch (error) {

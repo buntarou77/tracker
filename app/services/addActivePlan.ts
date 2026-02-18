@@ -12,7 +12,7 @@ export const addActivePlan = async (id: number, state: boolean) => {
         });
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.error || 'Ошибка при обновлении плана');
+            throw new Error(errorData.error || 'Failed to update plan');
         }
         return await res.json();
     } catch (e) {

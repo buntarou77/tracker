@@ -34,7 +34,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const bankId = searchParams.get('bankId');
-    const deleteBankData = searchParams.get('deleteData') === 'true'; // Удалить все транзакции банка
+    const deleteBankData = searchParams.get('deleteData') === 'true'; // Delete all bank transactions
 
     if (!bankId) {
         return NextResponse.json(

@@ -1,7 +1,8 @@
-// Включаем SSG для главной страницы
+import { useTranslations } from "next-intl";
 export const dynamic = 'force-static'
-
-export default function Home() {
+export default function Home({params: {lng}}: {params: {lng: string}}) {
+  const t = useTranslations('home');
+  console.log(t)
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
       <div className="text-center">

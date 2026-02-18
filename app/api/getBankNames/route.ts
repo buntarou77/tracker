@@ -54,8 +54,6 @@ export async function GET(request: NextRequest) {
             .find(filter)
             .sort({ [sortBy]: sortOrder })
             .toArray();
-
-        // Преобразуем _id в id для всех счетов
         const transformedBanks = bankAccounts.map((bank: any) => {
             const { _id, ...rest } = bank;
             return {

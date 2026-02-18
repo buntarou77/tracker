@@ -98,7 +98,7 @@ const prepareDoughnutData =(data: any[], labels: string[])=>{
          labels: labels,
       datasets: [
         {
-          label: 'Расходы',
+          label: 'Expenses',
           data: data,
           backgroundColor: ['#FF6384', 
             '#36A2EB', 

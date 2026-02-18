@@ -1,10 +1,13 @@
 'use client'
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { useAuthContext } from '../context/AuthContext';
-import { useBankTransaction } from '../context/BankTransactionContext';
-import { useUI } from '../context/UIContext';
+import { useAuthContext } from '../../context/AuthContext';
+import { useBankTransaction } from '../../context/BankTransactionContext';
+import { useUI } from '../../context/UIContext';
+import { useError } from '../../context/ErrorContext';
+import {TransactionType} from '../../types/shared/transactions'
 import Cookies from 'js-cookie';
-import Error from '../components/Error'
+import BankAccount from '../../components/BankAccount';
+
 interface transaction {
     amount: number, 
     id: number,
@@ -16,15 +19,17 @@ interface transaction {
 }
 
 export default function Operations() {
+    const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore, bankNames, analyticTransactions, setAnalyticTransactions } = useBankTransaction();
     const [show, setShow] = useState<boolean>(false);
     const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
     const formRef = useRef<HTMLFormElement>(null);
     const [transactionType, setTransactionType] = useState<'loss' | 'gain'>('loss');
+    const [canUseCachedTransactions, setCanUseCachedTransactions] = useState<boolean>(Object.keys(analyticTransactions).length > 0);
     const [monthSkip, setMonthSkip] = useState<number>(1);
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
     const { login } = useAuthContext();
-    const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore } = useBankTransaction();
-    const {isBankAccountMissing, setIsBankAccountMissing, setIsAccountsVisible, setAddBankAccountForm} = useUI();
+    const { setIsAccountsVisible, setAddBankAccountForm } = useUI();
+    const { addError } = useError();
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (show && formRef.current && !formRef.current.contains(event.target as Node)) {
@@ -43,9 +48,17 @@ export default function Operations() {
     const addTransaction = async (amount: any, category: any, date: any, type: any) => {
         try {
             if(activeBank.name.trim() === ''){
-                setIsBankAccountMissing(true)
-                return
+                addError({
+                    theme: 'redDark',
+                    name: 'No Bank Account',
+                    desc: 'Please add your first bank account',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: createBankAccountError,
+                    interactiveName: 'Create'
+                });
+                return;
             }
+
             const response = await fetch('/api/addTrans', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -58,6 +71,7 @@ export default function Operations() {
                     bankId: activeBank.id
                 })
             });
+
             if (response.ok) {
                 if(type === 'gain'){
                     setBalance(Number(balance) + Number(amount));
@@ -69,13 +83,101 @@ export default function Operations() {
                     Cookies.set(`bank_account_${login}`, String(Number(balanceToken) - Number(amount)));
                 }
                 const data = await response.json();
-                const singleTransaction = data.data
-                setTrans(prev => (prev.push(singleTransaction)));
-    
+                const singleTransaction = data.data;
+                setTrans(prev => [...prev, singleTransaction]);
+                const analyticKey = `${new Date(singleTransaction.date).getFullYear()}-${new Date(singleTransaction.date).getMonth() + 1}`;
+                setAnalyticTransactions(prev=> ({
+                    ...prev,
+                    [analyticKey]: [...(prev[analyticKey] || []), singleTransaction]
+                }));
+                addError({
+                    theme: 'greenDark',
+                    name: 'Success',
+                    desc: 'Transaction added successfully',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => {},
+                    interactiveName: ''
+                });
+            } else {
+                addError({
+                    theme: 'redDark',
+                    name: 'Error',
+                    desc: 'Failed to add transaction',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => addTransaction(amount, category, date, type),
+                    interactiveName: 'Retry'
+                });
             }
         } catch (error) {
+            addError({
+                theme: 'redDark',
+                name: 'Network Error',
+                desc: 'Failed to add transaction',
+                stateChangeFunc: () => {},
+                interactiveFunc: () => addTransaction(amount, category, date, type),
+                interactiveName: 'Retry'
+            });
         }
     };
+
+    useEffect(()=>{
+        async function getTrans(){
+          if(activeBank.name === '') return 
+          const activeBankData = Cookies.get('activeBank')
+          let activeBankId 
+          if(!activeBankData) {
+            activeBankId = bankNames[0].id
+          }else{
+            activeBankId = JSON.parse(activeBankData)
+          }
+          if(canUseCachedTransactions){
+            const res =  getCashedTransactions(nextCursor, 20)
+            if(res.data.length > 0){
+                setTrans(res.data)
+                setNextCursor(res.cursor)
+            }else{
+                setCanUseCachedTransactions(res.data.length < 20)
+            }
+            setHasMore(true)
+            return 
+          }
+          const response = await fetch(`/api/getTrans?bankId=${activeBank.id}`, {
+            method: 'GET'
+          })
+          if(response.ok){
+            const responseData = await response.json()
+            setTrans(responseData.data);
+            setHasMore(responseData.meta.hasMore)
+            setNextCursor(responseData.meta.cursor)
+          }
+        }
+        getTrans()
+      },[activeBank])
+
+    function getCashedTransactions(cursor: string ,limit: number = 20): {hesNext: boolean, cursor: string, data: any[]} {
+        let limitLeft = limit + 1
+        const cursorDate = new Date(cursor)
+        let offset = 0
+        const resultArray = []
+        while(limitLeft > 0){
+            const targetDate = new Date(cursorDate.getFullYear(), cursorDate.getMonth() - offset)
+            let cursorKey = `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}` 
+            if(!analyticTransactions[cursorKey]) break
+            for(let item of analyticTransactions[cursorKey]){
+                limitLeft--
+                resultArray.push(item)
+            }
+            offset++
+        }
+        const preparedData = resultArray.sort((a: TransactionType, b: TransactionType)=> +new Date(a.date) - +new Date(b.date))
+        const res = {
+            cursor: `${preparedData[0]?.date}` || '',
+            hesNext: preparedData.length > 20,
+            data: preparedData.length === 21 ? preparedData.slice(19, 20) : preparedData
+        }
+        return res
+    }
+
     const handleToggle = useCallback(() => {
         setShow(prev => !prev);
         setShouldAnimate(prev => !prev);
@@ -84,13 +186,11 @@ export default function Operations() {
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        console.log(formData)
         const amount = formData.get('amount');
         const category = formData.get('category');
         const date = formData.get('date');
       
         if (amount && category && date && login) {
-            console.log(amount)
             addTransaction(amount, category, date, transactionType);
             setShow(false);
             setShouldAnimate(false);
@@ -100,20 +200,20 @@ export default function Operations() {
     const delTransaction = async (id: any, amount: any, type: any, date: any) => { 
         try {
             const data = JSON.stringify({
-                id,
+                transactionId: id,
                 amount,
                 type,
                 date,
                 login,
                 balance,
-                bankName: activeBank.name
-            })
+                bankId: activeBank.id,
+                includeUpdatedBank: true
+            });
             const response = await fetch(`api/delTrans`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: data
             });
-            
             if(response.ok){
                 if(type === 'loss'){
                     setBalance(Number(balance) + Number(amount));
@@ -121,13 +221,35 @@ export default function Operations() {
                     setBalance(Number(balance) - Number(amount));
                 }
                 
-                const updatedTrans: any = { ...trans };
-                Object.keys(updatedTrans).forEach(monthKey => {
-                    updatedTrans[monthKey] = updatedTrans[monthKey].filter((item: any) => item.id !== id);
+                setTrans(prev => prev.filter(trans => trans.id !== id));
+
+                addError({
+                    theme: 'greenDark',
+                    name: 'Success',
+                    desc: 'Transaction deleted successfully',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => {},
+                    interactiveName: ''
                 });
-                setTrans(updatedTrans);
+            } else {
+                addError({
+                    theme: 'redDark',
+                    name: 'Error',
+                    desc: 'Failed to delete transaction',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => delTransaction(id, amount, type, date),
+                    interactiveName: 'Retry'
+                });
             }
         } catch(e) {
+            addError({
+                theme: 'redDark',
+                name: 'Network Error',
+                desc: 'Failed to delete transaction',
+                stateChangeFunc: () => {},
+                interactiveFunc: () => delTransaction(id, amount, type, date),
+                interactiveName: 'Retry'
+            });
         }
     };
     
@@ -136,21 +258,47 @@ export default function Operations() {
         setIsLoadingMore(true);
         try {
             const nextSkip = monthSkip + 1;
-            if(activeBank.id === '' ) return 
-            console.log(nextCursor)
-            console.log("getTrans: operations 139")
+            if(activeBank.id === '' ) {
+                addError({
+                    theme: 'orangeDark',
+                    name: 'Warning',
+                    desc: 'No bank account selected',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => {},
+                    interactiveName: ''
+                });
+                return;
+            }
+
             const response = await fetch(`/api/getTrans?bankId=${activeBank.id}&cursor=${nextCursor}`, {
                 credentials: 'include'
             });
+
             if (response.ok) {
                 const data = await response.json();
-                console.log(data)
                 setTrans([...trans, ...data.data]);
                 setMonthSkip(nextSkip);
                 setHasMore(data.meta.hasMore)
                 setNextCursor(data.meta.cursor)
+            } else {
+                addError({
+                    theme: 'redDark',
+                    name: 'Error',
+                    desc: 'Failed to load more transactions',
+                    stateChangeFunc: () => {},
+                    interactiveFunc: () => loadMoreTransactions(),
+                    interactiveName: 'Retry'
+                });
             }
         } catch (error) {
+            addError({
+                theme: 'redDark',
+                name: 'Network Error',
+                desc: 'Failed to load transactions',
+                stateChangeFunc: () => {},
+                interactiveFunc: () => loadMoreTransactions(),
+                interactiveName: 'Retry'
+            });
         } finally {
             setIsLoadingMore(false);
         }
@@ -212,7 +360,7 @@ export default function Operations() {
         setIsAccountsVisible(true);
         setAddBankAccountForm(true);
     }
-    console.log(hasMore)
+
     const renderTransactionsByMonth = () => {
         if (!trans || typeof trans !== 'object' || !trans.length) {
             return (
@@ -223,19 +371,18 @@ export default function Operations() {
                 </div>
             );
         }
-        const monthTransactionsData = {};
+        const monthTransactionsData: Record<string, transaction[]> = {};
         for(let i = 0; i < trans.length ;i++){
             const date = new Date(trans[i].date);
-            const key = `${date.getFullYear()}-${date.getMonth() + 1}`
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             if(monthTransactionsData[key]){
-                monthTransactionsData[key] = [...monthTransactionsData[key], trans[i]]
+                monthTransactionsData[key] = [...monthTransactionsData[key], trans[i]];
             }else{
-
-                monthTransactionsData[key] = [trans[i]]
+                monthTransactionsData[key] = [trans[i]];
             }
-
         }
-        if (monthTransactionsData.length === 0) {
+
+        if (Object.keys(monthTransactionsData).length === 0) {
             return (
                 <div className="text-center py-12">
                     <div className="text-6xl mb-4">📊</div>
@@ -244,9 +391,13 @@ export default function Operations() {
                 </div>
             );
         }
-        return Object.keys(monthTransactionsData).map(monthKey => {
-            const monthTransactions: any[] = (monthTransactionsData as any)[monthKey];
-            if (!monthTransactions || [...Object.values(monthTransactions)].length === 0) return null;
+
+        return Object.keys(monthTransactionsData)
+            .sort()
+            .reverse()
+            .map(monthKey => {
+            const monthTransactions: any[] = monthTransactionsData[monthKey];
+            if (!monthTransactions || monthTransactions.length === 0) return null;
             return (
                 <div key={monthKey} className="mb-8">
                     <h3 className="text-xl font-bold text-white mb-4">
@@ -316,7 +467,6 @@ export default function Operations() {
     
     return (
         <div className="min-h-screen bg-gray-900 p-4 md:p-8">
-            <Error theme='redDark' name='You have no bank accoutn' desc='Please add your first bank account' stateChangeFunc={setIsBankAccountMissing} interactiveFunc={createBankAccountError} interactiveName='create' state={isBankAccountMissing}/>
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
                     <div className="lg:col-span-3">
@@ -371,9 +521,9 @@ export default function Operations() {
                             <h3 className="text-lg font-bold text-white mb-4">📊 Quick Stats</h3>
                             <div className="space-y-4">
                                 <div className="bg-gray-700 rounded-lg p-4">
-                                    <div className="text-sm text-gray-400">Total Transactions</div>
+                                    <div className="text-sm text-gray-400">Result per {trans.length} transactions</div>
                                     <div className="text-2xl font-bold text-white">
-                                        {trans.length  ? trans.reduce((sum: number, trans: transaction) => sum + trans.amount, 0) : 0}
+                                        {trans.length ? trans.reduce((sum: number, trans: transaction) => trans.type === 'loss' ? sum - trans.amount: sum + trans.amount , 0).toFixed(2) : 0} {bankNames.find((item)=>item.id === activeBank.id)?.currency}
                                     </div>
                                 </div>
                                 <div className="bg-gray-700 rounded-lg p-4">

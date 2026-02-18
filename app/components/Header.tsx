@@ -17,8 +17,6 @@ const robotoMono = Roboto_Mono({
 });
 
 export default memo(function Header() {
-
-
   return (
     <div className={`${inter.variable} ${robotoMono.variable} antialiased`}>
       <div className="header bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 relative flex items-center shadow-lg border-b border-gray-700 backdrop-blur-sm">

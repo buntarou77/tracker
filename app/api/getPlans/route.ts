@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
             .find(query)
             .sort({ [sortBy]: sortOrder })
             .toArray();
-
         if (includeProgress) {
             plans = plans.map(plan => {
                 const categoryProgress: Record<string, number> = {};
@@ -73,7 +72,6 @@ export async function GET(request: NextRequest) {
                 };
             });
         }
-
         return NextResponse.json(
             { 
                 success: true,

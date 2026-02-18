@@ -27,6 +27,7 @@ export interface PlanDocumentType {
 export interface CreatePlanType {
   frequency: frequencyType
   userId: string
+  currnecy: string
   name: string
   type: 'expense' | 'income'
   amount: number

@@ -8,11 +8,11 @@ function DetailItem({ label, value }: { label: string; value: React.ReactNode })
 }
 function getFrequencyLabel(freq: string) {
   const labels: Record<string, string> = {
-    once: 'Единоразово',
-    daily: 'Ежедневно',
-    weekly: 'Еженедельно',
-    monthly: 'Ежемесячно',
-    yearly: 'Ежегодно'
+    once: 'One-time',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly'
   };
   return labels[freq] || freq;
 }

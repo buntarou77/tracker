@@ -32,26 +32,22 @@ export async function POST(request: NextRequest) {
     }
 
     const data = (await request.json()) as CreatePlanType;
-    const { name, amount, categorys, targets, color, type, frequency } = data;
-    const preparedTargets = targets.map((item: targetItem) =>{
+    const { name, amount, categorys, targets, color, type, frequency, currency } = data;
+    const preparedTargets = targets?.map((item: targetItem) =>{
         return {
             id: new Date(),
             target: item.target,
             amount: Number(item.amount)
         }
     })
-    const preparedCategorys = categorys.map((item: categoryItem) =>{
+    const preparedCategorys = categorys?.map((item: categoryItem) =>{
         return {
             id: new Date(),
             category: item.category,
             amount: Number(item.amount)
         }
     })
-    console.log(name)
-    console.log(categorys)
-    console.log(amount)
     if (!name || !amount || !categorys) {
-        console.log(1)
         return NextResponse.json(
             { error: 'Missing required fields: name, amount, category' },
             { status: 400 }
@@ -75,17 +71,16 @@ export async function POST(request: NextRequest) {
             userId: userId,
             name: name.trim(),
             frequency,
+            currency,
             type,
             amount: Number(amount),
-            categorys: preparedCategorys,
-            targets: preparedTargets,
+            categorys: preparedCategorys ?? [],
+            targets: preparedTargets ?? [],
             color: color || '#000000',
             createdAt: new Date(),
             updatedAt: new Date()
         };
-
         const result = await db.collection('plans').insertOne(newPlan);
-
         if (!result.acknowledged) {
             return NextResponse.json(
                 { error: 'Failed to create plan' },
@@ -96,7 +91,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             { 
                 success: true,
-                plan: newPlan
+                plan: {...newPlan, id: result.insertedId}
             },
             { status: 201 }
         );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
@@ -50,38 +50,30 @@ export async function DELETE(request: NextRequest) {
         session.startTransaction()
         const result = await db.collection('transactions').findOneAndDelete(
             { 
-                id: Number(transactionId),
-                userId: userId,
-                bankId: bankId
-            },
+                _id: new ObjectId(`${transactionId}`)
+            },  
             {session}
         );
-
-        if (!result?.value) {
+        if (!result) {
             return NextResponse.json(
                 { error: 'Transaction not found' },
                 { status: 404 }
             );
         }
-
-        const deletedTransaction = result.value;
-
+        const deletedTransaction = result;
         const newBalance = type === 'loss' 
             ? Number(balance) + Number(amount)
             : Number(balance) - Number(amount);
-        
         const gainAmount = type === 'loss' ? Number(amount) - Number(amount) * 2 : Number(amount)
         const lossAmount = type === 'loss' ? Number(amount): Number(amount) - Number(amount) * 2 
         const bankUpdateResult = await db.collection('bankAccounts').findOneAndUpdate(
             { 
-                id: bankId,
-                userId: userId
+                _id: new ObjectId(`${bankId}`)
             },
             { $inc: {'balance' : gainAmount, 'stats.netBalance': gainAmount,  'stats.totalGains': gainAmount, 'stats.totalLoss': lossAmount, 'stats.totalTransactions': -1}},
             { returnDocument: 'after' , session}
         );
-
-        if (!bankUpdateResult?.value) {
+        if (!bankUpdateResult) {
             return NextResponse.json(
                 { error: 'Failed to update bank account balance' },
                 { status: 500 }

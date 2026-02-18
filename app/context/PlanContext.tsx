@@ -9,9 +9,9 @@ interface PlanContextType {
   activePlans: any[];
   activePlansStatus: any;
   storagePlans: any[];
-  activeMonthPlan: PlanType;
+  activeMonthPlan: getPlanType | null;
 
-  setActiveMonthPlan: (activeMonthPlan: PlanType) => void;
+  setActiveMonthPlan: (activeMonthPlan: getPlanType | null) => void;
   setPlans: (plans: any[] | ((prev: any[]) => any[])) => void;
   setActivePlans: (activePlans: any[]) => void;
   setActivePlansStatus: (status: any) => void;
@@ -54,8 +54,6 @@ export function PlanProvider({ children }: PlanProviderProps) {
           if (res.ok) {
             const data = await res.json();
             const activePlansIdsData = getActivePlans();
-            console.log('plansData')
-            console.log(data.plans)
             const activePlansStatusData = data.plans.reduce((acc: any, plan: any) => {
               if (activePlansIdsData.includes(plan.id)) {
                 acc[plan.frequency] = {
@@ -70,22 +68,11 @@ export function PlanProvider({ children }: PlanProviderProps) {
               monthly: { status: false, id: 0 },
               yearly: { status: false, id: 0 }
             });
-            console.log('212121')
-            console.log(activePlansIdsData)
-            console.log(activePlansStatusData)
             setActivePlansStatus(activePlansStatusData);
-            console.log('monthly')
-            console.log(activePlansStatusData.monthly)
             if(activePlansStatusData.monthly.status){
-              console.log(1)
               setActiveMonthPlan(plans.find((item)=> item.id === activePlansStatusData['monthly'].id))
             }
-            setPlans(data.plans.map((item: getPlanType)=> {
-              return{
-                ...item,
-                id: item._id
-              }
-            }));
+            setPlans(data.plans)
           }
         } catch(e) {
         }
@@ -118,7 +105,7 @@ export function PlanProvider({ children }: PlanProviderProps) {
 export function usePlan() {
   const context = useContext(PlanContext);
   if (!context) {
-    throw new Error('usePlan должен использоваться внутри PlanProvider');
+    throw new Error('usePlan must be used within PlanProvider');
   }
   return context;
 }

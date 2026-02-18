@@ -1,4 +1,4 @@
-// Включаем SSG для страницы About
+// Enable SSG for the About page
 export const dynamic = 'force-static'
 
 export default function AboutPage() {

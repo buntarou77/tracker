@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
@@ -34,7 +34,6 @@ export async function DELETE(request: NextRequest) {
 
     const data = await request.json();
     const { planId, includeRemainingPlans } = data;
-
     if (!planId) {
         return NextResponse.json(
             { error: 'planId is required' },
@@ -49,17 +48,15 @@ export async function DELETE(request: NextRequest) {
         const db = client.db('users');
 
         const result = await db.collection('plans').findOneAndDelete({
-            id: planId,
+            _id: new ObjectId(`${planId}`),
             userId: userId
         });
-
-        if (!result.value) {
+        if (!result?._id) {
             return NextResponse.json(
                 { error: 'Plan not found' },
                 { status: 404 }
             );
         }
-
         const responseData: any = { 
             success: true,
             message: 'Plan deleted successfully',

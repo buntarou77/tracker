@@ -63,7 +63,7 @@ export function UIProvider({ children }: UIProviderProps) {
 export function useUI() {
   const context = useContext(UIContext);
   if (!context) {
-    throw new Error('useUI должен использоваться внутри UIProvider');
+    throw new Error('useUI must be used within UIProvider');
   }
   return context;
 }

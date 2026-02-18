@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import { useAuthContext } from './AuthContext';
+import { TransactionType } from '../types/shared/transactions';
 interface BankTransactionContextType {
   activeBank: { name: string; id: string };
   bankNames: any[];
@@ -12,7 +13,9 @@ interface BankTransactionContextType {
   exchangeRates: any;
   hasMore: boolean;
   nextCursor: string | null;
+  analyticTransactions: Record<string, TransactionType[]>
 
+  setAnalyticTransactions: (analyticTransactions: any ) => void
   setActiveBank: (bank: { name: string; id: string }) => void;
   setHasMore: (hasMore: boolean) => void;
   setNextCursor: (nextCursor: string | null) => void;
@@ -36,16 +39,16 @@ interface BankTransactionProviderProps {
 }
 
 export function BankTransactionProvider({ children }: BankTransactionProviderProps) {
-  const [nextCursor, setNextCursor] = useState<string>('')
+  const [nextCursor, setNextCursor] = useState<string>(`${new Date()}`)
   const [hasMore, setHasMore] = useState<boolean>(false)
   const [activeBank, setActiveBank] = useState({name: '', id: ''});
   const [bankNames, setBankNames] = useState<any[]>([]);
-  const [trans, setTrans] = useState({});
+  const [trans, setTrans] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState('');
- const [exchangeRates, setExchangeRates] = useState<any>({});
+  const [exchangeRates, setExchangeRates] = useState<any>({});
+  const [analyticTransactions, setAnalyticTransactions] = useState<Record<string,TransactionType[]>>({})
   const { login } = useAuthContext();
-  console.log(bankNames)
   
   useEffect(() => {
     async function loadBankData() {
@@ -55,61 +58,16 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
           const response = await fetch(`/api/getBankNames`, {
             method: 'GET'
           });
-          console.log(response)
           if (!response.ok) {
             return 
           }
             const namesData = await response.json();
-            console.log(namesData)
             const trueData = namesData.banks;
             setBankNames(trueData)
             if (!trueData || trueData.length === 0) {
               return;
             }
-            
-            const activeBankCookie = Cookies.get('ActiveBankId');
-            // if (activeBankCookie) {
-            //   const activeBankId = JSON.parse(activeBankCookie)
-            //   const activeBank = trueData.find((bank: bankType) => bank.id === activeBankId);
-            //   if (activeBank) {  
-            //     try {
-            //       if(activeBank.name === '') return 
-            //       console.log('getTrans: bankTransactions 70')
-            //       const response = await fetch(`/api/getTrans?bankId=${activeBank.id}`, {
-            //         method: 'GET'
-            //       });
-            //       if (response.ok) {
-            //         const transData = await response.json();
-            //         setTrans(transData.transactions);
-            //         setBalance(activeBank.balance);  
-            //         setCurrency(activeBank.currency);
-            //         setHesNext(transData.hesNext)
-            //         setNextCursor(transData.nextCursor)
-            //         setActiveBank({name: activeBank.name, id: activeBank.id});
-            //       }
-            //     } catch(e) {
-            //     }
-            //   }
-            // } else {
-            //   try {
-            //     if(activeBank.name === '' ) return 
-            //     console.log('getTrans: bankTransaction 87')
-            //     const response = await fetch(`/api/getTrans?bankId=${trueData[0].id}`, {
-            //       method: 'GET'
-            //     });
-            //     if (response.ok) {
-            //       const transData = await response.json();
-            //       const someActiveBank = trueData[0];
-            //       setTrans(transData.transactions);
-            //       setBalance(someActiveBank.balance);
-            //       setCurrency(someActiveBank.currency);
-            //       setActiveBank({name: someActiveBank.name, id: someActiveBank.id});
-            //       Cookies.set('ActiveBankId', JSON.stringify(someActiveBank.id || ''));
-            //     }
-            //   } catch(e) {
-            //   }
-            // }
-          
+            const activeBankCookie = Cookies.get('ActiveBankId');          
         } catch(e) {
         }
       }
@@ -135,7 +93,9 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     setTrans,
     setBalance,
     setCurrency,
-  }), [activeBank, bankNames, trans, balance, currency]);
+    analyticTransactions,
+    setAnalyticTransactions
+  }), [activeBank, bankNames, trans, balance, currency, analyticTransactions]);
 
   return (
     <BankTransactionContext.Provider value={contextValue}>

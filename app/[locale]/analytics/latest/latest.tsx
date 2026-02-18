@@ -11,30 +11,37 @@ import leftArrow from '../../resources/arrow-left.svg';
 import rigthArrow from '../../resources/arrow-right.svg';
 import { usePlan } from '@/app/context/PlanContext';
 import { useAuthContext } from '@/app/context/AuthContext';
-export default memo(function LastsAnalytics() {
-  ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    ArcElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement
-  );
-  const {trans, setTrans, activeBank, } = useBankTransaction()
-  const {setActiveMonthPlan, activeMonthPlan, activePlansStatus, setActivePlansStatus, plans, setPlans} = usePlan()
-  const {login}  = useAuthContext()
+import { useError } from '@/app/context/ErrorContext';
+import { getCurrencySymbol } from '@/app/lib/symbols';
+import getMonthName from '@/app/utils/getMonthName';
+import { TransactionType } from '@/app/types/shared/transactions';
 
-  const {balance} = useBankTransaction()
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  ArcElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement
+);
+
+export default memo(function LastsAnalytics() {
+  const { analyticTransactions, setAnalyticTransactions, activeBank, bankNames, trans } = useBankTransaction();
+  const { setActiveMonthPlan, activeMonthPlan, activePlansStatus, setActivePlansStatus, plans, setPlans } = usePlan();
+  const { login } = useAuthContext();
+  const { addError } = useError();
+  const { balance } = useBankTransaction();
+
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
   const [monthRes, setMonthRes] = useState(0);
   const [filteredTrans, setFilteredTrans] = useState<any[]>([]);
   const [filteredGainTrans, setFilteredGainTrans] = useState<any[]>([]);
   const [filteredLossTrans, setFilteredLossTrans] = useState<any[]>([]);
-  const [month, setMonth] = useState<string>('');
+  const [periodInfo, setPeriodInfo] = useState<{ year: string; month: string }>({ year: '', month: '' });
   const [monthOffset, setMonthOffset] = useState(0);
   const [expenseProgress, setExpenseProgress] = useState(0);
   const [incomeProgress, setIncomeProgress] = useState(0);
@@ -50,78 +57,79 @@ export default memo(function LastsAnalytics() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalTransactions, setModalTransactions] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
+
   const loadMonth = async (offset: number) => {
-    if (!login || !activeBank.id || isLoadingMonth) return;
-    
+    if (!activeBank?.id) return;
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
     const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
     const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
-    
+
     setIsLoadingMonth(true);
+    const isMonthTransactionsOperations = trans.some((item)=> new Date(item.date) < startDate)
+    const key = `${startDate.getFullYear()}-${endDate.getMonth() + 1}`
+    if(isMonthTransactionsOperations){
+      setAnalyticTransactions((prev: Record<string, TransactionType[]>)=> ({...prev, [key]: trans.filter(item=> new Date(item.date) > startDate && new Date(item.date) < endDate)}))
+      return
+    }
     try {
       const response = await fetch(
-        `/api/getTrans?bankId=${activeBank.id}&from=${startDate.toISOString()}&to=${endDate.toISOString()}`,
+        `/api/transactions?bankId=${activeBank.id}&from=${startDate.toISOString()}&to=${endDate.toISOString()}`,
         { credentials: 'include' }
       );
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.transactions && data.transactions.length > 0) {
-          setTrans((prevTrans: any[]) => [
-            ...prevTrans.filter((t: any) => {
-              const tDate = new Date(t.date);
-              return tDate < startDate || tDate > endDate;
-            }),
-            ...data.transactions
-          ]);
-        }
+      if (!response.ok) {
+        addError({
+          theme: 'redDark',
+          name: 'Load error',
+          desc: 'Failed to load transactions',
+          stateChangeFunc: () => { },
+          interactiveFunc: () => loadMonth(offset),
+          interactiveName: 'Retry'
+        });
+        return;
       }
+
+      const data = await response.json();
+      setAnalyticTransactions((prev: Record<string, any[]>)=> {
+        return {...prev, [key]: data.data}
+      });
     } catch (error) {
-      console.error('Error loading month:', error);
+      addError({
+        theme: 'redDark',
+        name: 'Network error',
+        desc: 'Please check your internet connection',
+        stateChangeFunc: () => { },
+        interactiveFunc: () => loadMonth(offset),
+        interactiveName: 'Retry'
+      });
     } finally {
       setIsLoadingMonth(false);
     }
   };
-  
-  const getMonthTransactions = (year: number, month: number): any[] => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-    
-    return trans.filter((transaction: any) => {
-      const transDate = new Date(transaction.date);
-      return transDate >= startDate && transDate <= endDate;
-    });
-  };
+
+
+  const getMonthTransactions = (year: number, month: number): TransactionType[] =>
+    analyticTransactions[`${year}-${month}`] || [];
 
   const isMonthLoaded = (year: number, month: number): boolean => {
-    if (!trans || trans.length === 0) return false;
-    
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-    
-    return trans.some((transaction: any) => {
-      const transDate = new Date(transaction.date);
-      return transDate >= startDate && transDate <= endDate;
-    });
+    const key = `${year}-${month}`;
+    return !!analyticTransactions[key] 
   };
 
   const loadMonthData = async (offset: number) => {
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+
     const year = targetDate.getFullYear();
     const month = targetDate.getMonth() + 1;
-
     if (!isMonthLoaded(year, month)) {
       await loadMonth(offset);
     }
-    
     const monthTransactions = getMonthTransactions(year, month);
 
     const gainTrans = monthTransactions.filter((t: any) => t.type === 'gain');
     const lossTrans = monthTransactions.filter((t: any) => t.type === 'loss');
-    
+
     setFilteredTrans(monthTransactions);
     setFilteredGainTrans(gainTrans);
     setFilteredLossTrans(lossTrans);
@@ -129,67 +137,58 @@ export default memo(function LastsAnalytics() {
     const totalGains = gainTrans.reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
     const totalLosses = lossTrans.reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
     const monthResult = totalGains - totalLosses;
-    
-    const startBudgetValue = monthTransactions.reduce((acc, item)=> item.type === 'loss' ? acc - item.amount: acc + item.amount , balance)
+
+    const startBudgetValue = monthTransactions.reduce((acc, item) => item.type === 'loss' ? acc + item.amount : acc - item.amount, balance)
     setStartBudget(startBudgetValue);
     setEndBudget(startBudgetValue + monthResult);
     setMonthRes(monthResult);
-    
-    const monthName = getMonth(month - 1);
-    if (monthName) {
-      setMonth(monthName);
-    }
+
+    setPeriodInfo({year: year.toString(), month: getMonthName(month - 1)});
   };
 
   const loadActivePlan = () => {
     if (isLoadingPlan) return;
-    
+
     setIsLoadingPlan(true);
-    
+
     try {
       if (!plans || plans.length === 0) {
-        setActivePlan(null);
+        setActiveMonthPlan(null);
         return;
       }
-      
+
       let activePlanId = null;
-      
+
       for (const period of ['daily', 'weekly', 'monthly', 'yearly']) {
         if (activePlansStatus[period]?.status === true) {
           activePlanId = activePlansStatus[period].id;
           break;
         }
       }
-      
+
       const active = activePlanId ? plans.find((plan: any) => plan.id === activePlanId) : null;
       setActiveMonthPlan(active || null);
-      
+
     } catch (error) {
-      console.error('Error processing active plan:', error);
       setActiveMonthPlan(null);
     } finally {
       setIsLoadingPlan(false);
     }
   };
-  
+
   useEffect(() => {
     if (login) {
       loadActivePlan();
     }
   }, [login, activePlansStatus]);
-  
-  useEffect(() => {
-    if (trans && trans.length > 0) {
-      loadMonthData(monthOffset);
-      if (login) {
-        loadActivePlan();
-      }
-    }
-  }, [trans, monthOffset]);
 
-  useEffect(()=>{
-    if(month == ''){
-      setMonth(getMonth(new Date().getMonth()))
+  useEffect(() => {
+    loadMonthData(monthOffset);
+  }, [monthOffset, activeBank, analyticTransactions]);
+
+  useEffect(() => {
+    if (periodInfo.month === '') {
+      setPeriodInfo({year: new Date().getFullYear().toString(), month: getMonth(new Date().getMonth()) || ''});
     }
   }, []);
 
@@ -201,45 +200,59 @@ export default memo(function LastsAnalytics() {
     const loadPrevMonthData = async () => {
       setPrevMonthLoss(0);
       setPrevMonthGain(0);
-      
+
       const now = new Date();
       const currentTargetDate = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
       const prevTargetDate = new Date(currentTargetDate.getFullYear(), currentTargetDate.getMonth() - 1, 1);
       const prevYear = prevTargetDate.getFullYear();
       const prevMonth = prevTargetDate.getMonth() + 1;
-      
+
       if (!isMonthLoaded(prevYear, prevMonth)) {
         const prevMonthOffset = monthOffset + 1;
         await loadMonth(prevMonthOffset);
       }
-      
+
       const prevMonthTransactions = getMonthTransactions(prevYear, prevMonth);
-      
+
       const prevGainTrans = prevMonthTransactions.filter((t: any) => t.type === 'gain');
       const prevLossTrans = prevMonthTransactions.filter((t: any) => t.type === 'loss');
-      
+
       setPrevMonthLoss(prevLossTrans.reduce((acc: number, item: any) => acc + Number(item.amount || 0), 0));
       setPrevMonthGain(prevGainTrans.reduce((acc: number, item: any) => acc + Number(item.amount || 0), 0));
     };
-    
-    if (trans && trans.length > 0) {
+
+    if (analyticTransactions && Object.keys(analyticTransactions).length > 0) {
       loadPrevMonthData();
     }
-  }, [trans, monthOffset]);
+  }, [analyticTransactions, monthOffset]);
+
+  useEffect(() => {
+    setMoreLosses(totalLosses - prevMonthLoss);
+    setMoreGains(totalGains - prevMonthGain);
+  }, [totalLosses, totalGains, prevMonthLoss, prevMonthGain]);
+
+  useEffect(() => {
+    setTotalLosses(filteredLossTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
+    setTotalGains(filteredGainTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
+  }, [filteredLossTrans, filteredGainTrans]);
+
+  useEffect(() => {
+    if (activeMonthPlan && activeMonthPlan.type === 'expense') {
+      setExpenseProgress((monthRes / activeMonthPlan.amount) * 100);
+    } else if (activeMonthPlan && activeMonthPlan.type === 'income') {
+      setIncomeProgress((monthRes / activeMonthPlan.amount) * 100);
+    }
+  }, [filteredTrans, activeMonthPlan, monthRes]);
 
   const handlePreviousMonth = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (new Date().getMonth() - monthOffset === 0) {
-      setMonthOffset(-1);
-    }
     setMonthOffset(prev => prev + 1);
   };
 
   const handleNextMonth = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (monthOffset > 0) {
-      setMonthOffset(prev => prev - 1);
-    }
+    if(monthOffset - 1 < 0) return;
+    setMonthOffset(prev => prev - 1);
   };
 
   const openModal = (title: string, transactions: any[]): void => {
@@ -263,16 +276,6 @@ export default memo(function LastsAnalytics() {
     const typeTrans = type === 'gains' ? filteredGainTrans : filteredLossTrans;
     openModal(`${type} transactions`, typeTrans);
   };
-  
-  useEffect(() => {
-    setMoreLosses(totalLosses - prevMonthLoss);
-    setMoreGains(totalGains - prevMonthGain);
-  }, [totalLosses, totalGains, prevMonthLoss, prevMonthGain]);
-
-  useEffect(() => {
-    setTotalLosses(filteredLossTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
-    setTotalGains(filteredGainTrans.reduce((acc, item) => Number(acc) + Number(item.amount || 0), 0));
-  }, [filteredLossTrans, filteredGainTrans]);
 
   const lossBarLabels = prepareMonthBarData(filteredLossTrans).label;
   const lossBarData = prepareMonthBarData(filteredLossTrans).data;
@@ -285,63 +288,64 @@ export default memo(function LastsAnalytics() {
   const allDates = Array.from(
     new Set([...filteredGainTrans.map((t) => t.date), ...filteredLossTrans.map((t) => t.date)])
   ).sort();
-  
+
   const gains = allDates.map((date) => {
     const item = filteredGainTrans.find((t) => t.date === date);
     return item ? item.amount : 0;
   });
-  
+
   const losses = allDates.map((date) => {
     const item = filteredLossTrans.find((t) => t.date === date);
     return item ? item.amount : 0;
   });
 
   const typeDatas = preparePieData([filteredGainTrans.length, filteredLossTrans.length], ['gains', 'losses']);
-  const { data: lineData, options: lineOptions } = prepareLineData([gains, losses], allDates);
-  
+  const { data: lineData, options: lineOptions } = prepareLineData(
+    [gains, losses],
+    allDates.map((date) => new Date(date).getDate().toString())
+  );
+
   const { categorys, categoryAmounts, sortCategory } = filtredCategorys(filteredTrans);
   const categorysArray = categorys as string[];
   const categoryAmountsArray = categoryAmounts as number[];
-  
+
   const showCategory = sortCategory.slice(0, 5).map((item: [string, number], index: number) => (
     <div key={item[0]}>
       <span className='font-[700]'>{index + 1}</span>. {item[0]} - {item[1]}
     </div>
   ));
-  
+
   const gainCategorys = preparePieTransactions(filteredGainTrans).Categorys as string[];
   const gainAmounts = preparePieTransactions(filteredGainTrans).Amounts as number[];
   const gainDoughnutData = prepareDoughnutData(gainAmounts, gainCategorys);
-  
+
   const lossCategorys = preparePieTransactions(filteredLossTrans).Categorys as string[];
   const lossAmounts = preparePieTransactions(filteredLossTrans).Amounts as number[];
   const lossDoughnutData = prepareDoughnutData(lossAmounts, lossCategorys);
   const categoryDoughnutData = prepareDoughnutData(categoryAmountsArray, categorysArray);
-  console.log(startBudget)
-  useEffect(() => {
-    if (activeMonthPlan && activeMonthPlan.type === 'expense') {
-      setExpenseProgress((monthRes / activeMonthPlan.amount) * 100);
-    } else if (activeMonthPlan && activeMonthPlan.type === 'income') {
-      setIncomeProgress((monthRes / activeMonthPlan.amount) * 100);
-    }
-  }, [filteredTrans, activeMonthPlan, monthRes]);
+
+  const currencySymbol = getCurrencySymbol(activeBank?.currency as any);
+  const displayCurrency = currencySymbol || activeBank?.currency;
+
+  const planCurrencySymbol = getCurrencySymbol(activeMonthPlan?.currency as any);
+  const planDisplayCurrency = planCurrencySymbol || activeMonthPlan?.currency;
 
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
       <div className='w-[100%] flex justify-center'>
         <div className='flex justify-between items-center w-[500px]'>
-          <button 
-            onClick={handlePreviousMonth} 
+          <button
+            onClick={handlePreviousMonth}
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
             <img className='w-[40px] h-[40px]' src={leftArrow.src} alt="Previous month" />
           </button>
           <div className='flex flex-col items-center'>
-            <p>{ isLoadingMonth ? <span className="text-sm text-gray-400 mt-1 h-[5px]">Loading...</span> : month}</p>
+            <div>{isLoadingMonth ? <span className="text-sm text-gray-400 mt-1 h-[5px]">Loading...</span> : <div className={'flex flex-col'}><p className={'opacity-50 flex justify-center items-center'}>{periodInfo.year}</p><p className={'flex justify-center items-center opacity-80'}>{periodInfo.month}</p></div>}</div>
           </div>
-          <button 
-            onClick={handleNextMonth} 
+          <button
+            onClick={handleNextMonth}
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
@@ -349,36 +353,42 @@ export default memo(function LastsAnalytics() {
           </button>
         </div>
       </div>
-      
+
       <div className='flex justify-between'>
         <div className=" p-4 rounded-lg shadow-md text-white w-[300px] space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Start Budget:</span>
-            <span className="font-semibold text-blue-300">{startBudget.toFixed(2)}$</span>
+            <span className="font-semibold text-blue-300">{startBudget.toFixed(2)}{displayCurrency}</span>
           </div>
-          
+
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Current Budget:</span>
             <span className={`font-semibold ${endBudget > startBudget ? 'text-green-400' : 'text-red-400'}`}>
-              {endBudget.toFixed(2)}$  
+              {endBudget.toFixed(2)}{displayCurrency}
             </span>
           </div>
-          
+
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Monthly Result:</span>
             <span className={`font-semibold ${endBudget > startBudget ? 'text-lime-300' : 'text-red-400'}`}>
-              {monthRes.toFixed(2)}$
+              {monthRes.toFixed(2)}{displayCurrency}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Transactions in this month:</span>
+            <span className={`font-semibold  text-lime-300 `}>
+              {filteredTrans.length}
             </span>
           </div>
         </div>
-        
         <div className='m-3'>
           <div className='min-w-[280px] bg-gray-800/40 backdrop-blur-sm p-4 rounded-lg border border-gray-600 shadow-lg'>
             {isLoadingPlan ? (
               <div className='flex items-center justify-center py-4 '>
                 <span className='text-gray-400 text-xs '>Loading plan...</span>
               </div>
-            ) : activeMonthPlan ? 
+            ) : activeMonthPlan ?
               <div className='w-[280px] flex flex-col items-center justify-center space-y-2'>
                 <div className='flex flex-row items-center space-x-2'>
                   <span className='text-white font-medium text-xs'>Plan:</span>
@@ -386,88 +396,88 @@ export default memo(function LastsAnalytics() {
                     {`${Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress))}%`}
                   </p>
                 </div>
-                
+
                 <div className='w-full max-w-[260px] relative'>
                   <div className='relative w-full h-5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg border border-gray-500 shadow-md overflow-hidden'>
-                    <div 
-                      style={{ 
-                        width: `${Math.min(100, Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress)))}%` 
-                      }} 
+                    <div
+                      style={{
+                        width: `${Math.min(100, Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress)))}%`
+                      }}
                       className={`
                         absolute top-0 left-0 h-full rounded-md transition-all duration-500 ease-out
-                        ${activeMonthPlan.type === 'expense' 
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-md shadow-emerald-500/30' 
+                        ${activeMonthPlan.type === 'expense'
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-md shadow-emerald-500/30'
                           : 'bg-gradient-to-r from-blue-500 to-blue-400 shadow-md shadow-blue-500/30'
                         }
                       `}
                     >
                       <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-md'></div>
                     </div>
-                    
+
                     {(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress) > 100 && (
                       <div className='absolute top-0 right-0 h-full w-1 bg-red-500 rounded-r-md shadow-sm'></div>
                     )}
                   </div>
-                  
+
                   <div className='absolute inset-0 flex items-center justify-center'>
                     <span className='text-white font-semibold text-xs drop-shadow'>
                       {Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress)}%
                     </span>
                   </div>
                 </div>
-                
+
                 <div className='flex items-center space-x-1'>
                   <div className={`w-2 h-2 rounded-full ${activeMonthPlan.type === 'expense' ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
                   <span className='text-gray-300 text-xs capitalize'>
                     {activeMonthPlan.type}
                   </span>
                   <span className='text-gray-400 text-xs'>
-                    ({activeMonthPlan.amount}$)
+                    ({activeMonthPlan.amount}{planDisplayCurrency})
                   </span>
                 </div>
               </div> : (
-               <div className='flex items-center justify-center py-4'>
-                 <span className='text-gray-400 text-xs'>No active plan</span>
-               </div>
-             )
+                <div className='flex items-center justify-center py-4'>
+                  <span className='text-gray-400 text-xs'>No active plan</span>
+                </div>
+              )
             }
           </div>
         </div>
-        
+
         <div className='flex gap-[10px] flex-col'>
           <div className='flex flex-col gap-2 text-white  p-4 rounded-lg shadow-md min-w-[280px]'>
             <div className='flex justify-between items-center '>
               <span className='text-gray-400'>Your Losses:</span>
-              <span className='text-red-400 font-semibold'>{totalLosses}$</span>
+              <span className='text-red-400 font-semibold'>{totalLosses}{displayCurrency}</span>
             </div>
             <div className='flex justify-between items-center'>
               <span className='text-gray-400'>Your Gains:</span>
-              <span className='text-green-400 font-semibold'>{totalGains}$</span>
+              <span className='text-green-400 font-semibold'>{totalGains}{displayCurrency}</span>
             </div>
             <div className='flex justify-between items-center'>
               <span className='text-gray-400'>Gains vs prev month:</span>
               <span className={`font-semibold ${moreGains >= 0 ? 'text-lime-400' : 'text-red-400'}`}>
-                {moreGains >= 0 ? '+' : ''}{moreGains}$
+                {moreGains >= 0 ? '+' : ''}{moreGains}{displayCurrency}
               </span>
             </div>
             <div className='flex justify-between items-center'>
               <span className='text-gray-400'>Losses vs prev month:</span>
               <span className={`font-semibold ${moreLosses >= 0 ? 'text-orange-400' : 'text-green-400'}`}>
-                {moreLosses >= 0 ? '+' : ''}{moreLosses}$
+                {moreLosses >= 0 ? '+' : ''}{moreLosses}{displayCurrency}
               </span>
             </div>
           </div>
         </div>
       </div>
-      
+
       <div className="w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px]">
         <Line className="w-full max-w-[1200px] h-[500px] m-auto" options={lineOptions} data={lineData} />
       </div>
-      
+
       <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
         <Bar className="w-full max-w-[1200px] h-[500px] m-auto" data={barLossData} />
       </div>
-      
+
       <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
         {gainBarData.length > 0 ? (
           <Bar className="w-full max-w-[1200px] h-[500px] m-auto" data={barGainData} />
@@ -478,151 +488,237 @@ export default memo(function LastsAnalytics() {
         )}
       </div>
 
-      
       <div className='flex flex-col w-[1200px] pt-[50px] gap-[20px]'>
-        <div className='flex flex-row gap-[20px] w-[90%] border-[#5e5e5e] border-[2px]'>
-          <div className='  rounded-[10px] w-[50%] h-[400px]'>
-            <Doughnut 
-              style={{width: '100%' }} 
-              data={categoryDoughnutData} 
-              options={{
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: {
-                        size: 10
+        <div className='flex flex-row gap-[20px] w-[90%] bg-gray-800/60 backdrop-blur-sm border border-gray-600 rounded-xl shadow-lg p-4'>
+          <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-gray-700/50'>
+            {categorysArray.length > 0 ? (
+              <Doughnut
+                style={{ width: '100%' }}
+                data={categoryDoughnutData}
+                options={{
+                  plugins: {
+                    legend: {
+                      labels: {
+                        font: {
+                          size: 10
+                        },
+                        color: '#e5e7eb'
                       }
                     }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            ) : (
+              <div className='flex flex-col items-center justify-center text-center p-8'>
+                <div className='w-16 h-16 rounded-full bg-gray-700/50 flex items-center justify-center mb-4'>
+                  <svg className='w-8 h-8 text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+                  </svg>
+                </div>
+                <p className='text-gray-400 text-sm font-medium'>No category data yet</p>
+                <p className='text-gray-500 text-xs mt-1'>Add transactions to see statistics</p>
+              </div>
+            )}
           </div>
           <div className='w-[50%] p-4'>
-            <h3 className='text-white text-lg font-bold mb-4'>Categories</h3>
-            <div className='grid grid-cols-2 gap-2 max-h-[350px] w-[100%] overflow-y-auto'>
-              {categorysArray.map((category, index) => (
-                <button
-                  key={index}
-                  onClick={() => showCategoryTransactions(category)}
-                  className='bg-gray-700 hover:bg-gray-600 text-white p-2 rounded text-sm transition-colors text-left'
-                >
-                  {category}: {categoryAmountsArray[index]}$
-                </button>
-              ))}
+            <div className='flex items-center gap-2 mb-4'>
+              <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
+              <h3 className='text-white text-lg font-bold'>Categories</h3>
             </div>
+            {categorysArray.length > 0 ? (
+              <div className='grid grid-cols-2 gap-2 max-h-[350px] w-[100%] overflow-y-auto'>
+                {categorysArray.map((category, index) => (
+                  <button
+                    key={index}
+                    onClick={() => showCategoryTransactions(category)}
+                    className='bg-gray-700/80 hover:bg-gray-600/90 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-gray-600/50 hover:border-gray-500'
+                  >
+                    {category}: {categoryAmountsArray[index]}{displayCurrency}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className='flex items-center justify-center h-[350px] text-gray-500 text-sm'>
+                No categories to display
+              </div>
+            )}
           </div>
         </div>
 
-
-        <div className='flex flex-row gap-[20px] w-[90%] border-[#5e5e5e] border-[2px]'>
-          <div className='  rounded-[10px] w-[50%] h-[400px]'>
-            <Pie 
-              style={{width: '100%' }} 
-              data={typeDatas} 
-              options={{
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: {
-                        size: 10
+        <div className='flex flex-row gap-[20px] w-[90%] bg-gray-800/60 backdrop-blur-sm border border-gray-600 rounded-xl shadow-lg p-4'>
+          <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-gray-700/50'>
+            {filteredGainTrans.length > 0 || filteredLossTrans.length > 0 ? (
+              <Pie
+                style={{ width: '100%' }}
+                data={typeDatas}
+                options={{
+                  plugins: {
+                    legend: {
+                      labels: {
+                        font: {
+                          size: 10
+                        },
+                        color: '#e5e7eb'
                       }
                     }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            ) : (
+              <div className='flex flex-col items-center justify-center text-center p-8'>
+                <div className='w-16 h-16 rounded-full bg-gray-700/50 flex items-center justify-center mb-4'>
+                  <svg className='w-8 h-8 text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
+                  </svg>
+                </div>
+                <p className='text-gray-400 text-sm font-medium'>No transactions yet</p>
+                <p className='text-gray-500 text-xs mt-1'>Add transactions to start analysis</p>
+              </div>
+            )}
           </div>
           <div className='w-[50%] p-4'>
-            <h3 className='text-white text-lg font-bold mb-4'>Transaction Types</h3>
+            <div className='flex items-center gap-2 mb-4'>
+              <div className='w-2 h-2 bg-purple-500 rounded-full'></div>
+              <h3 className='text-white text-lg font-bold'>Transaction Types</h3>
+            </div>
             <div className='flex flex-col gap-2'>
               <button
                 onClick={() => showTypeTransactions('gains')}
-                className='bg-green-700 hover:bg-green-600 text-white p-3 rounded transition-colors text-left'
+                className='bg-gradient-to-r from-emerald-600/80 to-emerald-500/80 hover:from-emerald-600 hover:to-emerald-500 text-white p-3 rounded-lg transition-all duration-200 text-left border border-emerald-500/30 hover:border-emerald-400/50 shadow-md hover:shadow-emerald-500/20'
               >
-                Gains: {filteredGainTrans.length} transactions ({totalGains}$)
+                <div className='flex items-center justify-between'>
+                  <span className='font-semibold'>Gains</span>
+                  <span className='text-emerald-100'>{filteredGainTrans.length} transactions</span>
+                </div>
+                <div className='text-emerald-200 text-sm mt-1'>{totalGains}{displayCurrency}</div>
               </button>
               <button
                 onClick={() => showTypeTransactions('losses')}
-                className='bg-red-700 hover:bg-red-600 text-white p-3 rounded transition-colors text-left'
+                className='bg-gradient-to-r from-orange-600/80 to-red-500/80 hover:from-orange-600 hover:to-red-500 text-white p-3 rounded-lg transition-all duration-200 text-left border border-red-500/30 hover:border-red-400/50 shadow-md hover:shadow-red-500/20'
               >
-                Losses: {filteredLossTrans.length} transactions ({totalLosses}$)
+                <div className='flex items-center justify-between'>
+                  <span className='font-semibold'>Losses</span>
+                  <span className='text-red-100'>{filteredLossTrans.length} transactions</span>
+                </div>
+                <div className='text-red-200 text-sm mt-1'>{totalLosses}{displayCurrency}</div>
               </button>
             </div>
           </div>
         </div>
 
-
-        <div className='flex flex-row gap-[20px] w-[90%] border-[#5e5e5e] border-[2px]'>
-          <div className='  rounded-[10px] w-[50%] h-[400px]'>
-            <Doughnut 
-              style={{width: '100%' }} 
-              data={gainDoughnutData} 
-              options={{
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: {
-                        size: 10
+        <div className='flex flex-row gap-[20px] w-[90%] bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 backdrop-blur-sm border border-emerald-600/30 rounded-xl shadow-lg p-4'>
+          <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-emerald-700/30'>
+            {gainCategorys.length > 0 ? (
+              <Doughnut
+                style={{ width: '100%' }}
+                data={gainDoughnutData}
+                options={{
+                  plugins: {
+                    legend: {
+                      labels: {
+                        font: {
+                          size: 10
+                        },
+                        color: '#e5e7eb'
                       }
                     }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            ) : (
+              <div className='flex flex-col items-center justify-center text-center p-8'>
+                <div className='w-16 h-16 rounded-full bg-emerald-900/30 flex items-center justify-center mb-4 border border-emerald-700/30'>
+                  <svg className='w-8 h-8 text-emerald-500/50' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
+                  </svg>
+                </div>
+                <p className='text-emerald-300/80 text-sm font-medium'>No income yet</p>
+                <p className='text-emerald-400/60 text-xs mt-1'>Add \"gain\" transactions to see insights</p>
+              </div>
+            )}
           </div>
           <div className='w-[50%] p-4'>
-            <h3 className='text-white text-lg font-bold mb-4'>Gain Categories</h3>
-            <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
-              {gainCategorys.map((category, index) => (
-                <button
-                  key={index}
-                  onClick={() => showCategoryTransactions(category)}
-                  className='bg-green-700 hover:bg-green-600 text-white p-2 rounded text-sm transition-colors text-left'
-                >
-                  {category}: {gainAmounts[index]}$
-                </button>
-              ))}
+            <div className='flex items-center gap-2 mb-4'>
+              <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+              <h3 className='text-white text-lg font-bold'>Gain Categories</h3>
             </div>
+            {gainCategorys.length > 0 ? (
+              <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
+                {gainCategorys.map((category, index) => (
+                  <button
+                    key={index}
+                    onClick={() => showCategoryTransactions(category)}
+                    className='bg-emerald-700/60 hover:bg-emerald-600/70 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-emerald-500/30 hover:border-emerald-400/50'
+                  >
+                    {category}: {gainAmounts[index]}{displayCurrency}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className='flex items-center justify-center h-[350px] text-emerald-400/60 text-sm'>
+                No income categories yet
+              </div>
+            )}
           </div>
         </div>
 
-
-        <div className='flex flex-row gap-[20px] w-[90%] border-[#5e5e5e] border-[2px]'>
-          <div className='  rounded-[10px] w-[50%] h-[400px]'>
-            <Doughnut 
-              style={{width: '100%' }} 
-              data={lossDoughnutData} 
-              options={{
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: {
-                        size: 10
+        <div className='flex flex-row gap-[20px] w-[90%] bg-gradient-to-br from-orange-900/20 to-red-800/10 backdrop-blur-sm border border-red-600/30 rounded-xl shadow-lg p-4'>
+          <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-red-700/30'>
+            {lossCategorys.length > 0 ? (
+              <Doughnut
+                style={{ width: '100%' }}
+                data={lossDoughnutData}
+                options={{
+                  plugins: {
+                    legend: {
+                      labels: {
+                        font: {
+                          size: 10
+                        },
+                        color: '#e5e7eb'
                       }
                     }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            ) : (
+              <div className='flex flex-col items-center justify-center text-center p-8'>
+                <div className='w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center mb-4 border border-red-700/30'>
+                  <svg className='w-8 h-8 text-red-500/50' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' />
+                  </svg>
+                </div>
+                <p className='text-red-300/80 text-sm font-medium'>No expenses yet</p>
+                <p className='text-red-400/60 text-xs mt-1'>Add \"loss\" transactions to see insights</p>
+              </div>
+            )}
           </div>
           <div className='w-[50%] p-4'>
-            <h3 className='text-white text-lg font-bold mb-4'>Loss Categories</h3>
-            <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
-              {lossCategorys.map((category, index) => (
-                <button
-                  key={index}
-                  onClick={() => showCategoryTransactions(category)}
-                  className='bg-red-700 hover:bg-red-600 text-white p-2 rounded text-sm transition-colors text-left'
-                >
-                  {category}: {lossAmounts[index]}$
-                </button>
-              ))}
+            <div className='flex items-center gap-2 mb-4'>
+              <div className='w-2 h-2 bg-red-500 rounded-full'></div>
+              <h3 className='text-white text-lg font-bold'>Loss Categories</h3>
             </div>
+            {lossCategorys.length > 0 ? (
+              <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
+                {lossCategorys.map((category, index) => (
+                  <button
+                    key={index}
+                    onClick={() => showCategoryTransactions(category)}
+                    className='bg-red-700/60 hover:bg-red-600/70 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-red-500/30 hover:border-red-400/50'
+                  >
+                    {category}: {lossAmounts[index]}{displayCurrency}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className='flex items-center justify-center h-[350px] text-red-400/60 text-sm'>
+                No expense categories yet
+              </div>
+            )}
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-lg">
           <div className="flex items-center gap-2 mb-4">
@@ -635,7 +731,7 @@ export default memo(function LastsAnalytics() {
         </div>
       </div>
 
-      <TransactionModal 
+      <TransactionModal
         modalOpen={modalOpen}
         modalTitle={modalTitle}
         modalTransactions={modalTransactions}
@@ -656,21 +752,25 @@ interface TransactionModalProps {
 }
 
 const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal, mounted }: TransactionModalProps) => {
+  const { activeBank } = useBankTransaction();
+  const currencySymbol = getCurrencySymbol(activeBank?.currency as any);
+  const displayCurrency = currencySymbol || activeBank?.currency;
+
   if (!mounted || !modalOpen) return null;
 
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
       onClick={closeModal}
     >
-      <div 
+      <div
         className="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-white">{modalTitle}</h2>
-            <button 
+            <button
               onClick={closeModal}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white"
             >
@@ -699,12 +799,12 @@ const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <span className={`text-lg font-bold ${
                         transaction.type === 'gain' ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {transaction.type === 'gain' ? '+' : '-'}${transaction.amount}
+                        {transaction.type === 'gain' ? '+' : '-'}{displayCurrency}{transaction.amount}
                       </span>
                     </div>
                   </div>

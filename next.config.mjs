@@ -1,6 +1,7 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+const withNextIntl = createNextIntlPlugin();
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production';
-
 const nextConfig = {
   experimental: {
     optimizePackageImports: ['@heroicons/react'],
@@ -39,4 +40,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default withNextIntl(nextConfig)

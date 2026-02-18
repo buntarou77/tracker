@@ -11,8 +11,6 @@ interface TokenPayload {
   id: string;
   login: string;
 }
-console.log(JWT_SECRET)
-console.log(REFRESH_SECRET)
 export function generateTokens(payload: TokenPayload) {
   const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES });
   const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES });

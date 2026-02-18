@@ -1,4 +1,4 @@
-import RegisterForm from '../components/SendForm';
+import LoginForm from '../components/loginFrom';
 
 
 export const dynamic = 'force-static'
@@ -16,8 +16,8 @@ export default function RegisterPage() {
 
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       
-      <div className="relative z-10 flex justify-center items-center min-h-screen py-8">
-        <RegisterForm />
+      <div className="relative z-10 flex justify-center items-center min-h-screen">
+        <LoginForm />
       </div>
     </div>
   );

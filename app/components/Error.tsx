@@ -35,7 +35,6 @@ const Error = ({ name, desc, theme, stateChangeFunc, state, interactiveFunc, int
             <div className="mr-3 h-2 w-2 animate-pulse rounded-full bg-[rgb(var(--error-point)/1)]" />
             <h3 className="text-sm font-medium">{name}</h3>
           </div>
-
           <button
             onClick={() => stateChangeFunc(false)}
             className="rounded-full p-1 transition-colors duration-200 hover:bg-[rgb(var(--error-border)/0.3)]"

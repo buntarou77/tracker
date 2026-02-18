@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useBankTransaction } from '../context/BankTransactionContext';
 import { useAuthContext } from '../context/AuthContext';  
 import { useUI } from '../context/UIContext';
+import settingSvg from '@/app/resources/settingsSvg.svg';
 type BankAccountType = {
   name: string;
   balance: string;
@@ -20,11 +21,11 @@ const BankAccount = () => {
     const [mounted, setMounted] = useState(false);
     const [activeBankCookies, setActiveBankCookies] = useState(Cookies.get('ActiveBank'))
     const [registerError, setRegisterError] = useState<boolean>(false)
+    const [changingBankId, setChangingBankId] = useState<string>('') 
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
     const [redirect, setRedirect] = useState<boolean>(false)
     const {isAccountsVisible, setIsAccountsVisible, addBankAccountForm, setAddBankAccountForm} = useUI();
     const { login, setLogin } = useAuthContext(); 
-    const [incorrectBalanceStatus, setIncorrectBalanceStatus] = useState<boolean>(false)
     const {bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency, setHasMore, setNextCursor, trans } = useBankTransaction();
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const renders = useRef(0);
@@ -44,19 +45,14 @@ const BankAccount = () => {
     }, []);
 
     useEffect(() => {
-      if(login){
       if(activeBankCookies){
         const bank = JSON.parse(activeBankCookies)
-        // хранить в куках id активного банка и при получении его id делать запрос на получение данных этого банка
-        // рассмотреть необходимости bankNames после фикса добавить strict mode
         setActiveBank({name : bank.name, id: bank.id || ''})
         setBalance(bank?.balance?.toFixed(2) || 0)
         setCurrency(bank.currency || 'RUB')
-      }else if(bankNames && bankNames.length > 0){
+      }else if(bankNames?.length > 0){
         const firstBank = bankNames[0]
         const balance = firstBank.balance
-        console.log(balance)
-        console.log(typeof balance)
         changeBalance(balance)
         setActiveBank({name: firstBank.name, id: firstBank.id})
         setCurrency(firstBank.currency || 'RUB')           
@@ -66,8 +62,7 @@ const BankAccount = () => {
         setBalance(0)
         setCurrency('RUB')
       }
-    }
-    }, [bankNames, login, activeBankCookies])
+    }, [bankNames, activeBankCookies])
     useEffect(()=>{
       const times = setTimeout(()=>{
         setToManyBankAccounts(false)
@@ -161,32 +156,6 @@ const BankAccount = () => {
         }
       }
     }
-
-    useEffect(()=>{
-      async function getTrans(){
-        if(activeBank.name === '') return 
-        const activeBankData = Cookies.get('activeBank')
-        let activeBankId 
-        if(!activeBankData) {
-          activeBankId = bankNames[0].id
-        }else{
-          activeBankId = JSON.parse(activeBankData)
-        }
-        console.log('getTrans: bankAccount 158')
-        const response = await fetch(`/api/getTrans?bankId=${activeBank.id}`, {
-          method: 'GET'
-        })
-        if(response.ok){
-          const responseData = await response.json()
-          console.log(responseData)
-          setTrans(responseData.data);
-          setHasMore(responseData.meta.hasMore)
-          setNextCursor(responseData.meta.cursor)
-        }
-      }
-      getTrans()
-    },[activeBank])
-
     const deleteAccount = async (accountId: string,accountName: string,  e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
@@ -211,7 +180,12 @@ const BankAccount = () => {
         }
       }
     };
+    function editBankAccount(bankId: string, e: React.MouseEvent<HTMLButtonElement>){
+      e.preventDefault();
+      if(changingBankId !== ''){
 
+      }
+    }
     const bankToActive = (bank: BankAccountType) =>{
       setActiveBank({name: bank.name, id: bank.id || ''})
       setBalance(Number(bank.balance) || 0)
@@ -223,7 +197,6 @@ const BankAccount = () => {
     const handleAccountsClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation(); 
     };
-    console.log(bankNames)
     if (!mounted) return null;
     if(!login) return null
     const bankAccountContent = (
@@ -278,7 +251,12 @@ const BankAccount = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        
+                                        <button
+                                            onClick={(e) => editBankAccount(account.id,  e)}
+                                            className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white border border-white/30 hover:border-white/50 transform hover:scale-110 active:scale-95 backdrop-blur-sm"
+                                            title="Delete account">
+                                          <img src={settingSvg.src} alt="" className="w-3.5 h-3.5"/>
+                                        </button>
                                         <button
                                             onClick={(e) => deleteAccount(account.id,account.name,  e)}
                                             className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/50 transform hover:scale-110 active:scale-95"
@@ -288,6 +266,7 @@ const BankAccount = () => {
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                         </button>
+                                        
                                     </li>
                                 ))
                             ) : (

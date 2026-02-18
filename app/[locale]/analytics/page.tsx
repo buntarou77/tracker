@@ -71,12 +71,12 @@ export default function Analytics() {
     setPlanIsSending,
   } = useUI();
   const {login, setLogin} = useAuthContext();
-  const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, } = useBankTransaction();
+  const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, bankNames } = useBankTransaction();
 
+  const [editedPlan, setEditedPlan] = useState<any>({});
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
   const [activeTargetForm, setActiveTargetForm] = useState(false);
-  const [categorys, setCategorys] = useState<any[]>([]);
   const [typeOfPlan, setTypeOfPlan] = useState('expense');
   const [category, setCategory] = useState('food');
   const [amount, setAmount] = useState<string>('');
@@ -89,11 +89,11 @@ export default function Analytics() {
   const [activePlanWindow, setActivePlanWindow] = useState(false);
   const [activePlan, setActivePlan] = useState<any>({});
   const [editPlanStatus, setEditPlanStatus] = useState(false);
-  const [editedPlan, setEditedPlan] = useState<any>({});
   const [newPlan, setNewPlan] = useState<any>({});
   const [lastsPlan, setLastsPlan] = useState<any>({})
   const [doublePlansError, setDoublePlansError] = useState(false)
   const [targets, setTargets] = useState<any[]>([]);
+  const [newBankCurrency, setNewBankCurrnecy] = useState<"RUB" | "USD" | "EUR" | "GBP" | "JPY" | "CNY" | "CAD" | "AUD" | "CHF" | "KRW" | "INR" | "BRL" | "">("")
   const [target, setTarget] = useState<string>('');
   const [targetAmount, setTargetAmount] = useState<string>('');
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
@@ -101,13 +101,7 @@ export default function Analytics() {
   const [canShowAnalytics, setCanShowAnalytics] = useState(false);
 
 
-  useEffect(()=>{
-    if(Object.keys(trans).length <= 0){
-      setCanShowAnalytics(false);
-    }else{
-      setCanShowAnalytics(true);
-    }
-  })
+
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
@@ -141,7 +135,6 @@ export default function Analytics() {
       alert('error')
       return 
     }
-    console.log(frequency)
     setActivePlansStatus((prev: ActivePlansStatus) => ({
       ...prev,
       [frequency]: {
@@ -179,20 +172,17 @@ export default function Analytics() {
       alert('total Amount is number')
       return 
     }
-    console.log(targets)
     const newPlan = {
       frequency,
-      categorys: editedPlan.categorys,
+      categorys: editedPlan.categorys || [],
+      currency: newBankCurrency,
       name: planName,
       amount: Number(totalAmount),
       type: typeOfPlan,
-      targets: targets,
+      targets: editedPlan.targets || [],
       date,
       notes,
     };
-    console.log('new plan log')
-    console.log(newPlan)
-    try{
       const request = await fetch('api/addPlan', {
         method: 'POST',
         headers: {
@@ -201,10 +191,13 @@ export default function Analytics() {
         body: JSON.stringify(newPlan)
       })
       if(!request.ok) throw new Error('failed to add plan')
-    }catch(e){
-    }
-    setPlanIsSending(true)
-    setLoadingSending(false)
+      const data = await request.json()
+      setPlanIsSending(true)
+      setLoadingSending(false)
+      setActiveForm(false)
+      setNewBankCurrnecy("")
+      setEditedPlan({})
+      setPlans(prev=> [...prev, data.plan])
   }
 
     const handleChange = (field: string, value: any)=>{
@@ -212,11 +205,13 @@ export default function Analytics() {
   }
   const delPlan = async (id: number) => {
     try{
-      const res = await fetch(`api/deletePlan?id=${id}&login=${login}`, {
-        method: 'DELETE'
+      const res = await fetch(`api/deletePlan?planId=${id}`, {
+        method: 'DELETE',
+        body: JSON.stringify({planId: id})
       })
       if(res.ok){
         setActivePlanWindow(false)
+        setPlans(prev=>prev.filter(item=> item.id !== id))
       }
     }catch(e){
     }
@@ -242,7 +237,6 @@ export default function Analytics() {
     e.preventDefault();
     setActiveCateghoryForm((m) => !m);
   };
-  console.log(activePlansStatus)
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
 
@@ -270,9 +264,9 @@ export default function Analytics() {
       setPlanIsSending(false)
     }, 5000)
   },[planIsSending])
+
   const addCategory = (e: React.MouseEvent) => {
     e.preventDefault()
-    console.log('try to add')
     if(isNaN(amount)){
       alert('amount is number')
       return 
@@ -282,12 +276,12 @@ export default function Analytics() {
       amount: Number(amount),
       id: Date.now()
     }
+    console.log(newCategory)
     setEditedPlan((prev: any) => ({
       ...prev,
       categorys: [...(prev.categorys || []), newCategory]
     }))
   }
-// console.log(editedPlan)
   const addTargetToEditedPlan = (e: React.MouseEvent) => {
     e.preventDefault()
     if (!target.trim() || targetAmount <= 0) {
@@ -343,18 +337,19 @@ export default function Analytics() {
       amount: targetAmount,
       id: Date.now()
     };
-    setTargets(prev => [...(prev || []), newTarget]);
+    setEditedPlan(prev => ({...prev, targets: [...(prev.targets || []), newTarget]}));
     setTarget('');
     setTargetAmount(0);
   };
-  if(!canShowAnalytics) { 
-    return (
-      <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-    <div className="text-center text-white text-2xl font-bold">No plans found</div>
-      </div>
-    )
+  // if(!canShowAnalytics) { 
+  //   return (
+  //     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+  //   <div className="text-center text-white text-2xl font-bold">No plans found</div>
+  //     </div>
+  //   )
     
-  }  
+  // }  
+
 
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -899,7 +894,7 @@ export default function Analytics() {
             <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
               <h2 className="text-xl font-semibold text-white mb-6">Create New Plan</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Plan Name</label>
                     <input 
@@ -920,7 +915,23 @@ export default function Analytics() {
                       className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
                     />
                   </div>
-
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2" >Currency</label>
+                    <select onChange={(e)=> setNewBankCurrnecy(e.target.value)} value={newBankCurrency} className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors">
+                    <option value="EUR">🇪🇺 EUR — Euro</option>
+                    <option value="USD">🇺🇸 USD — US Dollar</option>
+                    <option value="GBP">🇬🇧 GBP — British Pound</option>
+                    <option value="JPY">🇯🇵 JPY — Japanese Yen</option>
+                    <option value="CNY">🇨🇳 CNY — Chinese Yuan</option>
+                    <option value="CAD">🇨🇦 CAD — Canadian Dollar</option>
+                    <option value="AUD">🇦🇺 AUD — Australian Dollar</option>
+                    <option value="CHF">🇨🇭 CHF — Swiss Franc</option>
+                    <option value="KRW">🇰🇷 KRW — South Korean Won</option>
+                    <option value="INR">🇮🇳 INR — Indian Rupee</option>
+                    <option value="BRL">🇧🇷 BRL — Brazilian Real</option>
+                    <option value="RUB">🇷🇺 RUB — Russian Ruble</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
                     <div className="flex gap-4">
@@ -1076,7 +1087,7 @@ export default function Analytics() {
                     <div>
                       <h3 className="text-white font-medium mb-3">Targets</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {targets.map((target) => (
+                        {editedPlan?.targets?.map((target) => (
                           <div key={target.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
                             <span className="text-gray-300">{target.target}</span>
                             <div className="flex items-center gap-2">

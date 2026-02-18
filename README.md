@@ -1,99 +1,99 @@
 # 💰 Finance Tracker
 
-Персональное приложение для отслеживания финансов, планирования бюджета и аналитики расходов.
+A personal app for tracking finances, planning budgets, and analyzing spending.
 
-## 🚀 Возможности
+## 🚀 Features
 
-- 📊 Аналитика расходов и доходов
-- 🎯 Планирование бюджета с категориями
-- 💳 Управление банковскими счетами
-- 📈 Визуализация данных через графики
-- 🔐 Безопасная аутентификация
+- 📊 Expense and income analytics
+- 🎯 Budget planning with categories
+- 💳 Bank account management
+- 📈 Data visualization with charts
+- 🔐 Secure authentication
 
-## 🛠️ Технологии
+## 🛠️ Tech Stack
 
 - **Frontend:** Next.js 14, React 18, TypeScript
 - **Styling:** Tailwind CSS
-- **Charts:** Chart.js, React-Chartjs-2
+- **Charts:** Chart.js, react-chartjs-2
 - **Database:** MongoDB
 - **Auth:** JWT, bcryptjs
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Вариант 1: С Docker (Рекомендуется)
+### Option 1: With Docker (Recommended)
 
-1. **Клонируйте репозиторий**
+1. **Clone the repository**
    ```bash
    git clone <your-repo-url>
    cd my-next
    ```
 
-2. **Запустите базы данных**
+2. **Start databases**
    ```bash
    docker-compose up -d
    ```
 
-3. **Установите зависимости**
+3. **Install dependencies**
    ```bash
    npm install
    ```
 
-4. **Запустите приложение**
+4. **Run the app**
    ```bash
    npm run dev
    ```
 
-5. **Откройте браузер**
+5. **Open in browser**
    ```
    http://localhost:3000
    ```
 
-### Вариант 2: Локальная установка
+### Option 2: Local Setup
 
-1. **Установите MongoDB**
+1. **Install MongoDB**
 - MongoDB: https://docs.mongodb.com/manual/installation/
 
-2. **Запустите сервис**
+2. **Start the service**
    ```bash
    # MongoDB
    mongod
    ```
 
-3. **Установите зависимости и запустите приложение**
+3. **Install dependencies and run the app**
    ```bash
    npm install
    npm run dev
    ```
 
-## ⚙️ Конфигурация
+## ⚙️ Configuration
 
-Приложение использует централизованную конфигурацию в `lib/config.ts`. Все настройки базы данных и приложения можно изменить там.
+The app uses centralized configuration in `lib/config.ts`. You can adjust database and app settings there.
 
-### Переменные окружения (опционально)
+### Environment variables (optional)
 
-Создайте `.env.local` для переопределения настроек по умолчанию:
+Create `.env.local` to override defaults:
 
 ```bash
-# Скопируйте пример
+# Copy the example
 cp env.example .env.local
 
-# Отредактируйте .env.local
+# Edit .env.local
 ```
 
-### Доступные переменные:
-- `MONGODB_URI` - URI подключения к MongoDB
-- `MONGODB_DB_NAME` - Название базы данных
-- `COLLECTION_NAME` - Название коллекции
-- `JWT_SECRET` - Секретный ключ для JWT токенов
-- `NEXT_PUBLIC_BASE_URL` - Базовый URL приложения
+### Available variables
+- `MONGODB_URI` - MongoDB connection URI
+- `MONGODB_DB_NAME` - Database name
+- `COLLECTION_NAME` - Collection name
+- `JWT_SECRET` - Secret for JWT tokens
+- `NEXT_PUBLIC_BASE_URL` - App base URL
 
-## 🗄️ База данных
+## 🗄️ Database
 
 ### MongoDB
-- **База данных:** `users` (по умолчанию)
-- **Коллекция:** `users` (по умолчанию)
+- **Database:** `users` (default)
+- **Collection:** `users` (default)
 
-### Структура пользователя:
+### User document structure:
 ```json
 {
   "user": "username",
@@ -105,38 +105,38 @@ cp env.example .env.local
 }
 ```
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 src/
 ├── app/
-│   ├── api/          # API роуты
-│   ├── components/   # React компоненты
+│   ├── api/          # API routes
+│   ├── components/   # React components
 │   ├── context/      # React Context
-│   ├── hooks/        # Кастомные хуки
-│   ├── utils/        # Утилиты
+│   ├── hooks/        # Custom hooks
+│   ├── utils/        # Utilities
 │   └── ...
 lib/
-├── config.ts         # Централизованная конфигурация
+├── config.ts         # Centralized config
 └── ...
 ```
 
-## 🤝 Разработка
+## 🤝 Development
 
 ```bash
-# Запуск в режиме разработки
+# Start in development mode
 npm run dev
 
-# Сборка для продакшена
+# Build for production
 npm run build
 
-# Запуск продакшн версии
+# Start production server
 npm start
 
-# Линтинг
+# Lint
 npm run lint
 ```
 
-## 📝 Лицензия
+## 📝 License
 
 MIT License

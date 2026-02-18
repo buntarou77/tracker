@@ -19,7 +19,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    console.log('1')
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
     try {
       await client.connect();
@@ -33,7 +32,6 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      console.log(2)
       const requestId = user._id.toString()
       const requestUsername = user.user;
       const isPasswordValid = await bcryptjs.compare(password, user.password_hash);
@@ -43,9 +41,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      console.log(3)
       const { password_hash, ...userWithoutPassword } = user;
-      console.log(3.75)
 
       const tokens = generateTokens({
       id: user._id.toString(),
@@ -53,7 +49,6 @@ export async function POST(request: Request) {
       });
 
  
-      console.log(3.5)
       const response = NextResponse.json(
         { 
           success: true, 
@@ -65,7 +60,6 @@ export async function POST(request: Request) {
         },
         { status: 200 }
       );
-      console.log(4)
       response.cookies.set('accessToken', tokens.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

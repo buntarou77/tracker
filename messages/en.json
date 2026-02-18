@@ -1,0 +1,9 @@
+{
+    "title": "Welcome to {{appName}}",
+    "subtitle": "Your personal finance management solution",
+    "createAccount": "Create Account",
+    "learnMore": "Learn More",
+    "newHere": "New to {{appName}}?",
+    "signUpNow": "Sign Up Now"
+  }
+  

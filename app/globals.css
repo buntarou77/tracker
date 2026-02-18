@@ -131,7 +131,7 @@ body {
   font-family: Arial, Helvetica, sans-serif, 'EB Garamond', 'Inter';
 }
 
-/* Кастомные скроллбары */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -183,7 +183,7 @@ body {
   border-radius: 4px;
 }
 
-/* Дополнительные утилиты */
+/* Additional utilities */
 .glass-effect {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);

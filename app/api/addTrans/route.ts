@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
@@ -43,11 +43,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { amount, category, date, type, bankId } = data;
-  console.log(amount)
   const numeralAmount = Number(amount);
 
   if (!numeralAmount || isNaN(numeralAmount) || !category || !date || !bankId) {
-    console.log('1')
     return NextResponse.json(
       { error: 'Required fields missing or invalid: amount, category, date, bankId' },
       { status: 400 }
@@ -55,7 +53,6 @@ export async function POST(request: NextRequest) {
   }
 
   if (type !== 'gain' && type !== 'loss') {
-    console.log('2')
     return NextResponse.json(
       { error: 'Invalid transaction type. Must be "gain" or "loss"' },
       { status: 400 }
@@ -66,7 +63,6 @@ export async function POST(request: NextRequest) {
     await mongoClient.connect();
 
     const session = mongoClient.startSession();
-    console.log('log1')
   try {
 
     let transactionDate;
@@ -76,7 +72,6 @@ export async function POST(request: NextRequest) {
         throw new Error('Invalid date');
       }
     } catch (error) {
-      console.log('4')
       return NextResponse.json(
         { error: 'Invalid date format' },
         { status: 400 }
@@ -86,7 +81,6 @@ export async function POST(request: NextRequest) {
     const year = transactionDate.getFullYear();
     const month = String(transactionDate.getMonth() + 1).padStart(2, '0'); 
     const monthKey = `${year}-${month}`;
-    console.log(numeralAmount)
     const newTransaction = {
       userId,
       bankId,
@@ -96,15 +90,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       type
     };
-    console.log('log2')
-    console.log(newTransaction)
     session.startTransaction()
     const db = mongoClient.db('users');
-    console.log('session')
     const result = await db.collection('transactions').insertOne(newTransaction, {session})
-    console.log('trans1')
     if (!result.acknowledged) {
-      console.log('12')
       return NextResponse.json(
         { error: 'Failed to add transaction - no changes made' },
         { status: 500 }
@@ -112,29 +101,16 @@ export async function POST(request: NextRequest) {
     }
       const update =
         type === 'loss'
-          ? { $inc: {'balance' : -numeralAmount, 'stats.netBalance': -numeralAmount,  'stats.totalGains': -numeralAmount, 'stats.totalLoss': numeralAmount, 'stats.totalTransactions': 1} }
-          : { $inc: {'balance' : numeralAmount, 'stats.netBalance': numeralAmount,  'stats.totalGains': numeralAmount, 'stats.totalLoss': -numeralAmount, 'stats.totalTransactions': 1} }
-    try{
+          ? { $inc: {'balance' : -numeralAmount, 'stats.netBalance': -numeralAmount,  'stats.totalLoss': numeralAmount, 'stats.totalTransactions': 1} }
+          : { $inc: {'balance' : numeralAmount, 'stats.netBalance': numeralAmount, 'stats.totalGains': numeralAmount, 'stats.totalTransactions': 1} }
+        
       const balanceResult = await db
         .collection('bankAccounts')
         .findOneAndUpdate(
-          { userId, id: bankId },
+          { userId, _id: new ObjectId(bankId) },
           update,
           { returnDocument: 'after', session }
         );
-    }catch(e){
-      console.log(e)
-    }
-      const balanceResult = await db
-        .collection('bankAccounts')
-        .findOneAndUpdate(
-          { userId, id: bankId },
-          update,
-          { returnDocument: 'after', session }
-        );
-        console.log('trans2')
-        console.log(bankId)
-        console.log(userId)
       await session.commitTransaction()
     return NextResponse.json(
       { 
