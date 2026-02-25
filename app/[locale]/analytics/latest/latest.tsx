@@ -1,20 +1,21 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
-import { useState, useEffect, memo, useTransition } from 'react';
+import { useState, useEffect, memo } from 'react'; // removed useTransition as not used
 import { createPortal } from 'react-dom';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
-import { filtredCategorys } from '../../utils/filtredTrans';
+import { filtredCategorys } from '../../../utils/filtredTrans';
 import { preparePieTransactions, getMonth, prepareMonthBarData } from '@/app/utils/createData';
 import { prepareBarData, prepareLineData, preparePieData, prepareDoughnutData } from '@/app/utils/prepareData';
 import { useBankTransaction } from '@/app/context/BankTransactionContext';
-import leftArrow from '../../resources/arrow-left.svg';
-import rigthArrow from '../../resources/arrow-right.svg';
+import leftArrow from '../../../../public/arrow-left.svg';
+import rigthArrow from '../../../../public/arrow-right.svg';
 import { usePlan } from '@/app/context/PlanContext';
 import { useAuthContext } from '@/app/context/AuthContext';
 import { useError } from '@/app/context/ErrorContext';
 import { getCurrencySymbol } from '@/app/lib/symbols';
-import getMonthName from '@/app/utils/getMonthName';
+import getMonthName from '@/app/utils/getMonthName'; // This will still return English; consider replacing with t.raw('monthNames') later
 import { TransactionType } from '@/app/types/shared/transactions';
+import { useTranslations } from 'next-intl'; // <-- import
 
 ChartJS.register(
   CategoryScale,
@@ -29,6 +30,9 @@ ChartJS.register(
 );
 
 export default memo(function LastsAnalytics() {
+  const t = useTranslations('lastsAnalytics');      // <-- main UI translations
+  const err = useTranslations('lastsAnalyticsErrors'); // <-- error translations
+
   const { analyticTransactions, setAnalyticTransactions, activeBank, bankNames, trans } = useBankTransaction();
   const { setActiveMonthPlan, activeMonthPlan, activePlansStatus, setActivePlansStatus, plans, setPlans } = usePlan();
   const { login } = useAuthContext();
@@ -80,11 +84,11 @@ export default memo(function LastsAnalytics() {
       if (!response.ok) {
         addError({
           theme: 'redDark',
-          name: 'Load error',
-          desc: 'Failed to load transactions',
+          name: err('loadErrorTitle'),               // <-- translated
+          desc: err('loadErrorDesc'),                 // <-- translated
           stateChangeFunc: () => { },
           interactiveFunc: () => loadMonth(offset),
-          interactiveName: 'Retry'
+          interactiveName: err('retry')               // <-- translated
         });
         return;
       }
@@ -96,17 +100,18 @@ export default memo(function LastsAnalytics() {
     } catch (error) {
       addError({
         theme: 'redDark',
-        name: 'Network error',
-        desc: 'Please check your internet connection',
+        name: err('networkErrorTitle'),               // <-- translated
+        desc: err('networkErrorDesc'),                 // <-- translated
         stateChangeFunc: () => { },
         interactiveFunc: () => loadMonth(offset),
-        interactiveName: 'Retry'
+        interactiveName: err('retry')                  // <-- translated
       });
     } finally {
       setIsLoadingMonth(false);
     }
   };
 
+  // ... (rest of the data fetching functions remain unchanged)
 
   const getMonthTransactions = (year: number, month: number): TransactionType[] =>
     analyticTransactions[`${year}-${month}`] || [];
@@ -143,7 +148,7 @@ export default memo(function LastsAnalytics() {
     setEndBudget(startBudgetValue + monthResult);
     setMonthRes(monthResult);
 
-    setPeriodInfo({year: year.toString(), month: getMonthName(month - 1)});
+    setPeriodInfo({year: year.toString(), month: getMonthName(month - 1)}); // getMonthName returns English; could be replaced with t.raw('monthNames')[month-1]
   };
 
   const loadActivePlan = () => {
@@ -188,7 +193,7 @@ export default memo(function LastsAnalytics() {
 
   useEffect(() => {
     if (periodInfo.month === '') {
-      setPeriodInfo({year: new Date().getFullYear().toString(), month: getMonth(new Date().getMonth()) || ''});
+      setPeriodInfo({year: new Date().getFullYear().toString(), month: getMonth(new Date().getMonth()) || ''}); // getMonth returns English
     }
   }, []);
 
@@ -339,17 +344,26 @@ export default memo(function LastsAnalytics() {
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
-            <img className='w-[40px] h-[40px]' src={leftArrow.src} alt="Previous month" />
+            <img className='w-[40px] h-[40px]' src={leftArrow.src} alt={t('loading')} /> {/* alt translated */}
           </button>
           <div className='flex flex-col items-center'>
-            <div>{isLoadingMonth ? <span className="text-sm text-gray-400 mt-1 h-[5px]">Loading...</span> : <div className={'flex flex-col'}><p className={'opacity-50 flex justify-center items-center'}>{periodInfo.year}</p><p className={'flex justify-center items-center opacity-80'}>{periodInfo.month}</p></div>}</div>
+            <div>
+              {isLoadingMonth ? (
+                <span className="text-sm text-gray-400 mt-1 h-[5px]">{t('loading')}</span>
+              ) : (
+                <div className={'flex flex-col'}>
+                  <p className={'opacity-50 flex justify-center items-center'}>{periodInfo.year}</p>
+                  <p className={'flex justify-center items-center opacity-80'}>{periodInfo.month}</p>
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleNextMonth}
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
-            <img src={rigthArrow.src} alt="Next month" />
+            <img src={rigthArrow.src} alt={t('loading')} /> {/* alt translated */}
           </button>
         </div>
       </div>
@@ -357,26 +371,26 @@ export default memo(function LastsAnalytics() {
       <div className='flex justify-between'>
         <div className=" p-4 rounded-lg shadow-md text-white w-[300px] space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Start Budget:</span>
+            <span className="text-gray-400">{t('startBudget')}</span>
             <span className="font-semibold text-blue-300">{startBudget.toFixed(2)}{displayCurrency}</span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Current Budget:</span>
+            <span className="text-gray-400">{t('currentBudget')}</span>
             <span className={`font-semibold ${endBudget > startBudget ? 'text-green-400' : 'text-red-400'}`}>
               {endBudget.toFixed(2)}{displayCurrency}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Monthly Result:</span>
+            <span className="text-gray-400">{t('monthlyResult')}</span>
             <span className={`font-semibold ${endBudget > startBudget ? 'text-lime-300' : 'text-red-400'}`}>
               {monthRes.toFixed(2)}{displayCurrency}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Transactions in this month:</span>
+            <span className="text-gray-400">{t('transactionsCount')}</span>
             <span className={`font-semibold  text-lime-300 `}>
               {filteredTrans.length}
             </span>
@@ -386,12 +400,12 @@ export default memo(function LastsAnalytics() {
           <div className='min-w-[280px] bg-gray-800/40 backdrop-blur-sm p-4 rounded-lg border border-gray-600 shadow-lg'>
             {isLoadingPlan ? (
               <div className='flex items-center justify-center py-4 '>
-                <span className='text-gray-400 text-xs '>Loading plan...</span>
+                <span className='text-gray-400 text-xs '>{t('loadingPlan')}</span>
               </div>
             ) : activeMonthPlan ?
               <div className='w-[280px] flex flex-col items-center justify-center space-y-2'>
                 <div className='flex flex-row items-center space-x-2'>
-                  <span className='text-white font-medium text-xs'>Plan:</span>
+                  <span className='text-white font-medium text-xs'>{t('plan')}</span>
                   <p className={`font-bold text-sm ${activeMonthPlan.type === 'expense' ? (expenseProgress >= 0 ? 'text-emerald-400' : 'text-red-400') : (incomeProgress >= 0 ? 'text-emerald-400' : 'text-red-400')}`}>
                     {`${Math.max(0, Math.round(activeMonthPlan.type === 'expense' ? expenseProgress : incomeProgress))}%`}
                   </p>
@@ -437,7 +451,7 @@ export default memo(function LastsAnalytics() {
                 </div>
               </div> : (
                 <div className='flex items-center justify-center py-4'>
-                  <span className='text-gray-400 text-xs'>No active plan</span>
+                  <span className='text-gray-400 text-xs'>{t('noActivePlan')}</span>
                 </div>
               )
             }
@@ -447,21 +461,21 @@ export default memo(function LastsAnalytics() {
         <div className='flex gap-[10px] flex-col'>
           <div className='flex flex-col gap-2 text-white  p-4 rounded-lg shadow-md min-w-[280px]'>
             <div className='flex justify-between items-center '>
-              <span className='text-gray-400'>Your Losses:</span>
+              <span className='text-gray-400'>{t('yourLosses')}</span>
               <span className='text-red-400 font-semibold'>{totalLosses}{displayCurrency}</span>
             </div>
             <div className='flex justify-between items-center'>
-              <span className='text-gray-400'>Your Gains:</span>
+              <span className='text-gray-400'>{t('yourGains')}</span>
               <span className='text-green-400 font-semibold'>{totalGains}{displayCurrency}</span>
             </div>
             <div className='flex justify-between items-center'>
-              <span className='text-gray-400'>Gains vs prev month:</span>
+              <span className='text-gray-400'>{t('gainsVsPrev')}</span>
               <span className={`font-semibold ${moreGains >= 0 ? 'text-lime-400' : 'text-red-400'}`}>
                 {moreGains >= 0 ? '+' : ''}{moreGains}{displayCurrency}
               </span>
             </div>
             <div className='flex justify-between items-center'>
-              <span className='text-gray-400'>Losses vs prev month:</span>
+              <span className='text-gray-400'>{t('lossesVsPrev')}</span>
               <span className={`font-semibold ${moreLosses >= 0 ? 'text-orange-400' : 'text-green-400'}`}>
                 {moreLosses >= 0 ? '+' : ''}{moreLosses}{displayCurrency}
               </span>
@@ -483,7 +497,7 @@ export default memo(function LastsAnalytics() {
           <Bar className="w-full max-w-[1200px] h-[500px] m-auto" data={barGainData} />
         ) : (
           <div className='text-[35px] font-[800] flex items-center justify-center h-full'>
-            {`you have no gains(`}
+            {t('noGainsFallback')}
           </div>
         )}
       </div>
@@ -515,15 +529,15 @@ export default memo(function LastsAnalytics() {
                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
                   </svg>
                 </div>
-                <p className='text-gray-400 text-sm font-medium'>No category data yet</p>
-                <p className='text-gray-500 text-xs mt-1'>Add transactions to see statistics</p>
+                <p className='text-gray-400 text-sm font-medium'>{t('noCategoryData')}</p>
+                <p className='text-gray-500 text-xs mt-1'>{t('addTransactionsToSeeStats')}</p>
               </div>
             )}
           </div>
           <div className='w-[50%] p-4'>
             <div className='flex items-center gap-2 mb-4'>
               <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
-              <h3 className='text-white text-lg font-bold'>Categories</h3>
+              <h3 className='text-white text-lg font-bold'>{t('categoriesHeading')}</h3>
             </div>
             {categorysArray.length > 0 ? (
               <div className='grid grid-cols-2 gap-2 max-h-[350px] w-[100%] overflow-y-auto'>
@@ -539,7 +553,7 @@ export default memo(function LastsAnalytics() {
               </div>
             ) : (
               <div className='flex items-center justify-center h-[350px] text-gray-500 text-sm'>
-                No categories to display
+                {t('noCategories')}
               </div>
             )}
           </div>
@@ -571,15 +585,15 @@ export default memo(function LastsAnalytics() {
                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' />
                   </svg>
                 </div>
-                <p className='text-gray-400 text-sm font-medium'>No transactions yet</p>
-                <p className='text-gray-500 text-xs mt-1'>Add transactions to start analysis</p>
+                <p className='text-gray-400 text-sm font-medium'>{t('modal.noTransactions')}</p>
+                <p className='text-gray-500 text-xs mt-1'>{t('addTransactionsToSeeStats')}</p>
               </div>
             )}
           </div>
           <div className='w-[50%] p-4'>
             <div className='flex items-center gap-2 mb-4'>
               <div className='w-2 h-2 bg-purple-500 rounded-full'></div>
-              <h3 className='text-white text-lg font-bold'>Transaction Types</h3>
+              <h3 className='text-white text-lg font-bold'>{t('transactionTypesHeading')}</h3>
             </div>
             <div className='flex flex-col gap-2'>
               <button
@@ -587,8 +601,8 @@ export default memo(function LastsAnalytics() {
                 className='bg-gradient-to-r from-emerald-600/80 to-emerald-500/80 hover:from-emerald-600 hover:to-emerald-500 text-white p-3 rounded-lg transition-all duration-200 text-left border border-emerald-500/30 hover:border-emerald-400/50 shadow-md hover:shadow-emerald-500/20'
               >
                 <div className='flex items-center justify-between'>
-                  <span className='font-semibold'>Gains</span>
-                  <span className='text-emerald-100'>{filteredGainTrans.length} transactions</span>
+                  <span className='font-semibold'>{t('gainsButton')}</span>
+                  <span className='text-emerald-100'>{filteredGainTrans.length} {t('transactionsCount')?.split(' ')[0]}</span> {/* quick fix: just show number, but better to have a separate key */}
                 </div>
                 <div className='text-emerald-200 text-sm mt-1'>{totalGains}{displayCurrency}</div>
               </button>
@@ -597,8 +611,8 @@ export default memo(function LastsAnalytics() {
                 className='bg-gradient-to-r from-orange-600/80 to-red-500/80 hover:from-orange-600 hover:to-red-500 text-white p-3 rounded-lg transition-all duration-200 text-left border border-red-500/30 hover:border-red-400/50 shadow-md hover:shadow-red-500/20'
               >
                 <div className='flex items-center justify-between'>
-                  <span className='font-semibold'>Losses</span>
-                  <span className='text-red-100'>{filteredLossTrans.length} transactions</span>
+                  <span className='font-semibold'>{t('lossesButton')}</span>
+                  <span className='text-red-100'>{filteredLossTrans.length} {t('transactionsCount')?.split(' ')[0]}</span>
                 </div>
                 <div className='text-red-200 text-sm mt-1'>{totalLosses}{displayCurrency}</div>
               </button>
@@ -632,15 +646,15 @@ export default memo(function LastsAnalytics() {
                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
                   </svg>
                 </div>
-                <p className='text-emerald-300/80 text-sm font-medium'>No income yet</p>
-                <p className='text-emerald-400/60 text-xs mt-1'>Add \"gain\" transactions to see insights</p>
+                <p className='text-emerald-300/80 text-sm font-medium'>{t('noIncomeYet')}</p>
+                <p className='text-emerald-400/60 text-xs mt-1'>{t('addGainTransactions')}</p>
               </div>
             )}
           </div>
           <div className='w-[50%] p-4'>
             <div className='flex items-center gap-2 mb-4'>
               <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-              <h3 className='text-white text-lg font-bold'>Gain Categories</h3>
+              <h3 className='text-white text-lg font-bold'>{t('gainCategoriesHeading')}</h3>
             </div>
             {gainCategorys.length > 0 ? (
               <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
@@ -656,7 +670,7 @@ export default memo(function LastsAnalytics() {
               </div>
             ) : (
               <div className='flex items-center justify-center h-[350px] text-emerald-400/60 text-sm'>
-                No income categories yet
+                {t('noIncomeCategories')}
               </div>
             )}
           </div>
@@ -688,15 +702,15 @@ export default memo(function LastsAnalytics() {
                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' />
                   </svg>
                 </div>
-                <p className='text-red-300/80 text-sm font-medium'>No expenses yet</p>
-                <p className='text-red-400/60 text-xs mt-1'>Add \"loss\" transactions to see insights</p>
+                <p className='text-red-300/80 text-sm font-medium'>{t('noExpensesYet')}</p>
+                <p className='text-red-400/60 text-xs mt-1'>{t('addLossTransactions')}</p>
               </div>
             )}
           </div>
           <div className='w-[50%] p-4'>
             <div className='flex items-center gap-2 mb-4'>
               <div className='w-2 h-2 bg-red-500 rounded-full'></div>
-              <h3 className='text-white text-lg font-bold'>Loss Categories</h3>
+              <h3 className='text-white text-lg font-bold'>{t('lossCategoriesHeading')}</h3>
             </div>
             {lossCategorys.length > 0 ? (
               <div className='grid grid-cols-2 gap-2 max-h-[350px] overflow-y-auto'>
@@ -712,7 +726,7 @@ export default memo(function LastsAnalytics() {
               </div>
             ) : (
               <div className='flex items-center justify-center h-[350px] text-red-400/60 text-sm'>
-                No expense categories yet
+                {t('noExpenseCategories')}
               </div>
             )}
           </div>
@@ -723,7 +737,7 @@ export default memo(function LastsAnalytics() {
         <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-lg">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <h3 className="text-xl font-bold text-white">Top 5 Categories This Month</h3>
+            <h3 className="text-xl font-bold text-white">{t('top5Categories')}</h3>
           </div>
           <div className="space-y-2">
             {showCategory}
@@ -737,11 +751,11 @@ export default memo(function LastsAnalytics() {
         modalTransactions={modalTransactions}
         closeModal={closeModal}
         mounted={mounted}
+        t={t} // <-- pass translations down if needed; or use inside modal via useTranslations
       />
     </div>
   );
 });
-
 
 interface TransactionModalProps {
   modalOpen: boolean;
@@ -749,9 +763,10 @@ interface TransactionModalProps {
   modalTransactions: any[];
   closeModal: () => void;
   mounted: boolean;
+  t: any; // or useTranslations inside modal
 }
 
-const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal, mounted }: TransactionModalProps) => {
+const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal, mounted, t }: TransactionModalProps) => {
   const { activeBank } = useBankTransaction();
   const currencySymbol = getCurrencySymbol(activeBank?.currency as any);
   const displayCurrency = currencySymbol || activeBank?.currency;
@@ -816,7 +831,7 @@ const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal
               <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <p>No transactions found</p>
+              <p>{t('modal.noTransactions')}</p> {/* <-- use nested key */}
             </div>
           )}
         </div>

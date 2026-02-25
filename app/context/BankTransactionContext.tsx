@@ -9,7 +9,7 @@ interface BankTransactionContextType {
   bankNames: any[];
   trans: any[];
   balance: number;
-  currency: string;
+  currency: "USD" | "EUR" | "GBP" | "JPY" | "CHF" | "CNY" | "RUB";
   exchangeRates: any;
   hasMore: boolean;
   nextCursor: string | null;

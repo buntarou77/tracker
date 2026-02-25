@@ -1,9 +1,459 @@
 {
-    "title": "Добро пожаловать в {{appName}}",
+  "home": {
+    "title": "Добро пожаловать в {appName}",
     "subtitle": "Ваше персональное решение для управления финансами",
     "createAccount": "Создать аккаунт",
     "learnMore": "Узнать больше",
-    "newHere": "Впервые в {{appName}}?",
-    "signUpNow": "Зарегистрироваться"
+    "newHere": "Впервые в {appName}?",
+    "signUpNow": "Зарегистрироваться сейчас"
+  },
+
+  "register": {
+    "title": "Добро пожаловать",
+    "subtitle": "Создайте аккаунт, чтобы использовать все функции трекера",
+    "alreadyRegistered": "Уже зарегистрированы?",
+    "signIn": "войти",
+    "createAccountHeading": "Создать аккаунт",
+    "usernamePlaceholder": "Имя пользователя",
+    "passwordPlaceholder": "Пароль",
+    "repeatPasswordPlaceholder": "Повторите пароль",
+    "emailPlaceholder": "Электронная почта",
+    "submitButton": "Создать аккаунт",
+    "loadingButton": "Создание аккаунта...",
+    "successMessage": "Регистрация прошла успешно!",
+    "errorPasswordMismatch": "Пароли не совпадают",
+    "errorRegistrationError": "Ошибка регистрации",
+    "errorGeneric": "Произошла ошибка при отправке формы"
+  },
+
+  "login": {
+    "title": "С возвращением!",
+    "subtitle": "Войдите в свой аккаунт",
+    "formTitle": "Вход",
+    "usernamePlaceholder": "Имя пользователя",
+    "passwordPlaceholder": "Пароль",
+    "submitButton": "Войти",
+    "loadingButton": "Выполняется вход...",
+    "successMessage": "Вход выполнен успешно!",
+    "errorLogin": "Ошибка входа",
+    "errorGeneric": "Произошла ошибка при отправке формы"
+  },
+
+  "operations": {
+    "addTransaction": "Добавить транзакцию",
+    "loading": "Загрузка...",
+    "loadMore": "Загрузить ещё",
+    "allTransactionsLoaded": "Все транзакции загружены",
+    "quickStats": "Быстрая статистика",
+    "resultPer": "Результат за {count} транзакций",
+    "activeBank": "Активный счёт",
+    "noBankSelected": "Счёт не выбран",
+    "noTransactions": "Пока нет транзакций",
+    "startAdding": "Начните с добавления первой транзакции",
+    "income": "Доход",
+    "expense": "Расход",
+    "deleteTransaction": "Удалить транзакцию",
+    "formTitle": "Добавить транзакцию",
+    "transactionType": "Тип транзакции",
+    "expenseButton": "Расход",
+    "incomeButton": "Доход",
+    "amount": "Сумма",
+    "amountPlaceholder": "Введите сумму...",
+    "category": "Категория",
+    "date": "Дата",
+    "submitButton": "Добавить транзакцию",
+    "monthNames": [
+      "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ],
+    "categoryOptions": {
+      "housing": "🏠 Жильё",
+      "utilities": "💡 Коммунальные услуги",
+      "food": "🍽️ Еда",
+      "transport": "🚗 Транспорт",
+      "health": "🏥 Здоровье",
+      "clothing": "👕 Одежда",
+      "personal_care": "🧴 Уход за собой",
+      "entertainment": "🎬 Развлечения",
+      "travel": "✈️ Путешествия",
+      "hobbies": "🎨 Хобби",
+      "communication": "📱 Связь",
+      "subscriptions": "📺 Подписки",
+      "savings": "💳 Сбережения",
+      "investments": "📈 Инвестиции",
+      "insurance": "🛡️ Страхование",
+      "family": "👨‍👩‍👧‍👦 Семья",
+      "gifts": "🎁 Подарки",
+      "charity": "❤️ Благотворительность",
+      "education": "📚 Образование",
+      "taxes": "📋 Налоги",
+      "other": "📦 Другое"
+    },
+    "categoryIcons": {
+      "housing": "🏠",
+      "utilities": "💡",
+      "food": "🍽️",
+      "transport": "🚗",
+      "health": "🏥",
+      "clothing": "👕",
+      "personal_care": "🧴",
+      "entertainment": "🎬",
+      "travel": "✈️",
+      "hobbies": "🎨",
+      "communication": "📱",
+      "subscriptions": "📺",
+      "savings": "💳",
+      "investments": "📈",
+      "insurance": "🛡️",
+      "family": "👨‍👩‍👧‍👦",
+      "gifts": "🎁",
+      "charity": "❤️",
+      "education": "📚",
+      "taxes": "📋",
+      "other": "📦"
+    }
+  },
+
+  "analytics": {
+    "title": "Панель аналитики",
+    "plansButton": "Планы",
+    "addPlanButton": "Добавить план",
+    "planCreated": "План успешно создан!",
+    "doublePlansError": "Нельзя создать несколько активных планов с одинаковой периодичностью.",
+    "yourPlans": "Ваши планы",
+    "income": "Доход",
+    "expense": "Расход",
+    "frequency": {
+      "daily": "Ежедневно",
+      "weekly": "Еженедельно",
+      "monthly": "Ежемесячно",
+      "yearly": "Ежегодно",
+      "once": "Одноразово"
+    },
+    "planDetails": {
+      "type": "Тип",
+      "amount": "Сумма",
+      "frequency": "Периодичность",
+      "created": "Создан",
+      "notes": "Заметки",
+      "noNotes": "Нет заметок",
+      "categories": "Категории",
+      "targets": "Цели",
+      "addCategory": "+ Добавить категорию",
+      "addTarget": "+ Добавить цель",
+      "noCategories": "В этом плане нет категорий",
+      "noCategoriesEdit": "Категории пока не добавлены. Нажмите «Добавить категорию», чтобы начать.",
+      "noTargets": "Для этого плана не заданы цели",
+      "noTargetsEdit": "Цели пока не добавлены. Нажмите «Добавить цель», чтобы начать.",
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    },
+    "form": {
+      "title": "Создать новый план",
+      "planName": "Название плана",
+      "planNamePlaceholder": "Введите название плана",
+      "totalAmount": "Общая сумма",
+      "currency": "Валюта",
+      "type": "Тип",
+      "income": "Доход",
+      "expense": "Расход",
+      "frequency": "Периодичность",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "addCategory": "+ Добавить категорию",
+      "addTarget": "+ Добавить цель",
+      "categories": "Категории",
+      "addCategorySection": "Добавить категорию",
+      "targets": "Цели",
+      "addTargetSection": "Добавить цель",
+      "targetName": "Название цели",
+      "targetNamePlaceholder": "🎯 Название цели (например, Резервный фонд, Отпуск)",
+      "targetAmount": "Сумма цели",
+      "targetAmountPlaceholder": "Сумма цели",
+      "categoryPlaceholder": "Сумма",
+      "notes": "Заметки",
+      "notesPlaceholder": "Дополнительная информация...",
+      "cancel": "Отмена",
+      "create": "Создать план",
+      "creating": "Создание..."
+    },
+    "currencyOptions": {
+      "EUR": "🇪🇺 EUR — Евро",
+      "USD": "🇺🇸 USD — Доллар США",
+      "GBP": "🇬🇧 GBP — Британский фунт",
+      "JPY": "🇯🇵 JPY — Японская иена",
+      "CNY": "🇨🇳 CNY — Китайский юань",
+      "CAD": "🇨🇦 CAD — Канадский доллар",
+      "AUD": "🇦🇺 AUD — Австралийский доллар",
+      "CHF": "🇨🇭 CHF — Швейцарский франк",
+      "KRW": "🇰🇷 KRW — Южнокорейская вона",
+      "INR": "🇮🇳 INR — Индийская рупия",
+      "BRL": "🇧🇷 BRL — Бразильский реал",
+      "RUB": "🇷🇺 RUB — Российский рубль"
+    },
+    "categoryOptions": {
+      "housing": "🏠 Жильё",
+      "utilities": "⚡ Коммунальные услуги",
+      "food": "🍽️ Еда",
+      "transport": "🚗 Транспорт",
+      "health": "🏥 Здоровье",
+      "clothing": "👕 Одежда",
+      "personal_care": "🧴 Уход за собой",
+      "entertainment": "🎬 Развлечения",
+      "travel": "✈️ Путешествия",
+      "hobbies": "🎨 Хобби",
+      "communication": "📱 Телефон/Интернет",
+      "subscriptions": "📺 Подписки",
+      "savings": "💰 Сбережения",
+      "investments": "📈 Инвестиции",
+      "insurance": "🛡️ Страхование",
+      "family": "👨‍👩‍👧‍👦 Семья",
+      "gifts": "🎁 Подарки",
+      "charity": "❤️ Благотворительность",
+      "education": "📚 Образование",
+      "taxes": "🏛️ Налоги",
+      "other": "📦 Другое"
+    },
+    "noPlansFound": "Планы не найдены"
+  },
+
+  "analyticsErrors": {
+    "enterPlanName": "Введите название плана",
+    "enterTotalAmount": "Введите общую сумму",
+    "totalAmountNumber": "Общая сумма должна быть числом",
+    "amountNumber": "Сумма должна быть числом",
+    "enterTargetNameAndAmount": "Введите название цели и сумму",
+    "targetAmountNumber": "Сумма цели должна быть числом",
+    "failedToAddPlan": "Не удалось добавить план",
+    "error": "Ошибка"
+  },
+
+  "lastsAnalytics": {
+    "loading": "Загрузка...",
+    "startBudget": "Начальный бюджет:",
+    "currentBudget": "Текущий бюджет:",
+    "monthlyResult": "Результат за месяц:",
+    "transactionsCount": "Транзакций в этом месяце:",
+    "loadingPlan": "Загрузка плана...",
+    "plan": "План:",
+    "noActivePlan": "Нет активного плана",
+    "yourLosses": "Ваши расходы:",
+    "yourGains": "Ваши доходы:",
+    "gainsVsPrev": "Доходы по сравнению с прошлым месяцем:",
+    "lossesVsPrev": "Расходы по сравнению с прошлым месяцем:",
+    "noGainsFallback": "у вас пока нет доходов",
+    "noCategoryData": "Данные по категориям отсутствуют",
+    "addTransactionsToSeeStats": "Добавьте транзакции, чтобы увидеть статистику",
+    "categoriesHeading": "Категории",
+    "noCategories": "Нет категорий для отображения",
+    "transactionTypesHeading": "Типы транзакций",
+    "gainsButton": "Доходы",
+    "lossesButton": "Расходы",
+    "noIncomeYet": "Пока нет доходов",
+    "addGainTransactions": "Добавьте транзакции с типом «доход», чтобы увидеть аналитику",
+    "gainCategoriesHeading": "Категории доходов",
+    "noIncomeCategories": "Категории доходов пока отсутствуют",
+    "noExpensesYet": "Пока нет расходов",
+    "addLossTransactions": "Добавьте транзакции с типом «расход», чтобы увидеть аналитику",
+    "lossCategoriesHeading": "Категории расходов",
+    "noExpenseCategories": "Категории расходов пока отсутствуют",
+    "top5Categories": "Топ-5 категорий в этом месяце",
+    "modal": {
+      "noTransactions": "Транзакции не найдены"
+    },
+    "monthNames": [
+      "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ]
+  },
+
+  "lastsAnalyticsErrors": {
+    "loadErrorTitle": "Ошибка загрузки",
+    "loadErrorDesc": "Не удалось загрузить транзакции",
+    "networkErrorTitle": "Ошибка сети",
+    "networkErrorDesc": "Проверьте подключение к интернету",
+    "retry": "Повторить"
+  },
+
+  "budget": {
+    "title": "Управление бюджетом",
+    "activePlan": "Активный план",
+    "budgetStatus": "Статус бюджета",
+    "selectPlan": "Выберите план",
+    "categoryProgress": "Прогресс по категориям",
+    "noCategories": "Для этого плана не заданы категории",
+    "savingsGoals": "Прогресс по целям сбережений",
+    "noTargets": "Для этого плана не заданы цели",
+    "aiRecommendations": "🤖 Рекомендации ИИ",
+    "aiAllGood": "Отличная работа! Все показатели в норме.",
+    "goalLabel": "Цель: {amount}",
+    "achieved": "✓ Достигнута",
+    "saved": "накоплено",
+    "canAfford": "✅ Вы можете позволить себе эту цель!",
+    "needMore": "💰 Нужно ещё {amount}",
+    "claimButton": "🎯 Забрать цель",
+    "claimingButton": "Забираем...",
+    "overBudget": "⚠️ Перерасход на {amount}",
+    "frequency": {
+      "daily": "ежедневно",
+      "weekly": "еженедельно",
+      "monthly": "ежемесячно",
+      "yearly": "ежегодно"
+    },
+    "type": {
+      "income": "доход",
+      "expense": "расход"
+    }
+  },
+
+  "budgetErrors": {
+    "claimFailed": "Не удалось забрать цель. Пожалуйста, попробуйте снова."
+  },
+
+  "convert": {
+    "title": "Курсы валют",
+    "subtitle": "Курсы в реальном времени и быстрая конвертация",
+    "yourBalance": "Ваш баланс",
+    "budgetConverter": "Конвертер бюджета",
+    "budgetDescription": "Конвертируйте часть своего бюджета в другую валюту",
+    "budgetPercentage": "Процент бюджета: {percentage}%",
+    "convertTo": "Конвертировать в",
+    "amountToConvert": "Сумма для конвертации",
+    "convertedAmount": "Сконвертированная сумма",
+    "exchangeRate": "Курс",
+    "exchangeRateValue": "1 {from} = {rate} {to}",
+    "updated": "Обновлено",
+    "loadingExchangeRate": "Загрузка курса...",
+    "loadingRates": "Загрузка курсов...",
+    "updating": "Обновление...",
+    "currencyConverter": "Конвертер валют",
+    "from": "Из",
+    "to": "В",
+    "swapCurrencies": "Поменять валюты местами",
+    "addToFavorites": "☆ Добавить в избранное",
+    "favorited": "⭐ В избранном",
+    "refresh": "Обновить",
+    "saveToHistory": "💾 Сохранить в историю",
+    "clear": "🗑️ Очистить",
+    "clearHistory": "Очистить",
+    "popularExchangeRates": "Популярные курсы",
+    "favoriteRates": "Избранные курсы",
+    "conversionHistory": "История конвертаций",
+    "historyEmpty": "История конвертаций пуста",
+    "historyEmptyHint": "Выполните конвертацию и сохраните результат",
+    "per1": "за 1 {from}",
+    "loading": "Загрузка...",
+    "rateUnavailable": "Н/Д"
+  },
+
+  "convertErrors": {
+    "fetchFailed": "Не удалось получить курсы валют. Попробуйте снова.",
+    "ratesActual": "Курсы актуальны"
+  },
+
+  "bankAccount": {
+    "noName": "Без названия",
+    "accountsHeading": "Счета",
+    "noAccounts": "Нет счетов",
+    "addAccountButton": "+ Добавить счёт",
+    "deleteAccountTitle": "Удалить счёт",
+    "editAccountTitle": "Редактировать счёт",
+    "deleteConfirm": "Вы уверены, что хотите удалить счёт \"{name}\"?",
+    "logoutButton": "Выйти",
+    "notificationTitle": "Уведомление",
+    "errorTitle": "Ошибка",
+    "tooManyAccounts": "Слишком много счетов. Максимум 6 счетов.",
+    "errorRegistering": "Ошибка регистрации аккаунта.",
+    "pleaseFillAllFields": "Пожалуйста, заполните все поля",
+    "errorDeletingAccount": "Ошибка при удалении счёта",
+    "accountNamePlaceholder": "Название счёта",
+    "notesPlaceholder": "Заметки о счёте",
+    "amountPlaceholder": "Сумма",
+    "currencyRub": "₽",
+    "currencyUsd": "$",
+    "currencyEur": "€",
+    "saveButton": "Сохранить",
+    "cancelButton": "Отмена",
+    "settingsButton": "Настройки"
+  },
+
+  "about": {
+    "title": "О Finance Tracker",
+    "subtitle": "Ваше комплексное решение для управления личными финансами",
+    "features": {
+      "trackExpenses": {
+        "title": "Учёт расходов",
+        "description": "Отслеживайте свои траты с детальной записью транзакций и категоризацией."
+      },
+      "budgetPlanning": {
+        "title": "Бюджетное планирование",
+        "description": "Устанавливайте бюджеты и цели, чтобы оставаться на верном пути к финансовым задачам."
+      },
+      "analytics": {
+        "title": "Аналитика",
+        "description": "Получайте информацию о своих финансовых привычках с помощью подробной аналитики и отчётов."
+      },
+      "multiAccount": {
+        "title": "Несколько счетов",
+        "description": "Управляйте несколькими банковскими счетами и валютами в одной централизованной платформе."
+      }
+    },
+    "cta": {
+      "title": "Готовы начать?",
+      "description": "Присоединяйтесь к тысячам пользователей, которые взяли под контроль свои финансы с нашей платформой.",
+      "createAccount": "Создать бесплатный аккаунт",
+      "backHome": "Вернуться на главную"
+    }
+  },
+
+  "errors": {
+    "noBankAccount": {
+      "name": "Нет банковского счёта",
+      "desc": "Пожалуйста, добавьте свой первый банковский счёт",
+      "interactiveName": "Создать"
+    },
+    "success": {
+      "name": "Успех",
+      "desc": "Транзакция успешно добавлена"
+    },
+    "addError": {
+      "name": "Ошибка",
+      "desc": "Не удалось добавить транзакцию",
+      "interactiveName": "Повторить"
+    },
+    "networkError": {
+      "name": "Ошибка сети",
+      "desc": "Не удалось добавить транзакцию",
+      "interactiveName": "Повторить"
+    },
+    "deleteSuccess": {
+      "name": "Успех",
+      "desc": "Транзакция успешно удалена"
+    },
+    "deleteError": {
+      "name": "Ошибка",
+      "desc": "Не удалось удалить транзакцию",
+      "interactiveName": "Повторить"
+    },
+    "deleteNetworkError": {
+      "name": "Ошибка сети",
+      "desc": "Не удалось удалить транзакцию",
+      "interactiveName": "Повторить"
+    },
+    "noBankSelected": {
+      "name": "Предупреждение",
+      "desc": "Не выбран банковский счёт",
+      "interactiveName": ""
+    },
+    "loadMoreError": {
+      "name": "Ошибка",
+      "desc": "Не удалось загрузить дополнительные транзакции",
+      "interactiveName": "Повторить"
+    },
+    "loadMoreNetworkError": {
+      "name": "Ошибка сети",
+      "desc": "Не удалось загрузить транзакции",
+      "interactiveName": "Повторить"
+    }
   }
-  
+}

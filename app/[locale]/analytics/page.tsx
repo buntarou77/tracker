@@ -11,25 +11,27 @@ import {
   ArcElement
 } from 'chart.js';
 import { useState, useEffect } from 'react';
-import { usePlan } from '../context/PlanContext';
-import { useUI } from '../context/UIContext';
-import { useBankTransaction } from '../context/BankTransactionContext';
-import { useAuthContext } from '../context/AuthContext';
+import { usePlan } from '../../context/PlanContext';
+import { useUI } from '../../context/UIContext';
+import { useBankTransaction } from '../../context/BankTransactionContext';
+import { useAuthContext } from '../../context/AuthContext';
 import Cookies from 'js-cookie';
 import LastsAnalitycs from './latest/latest';
-import InfoSvg from '../resources/info-icon.svg';
-import editSvg from '../resources/edit-icon.svg';   
-import {DetailItem,   getFrequencyLabel} from '@/app/utils/createDitailsComponent';
+import InfoSvg from '../../../public/info-icon.svg';
+import editSvg from '../../../public/edit-icon.svg';   
+import {DetailItem, getFrequencyLabel} from '@/app/utils/createDitailsComponent';
+import { useTranslations } from 'next-intl';
+
 interface Plan {
- categories: [], 
- name: string,
- gainPlan: number,
- lossPlan: number, 
- planFor: string,
- id: number,
- type: string,
- totalAmount: number,
- frequency: string
+  categories: [], 
+  name: string,
+  gainPlan: number,
+  lossPlan: number, 
+  planFor: string,
+  id: number,
+  type: string,
+  totalAmount: number,
+  frequency: string
 }
 interface ActivePlan {
   id: number;
@@ -49,9 +51,10 @@ interface ActivePlansStatus {
   yearly: PlanStatus;
 }
 
-
-
 export default function Analytics() {
+  const t = useTranslations('analytics');
+  const e = useTranslations('analyticsErrors');
+  
   ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, LineElement, Title, Tooltip, Legend);
 
   const {
@@ -100,8 +103,6 @@ export default function Analytics() {
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
   const [canShowAnalytics, setCanShowAnalytics] = useState(false);
 
-
-
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
@@ -132,7 +133,7 @@ export default function Analytics() {
   const handleToggleActive = (e: React.ChangeEvent<HTMLInputElement>, frequency: keyof ActivePlansStatus, itemId: number) => {
     const isChecked = e.target.checked;
     if(activePlansStatus[frequency].status && activePlansStatus[frequency].id !== itemId){
-      alert('error')
+      alert(e('error'));
       return 
     }
     setActivePlansStatus((prev: ActivePlansStatus) => ({
@@ -157,19 +158,19 @@ export default function Analytics() {
   useEffect(()=>{
     setNewPlan({...editedPlan})
   },[editedPlan])
-  
+
   const submitPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingSending(true)
     if(planName === ''){
-      alert('Enter plan name');
+      alert(e('enterPlanName'));
       setLoadingSending(false)
       return
     }else if(Number(totalAmount) === 0){
-      alert('Enter total amount');
+      alert(e('enterTotalAmount'));
       return 
-    }else if(isNaN(totalAmount)){
-      alert('total Amount is number')
+    }else if(isNaN(Number(totalAmount))){
+      alert(e('totalAmountNumber'));
       return 
     }
     const newPlan = {
@@ -190,7 +191,7 @@ export default function Analytics() {
         },
         body: JSON.stringify(newPlan)
       })
-      if(!request.ok) throw new Error('failed to add plan')
+      if(!request.ok) throw new Error(e('failedToAddPlan'))
       const data = await request.json()
       setPlanIsSending(true)
       setLoadingSending(false)
@@ -200,8 +201,8 @@ export default function Analytics() {
       setPlans(prev=> [...prev, data.plan])
   }
 
-    const handleChange = (field: string, value: any)=>{
-      setNewPlan({...newPlan, [field]: value})
+  const handleChange = (field: string, value: any)=>{
+    setNewPlan({...newPlan, [field]: value})
   }
   const delPlan = async (id: number) => {
     try{
@@ -239,7 +240,6 @@ export default function Analytics() {
   };
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
-
     setEditedPlan((prev: any) => ({
       ...prev, 
       categorys: prev.categorys?.filter((item: any) => item.id !== id) || []  
@@ -256,7 +256,6 @@ export default function Analytics() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     setActiveForm(false);
   };
   useEffect(() => {
@@ -267,8 +266,8 @@ export default function Analytics() {
 
   const addCategory = (e: React.MouseEvent) => {
     e.preventDefault()
-    if(isNaN(amount)){
-      alert('amount is number')
+    if(isNaN(Number(amount))){
+      alert(e('amountNumber'));
       return 
     }
     const newCategory = {
@@ -276,7 +275,6 @@ export default function Analytics() {
       amount: Number(amount),
       id: Date.now()
     }
-    console.log(newCategory)
     setEditedPlan((prev: any) => ({
       ...prev,
       categorys: [...(prev.categorys || []), newCategory]
@@ -284,12 +282,12 @@ export default function Analytics() {
   }
   const addTargetToEditedPlan = (e: React.MouseEvent) => {
     e.preventDefault()
-    if (!target.trim() || targetAmount <= 0) {
-      alert('Please enter both target name and amount')
+    if (!target.trim() || Number(targetAmount) <= 0) {
+      alert(e('enterTargetNameAndAmount'))
       return
     }
-    if(isNaN(targetAmount)){
-      alert('target amount is number')
+    if(isNaN(Number(targetAmount))){
+      alert(e('targetAmountNumber'))
       return 
     }
     const newTarget = {
@@ -303,7 +301,7 @@ export default function Analytics() {
     }))
 
     setTarget('')
-    setTargetAmount(0)
+    setTargetAmount('')
     setActiveAddTargetForm(false)
   }
   useEffect(()=>{
@@ -313,18 +311,18 @@ export default function Analytics() {
   return ()=> clearTimeout(time)
   }, 50000)
   }
-
   }, [doublePlansError])
-  if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
   
+  if (error) return <div className="text-red-500 text-center p-4">{e('error')}</div>;
 
   const gainTrans: any[] = [];
   const lossTrans: any[] = [];
-    const addDoublePlansError = (e: React.ChangeEvent<HTMLInputElement>)=>{
+  
+  const addDoublePlansError = (e: React.ChangeEvent<HTMLInputElement>)=>{
     e.preventDefault();
     setDoublePlansError(true)
-
   }
+  
   const addTargetButton = (e: React.MouseEvent) => {
     e.preventDefault();
     setActiveTargetForm((prev) => !prev);
@@ -339,27 +337,25 @@ export default function Analytics() {
     };
     setEditedPlan(prev => ({...prev, targets: [...(prev.targets || []), newTarget]}));
     setTarget('');
-    setTargetAmount(0);
+    setTargetAmount('');
   };
+  
   // if(!canShowAnalytics) { 
   //   return (
   //     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-  //   <div className="text-center text-white text-2xl font-bold">No plans found</div>
+  //   <div className="text-center text-white text-2xl font-bold">{t('noPlansFound')}</div>
   //     </div>
   //   )
-    
   // }  
-
 
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-                Analytics Dashboard
+                {t('title')}
               </h1>
               <div className="flex items-center gap-4">
                 <button
@@ -374,7 +370,7 @@ export default function Analytics() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    Plans
+                    {t('plansButton')}
                   </span>
                 </button>
                 <button
@@ -385,17 +381,14 @@ export default function Analytics() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Add Plan
+                    {t('addPlanButton')}
                   </span>
                 </button>
               </div>
             </div>
-
-
           </div>
         </div>
       </div>
-
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
@@ -405,11 +398,10 @@ export default function Analytics() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Plan created successfully!
+              {t('planCreated')}
             </div>
           </div>
         )}
-
 
         {doublePlansError && (
           <div className="fixed top-20 right-4 z-50 animate-slide-in">
@@ -419,7 +411,7 @@ export default function Analytics() {
                   <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <p className="text-sm">Cannot create multiple active plans with the same frequency.</p>
+                  <p className="text-sm">{t('doublePlansError')}</p>
                 </div>
                 <button 
                   onClick={() => setDoublePlansError(false)}
@@ -434,7 +426,6 @@ export default function Analytics() {
           </div>
         )}
 
-
         {activePlansShow && (
           <div className="mb-8 animate-fade-in">
             <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
@@ -442,7 +433,7 @@ export default function Analytics() {
                 <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                Your Plans
+                {t('yourPlans')}
               </h2>
               <div className="space-y-3">
                 {plans?.map((item) => (
@@ -464,11 +455,11 @@ export default function Analytics() {
                               {item.type === 'income' ? '+' : '-'}${item.amount}
                             </span>
                             <span className="text-xs text-gray-500">•</span>
-                            <span className="text-sm text-blue-400 capitalize">{item.frequency}</span>
+                            <span className="text-sm text-blue-400 capitalize">{t(`frequency.${item.frequency}`)}</span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-3">
                         {activePlansStatus[item.frequency]?.status && activePlansStatus[item.frequency]?.id !== item.id ? (
                           <label className="relative inline-flex items-center cursor-not-allowed opacity-50">
@@ -491,7 +482,7 @@ export default function Analytics() {
                             <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-purple-600"></div>
                           </label>
                         )}
-                        
+
                         <button
                           onClick={() => {
                             setActivePlanWindow(!activePlanWindow);
@@ -509,7 +500,6 @@ export default function Analytics() {
             </div>
           </div>
         )}
-
 
         {activePlanWindow && (
           <div 
@@ -543,13 +533,13 @@ export default function Analytics() {
                           onClick={() => addPlanButton(editedPlan.id)}
                           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                         >
-                          Save
+                          {t('planDetails.save')}
                         </button>
                         <button 
                           onClick={() => setEditPlanStatus(false)}
                           className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                         >
-                          Cancel
+                          {t('planDetails.cancel')}
                         </button>
                       </>
                     ) : (
@@ -576,15 +566,15 @@ export default function Analytics() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm text-gray-400">Type</label>
+                      <label className="text-sm text-gray-400">{t('planDetails.type')}</label>
                       {editPlanStatus ? (
                         <select
                           defaultValue={editedPlan.type || 'expense'}
                           onChange={(e) => handleChange('type', e.target.value)}
                           className="mt-1 w-full bg-gray-700 text-white px-3 py-2 rounded-lg"
                         >
-                          <option value="income">Income</option>
-                          <option value="expense">Expense</option>
+                          <option value="income">{t('income')}</option>
+                          <option value="expense">{t('expense')}</option>
                         </select>
                       ) : (
                         <div className="mt-1">
@@ -593,14 +583,14 @@ export default function Analytics() {
                               ? 'bg-green-900/50 text-green-300 border border-green-700' 
                               : 'bg-red-900/50 text-red-300 border border-red-700'
                           }`}>
-                            {activePlan.type === 'income' ? 'Income' : 'Expense'}
+                            {activePlan.type === 'income' ? t('income') : t('expense')}
                           </span>
                         </div>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-sm text-gray-400">Amount</label>
+                      <label className="text-sm text-gray-400">{t('planDetails.amount')}</label>
                       {editPlanStatus ? (
                         <input
                           type="number"
@@ -620,22 +610,22 @@ export default function Analytics() {
                     </div>
 
                     <div>
-                      <label className="text-sm text-gray-400">Frequency</label>
+                      <label className="text-sm text-gray-400">{t('planDetails.frequency')}</label>
                       {editPlanStatus ? (
                         <select
                           defaultValue={editedPlan.frequency || 'monthly'}
                           onChange={(e) => handleChange('frequency', e.target.value)}
                           className="mt-1 w-full bg-gray-700 text-white px-3 py-2 rounded-lg"
                         >
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="yearly">Yearly</option>
+                          <option value="daily">{t('frequency.daily')}</option>
+                          <option value="weekly">{t('frequency.weekly')}</option>
+                          <option value="monthly">{t('frequency.monthly')}</option>
+                          <option value="yearly">{t('frequency.yearly')}</option>
                         </select>
                       ) : (
                         <div className="mt-1">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-900/50 text-blue-300 border border-blue-700">
-                            {getFrequencyLabel(activePlan.frequency)}
+                            {t(`frequency.${activePlan.frequency}`)}
                           </span>
                         </div>
                       )}
@@ -644,158 +634,154 @@ export default function Analytics() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm text-gray-400">Created</label>
+                      <label className="text-sm text-gray-400">{t('planDetails.created')}</label>
                       <p className="mt-1 text-white">
                         {activePlan.createdAt ? new Date(activePlan.createdAt).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
 
                     <div>
-                      <label className="text-sm text-gray-400">Notes</label>
+                      <label className="text-sm text-gray-400">{t('planDetails.notes')}</label>
                       {editPlanStatus ? (
                         <textarea
                           defaultValue={editedPlan.notes || ''}
                           onChange={(e) => handleChange('notes', e.target.value)}
                           className="mt-1 w-full bg-gray-700 text-white p-3 rounded-lg h-24 resize-none"
-                          placeholder="Add notes..."
+                          placeholder={t('form.notesPlaceholder')}
                         />
                       ) : (
                         <p className="mt-1 text-white bg-gray-700/50 p-3 rounded-lg min-h-[6rem]">
-                          {activePlan.notes || 'No notes'}
+                          {activePlan.notes || t('planDetails.noNotes')}
                         </p>
                       )}
                     </div>
                   </div>
                 </div>
 
-
                 <div className="mt-6">
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-semibold text-white">Categories</h3>
+                    <h3 className="text-lg font-semibold text-white">{t('planDetails.categories')}</h3>
                     {editPlanStatus && (
                       <button 
                         onClick={() => setActiveAddCategoryForm(!activeAddCategoryForm)}
                         className="text-blue-400 text-sm hover:text-blue-300"
                       >
-                        + Add Category
+                        {t('planDetails.addCategory')}
                       </button>
                     )}
                   </div>
-                    
-                    {activeAddCategoryForm && editPlanStatus && (
-                      <div className="mb-4 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <select 
-                            className="bg-gray-700 text-white px-3 py-2 rounded-lg"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                          >
-                            <option value="housing">🏠 Housing</option>
-                            <option value="utilities">⚡ Utilities</option>
-                            <option value="food">🍽️ Food</option>
-                            <option value="transport">🚗 Transportation</option>
-                            <option value="health">🏥 Health</option>
-                            <option value="clothing">👕 Clothing</option>
-                            <option value="personal_care">🧴 Personal Care</option>
-                            <option value="entertainment">🎬 Entertainment</option>
-                            <option value="travel">✈️ Travel</option>
-                            <option value="hobbies">🎨 Hobbies</option>
-                            <option value="communication">📱 Phone/Internet</option>
-                            <option value="subscriptions">📺 Subscriptions</option>
-                            <option value="savings">💰 Savings</option>
-                            <option value="investments">📈 Investments</option>
-                            <option value="insurance">🛡️ Insurance</option>
-                            <option value="family">👨‍👩‍👧‍👦 Family</option>
-                            <option value="gifts">🎁 Gifts</option>
-                            <option value="charity">❤️ Charity</option>
-                            <option value="education">📚 Education</option>
-                            <option value="taxes">🏛️ Taxes</option>
-                            <option value="other">📦 Other</option>
-                          </select>
-                          <input
-                            type="text"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
-                            placeholder="Amount"
-                          />
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <button 
-                            onClick={addCategory}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                          >
-                            Add Category
-                          </button>
-                          <button 
-                            onClick={() => setActiveAddCategoryForm(false)}
-                            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
-                          >
-                            Cancel
-                          </button>
-                        </div>
+
+                  {activeAddCategoryForm && editPlanStatus && (
+                    <div className="mb-4 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <select 
+                          className="bg-gray-700 text-white px-3 py-2 rounded-lg"
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                        >
+                          <option value="housing">{t('categoryOptions.housing')}</option>
+                          <option value="utilities">{t('categoryOptions.utilities')}</option>
+                          <option value="food">{t('categoryOptions.food')}</option>
+                          <option value="transport">{t('categoryOptions.transport')}</option>
+                          <option value="health">{t('categoryOptions.health')}</option>
+                          <option value="clothing">{t('categoryOptions.clothing')}</option>
+                          <option value="personal_care">{t('categoryOptions.personal_care')}</option>
+                          <option value="entertainment">{t('categoryOptions.entertainment')}</option>
+                          <option value="travel">{t('categoryOptions.travel')}</option>
+                          <option value="hobbies">{t('categoryOptions.hobbies')}</option>
+                          <option value="communication">{t('categoryOptions.communication')}</option>
+                          <option value="subscriptions">{t('categoryOptions.subscriptions')}</option>
+                          <option value="savings">{t('categoryOptions.savings')}</option>
+                          <option value="investments">{t('categoryOptions.investments')}</option>
+                          <option value="insurance">{t('categoryOptions.insurance')}</option>
+                          <option value="family">{t('categoryOptions.family')}</option>
+                          <option value="gifts">{t('categoryOptions.gifts')}</option>
+                          <option value="charity">{t('categoryOptions.charity')}</option>
+                          <option value="education">{t('categoryOptions.education')}</option>
+                          <option value="taxes">{t('categoryOptions.taxes')}</option>
+                          <option value="other">{t('categoryOptions.other')}</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
+                          placeholder={t('form.categoryPlaceholder')}
+                        />
                       </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      {!editPlanStatus ? (
-
-                        activePlan.categorys?.length > 0 ? (
-                          activePlan.categorys.map((cat: any) => (
-                            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
-                              <span className="text-white capitalize">{cat.category}</span>
-                              <div className="flex items-center gap-3">
-                                <span className="text-green-400 font-medium">${cat.amount}</span>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            <p>No categories added to this plan</p>
-                          </div>
-                        )
-                      ) : (
-
-                        editedPlan.categorys?.length > 0 ? (
-                          editedPlan.categorys.map((cat: any) => (
-                            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
-                              <span className="text-white capitalize">{cat.category}</span>
-                              <div className="flex items-center gap-3">
-                                <span className="text-green-400 font-medium">${cat.amount}</span>
-                                <button 
-                                  onClick={(e) => removeCategory(e, cat.id)}
-                                  className="text-red-400 hover:text-red-300"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            <p>No categories added yet. Click "Add Category" to start.</p>
-                          </div>
-                        )
-                      )}
+                      <div className="flex gap-2 mt-3">
+                        <button 
+                          onClick={addCategory}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                        >
+                          {t('form.addCategorySection')}
+                        </button>
+                        <button 
+                          onClick={() => setActiveAddCategoryForm(false)}
+                          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+                        >
+                          {t('planDetails.cancel')}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
+                  <div className="space-y-2">
+                    {!editPlanStatus ? (
+                      activePlan.categorys?.length > 0 ? (
+                        activePlan.categorys.map((cat: any) => (
+                          <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                            <span className="text-white capitalize">{cat.category}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-green-400 font-medium">${cat.amount}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          <p>{t('planDetails.noCategories')}</p>
+                        </div>
+                      )
+                    ) : (
+                      editedPlan.categorys?.length > 0 ? (
+                        editedPlan.categorys.map((cat: any) => (
+                          <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                            <span className="text-white capitalize">{cat.category}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-green-400 font-medium">${cat.amount}</span>
+                              <button 
+                                onClick={(e) => removeCategory(e, cat.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          <p>{t('planDetails.noCategoriesEdit')}</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
 
                 <div className="mt-6">
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-semibold text-white">Targets</h3>
+                    <h3 className="text-lg font-semibold text-white">{t('planDetails.targets')}</h3>
                     {editPlanStatus && (
                       <button 
                         onClick={() => setActiveAddTargetForm(!activeAddTargetForm)}
                         className="text-purple-400 text-sm hover:text-purple-300"
                       >
-                        + Add Target
+                        {t('planDetails.addTarget')}
                       </button>
                     )}
                   </div>
@@ -808,14 +794,14 @@ export default function Analytics() {
                           value={target}
                           onChange={(e) => setTarget(e.target.value)}
                           className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
-                          placeholder="🎯 Target name (e.g., Emergency Fund, Vacation)"
+                          placeholder={t('form.targetNamePlaceholder')}
                         />
                         <input
                           type="number"
                           value={targetAmount}
-                          onChange={(e) => setTargetAmount(Number(e.target.value))}
+                          onChange={(e) => setTargetAmount(e.target.value)}
                           className="bg-gray-700 text-white px-3 py-2 rounded-lg placeholder-gray-400"
-                          placeholder="Target amount"
+                          placeholder={t('form.targetAmountPlaceholder')}
                         />
                       </div>
                       <div className="flex gap-2 mt-3">
@@ -823,21 +809,20 @@ export default function Analytics() {
                           onClick={addTargetToEditedPlan}
                           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
                         >
-                          Add Target
+                          {t('form.addTargetSection')}
                         </button>
                         <button 
                           onClick={() => setActiveAddTargetForm(false)}
                           className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
                         >
-                          Cancel
+                          {t('planDetails.cancel')}
                         </button>
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="space-y-2">
                     {!editPlanStatus ? (
-
                       activePlan.targets?.length > 0 ? (
                         activePlan.targets.map((target: any) => (
                           <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -852,11 +837,10 @@ export default function Analytics() {
                           <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <p>No targets set for this plan</p>
+                          <p>{t('planDetails.noTargets')}</p>
                         </div>
                       )
                     ) : (
-
                       editedPlan.targets?.length > 0 ? (
                         editedPlan.targets.map((target: any) => (
                           <div key={target.id} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
@@ -877,7 +861,7 @@ export default function Analytics() {
                           <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <p>No targets added yet. Click "Add Target" to start.</p>
+                          <p>{t('planDetails.noTargetsEdit')}</p>
                         </div>
                       )
                     )}
@@ -888,26 +872,25 @@ export default function Analytics() {
           </div>
         )}
 
-
         {activeForm && (
           <div className="mb-8 animate-fade-in">
             <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-              <h2 className="text-xl font-semibold text-white mb-6">Create New Plan</h2>
+              <h2 className="text-xl font-semibold text-white mb-6">{t('form.title')}</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Plan Name</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.planName')}</label>
                     <input 
                       type="text" 
                       value={planName}
                       onChange={(e) => setPlanName(e.target.value)}
                       className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="Enter plan name"
+                      placeholder={t('form.planNamePlaceholder')}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Total Amount</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.totalAmount')}</label>
                     <input 
                       type="number" 
                       value={totalAmount}
@@ -916,24 +899,24 @@ export default function Analytics() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2" >Currency</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.currency')}</label>
                     <select onChange={(e)=> setNewBankCurrnecy(e.target.value)} value={newBankCurrency} className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors">
-                    <option value="EUR">🇪🇺 EUR — Euro</option>
-                    <option value="USD">🇺🇸 USD — US Dollar</option>
-                    <option value="GBP">🇬🇧 GBP — British Pound</option>
-                    <option value="JPY">🇯🇵 JPY — Japanese Yen</option>
-                    <option value="CNY">🇨🇳 CNY — Chinese Yuan</option>
-                    <option value="CAD">🇨🇦 CAD — Canadian Dollar</option>
-                    <option value="AUD">🇦🇺 AUD — Australian Dollar</option>
-                    <option value="CHF">🇨🇭 CHF — Swiss Franc</option>
-                    <option value="KRW">🇰🇷 KRW — South Korean Won</option>
-                    <option value="INR">🇮🇳 INR — Indian Rupee</option>
-                    <option value="BRL">🇧🇷 BRL — Brazilian Real</option>
-                    <option value="RUB">🇷🇺 RUB — Russian Ruble</option>
+                      <option value="EUR">{t('currencyOptions.EUR')}</option>
+                      <option value="USD">{t('currencyOptions.USD')}</option>
+                      <option value="GBP">{t('currencyOptions.GBP')}</option>
+                      <option value="JPY">{t('currencyOptions.JPY')}</option>
+                      <option value="CNY">{t('currencyOptions.CNY')}</option>
+                      <option value="CAD">{t('currencyOptions.CAD')}</option>
+                      <option value="AUD">{t('currencyOptions.AUD')}</option>
+                      <option value="CHF">{t('currencyOptions.CHF')}</option>
+                      <option value="KRW">{t('currencyOptions.KRW')}</option>
+                      <option value="INR">{t('currencyOptions.INR')}</option>
+                      <option value="BRL">{t('currencyOptions.BRL')}</option>
+                      <option value="RUB">{t('currencyOptions.RUB')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.type')}</label>
                     <div className="flex gap-4">
                       <label className="flex items-center">
                         <input
@@ -944,7 +927,7 @@ export default function Analytics() {
                           onChange={() => setTypeOfPlan('income')}
                           className="mr-2 text-blue-500"
                         />
-                        <span className="text-gray-300">Income</span>
+                        <span className="text-gray-300">{t('form.income')}</span>
                       </label>
                       <label className="flex items-center">
                         <input
@@ -955,23 +938,23 @@ export default function Analytics() {
                           onChange={() => setTypeOfPlan('expense')}
                           className="mr-2 text-blue-500"
                         />
-                        <span className="text-gray-300">Expense</span>
+                        <span className="text-gray-300">{t('form.expense')}</span>
                       </label>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Frequency</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.frequency')}</label>
                     <select
                       value={frequency}
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors"
                     >
-                      <option value="once">One-time</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
+                      <option value="once">{t('frequency.once')}</option>
+                      <option value="daily">{t('frequency.daily')}</option>
+                      <option value="weekly">{t('frequency.weekly')}</option>
+                      <option value="monthly">{t('frequency.monthly')}</option>
+                      <option value="yearly">{t('frequency.yearly')}</option>
                     </select>
                   </div>
                 </div>
@@ -979,7 +962,7 @@ export default function Analytics() {
                 {frequency === 'once' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.startDate')}</label>
                       <input
                         type="date"
                         onChange={(e) => setDate(prev => [e.target.value, ...prev])}
@@ -987,7 +970,7 @@ export default function Analytics() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">End Date</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.endDate')}</label>
                       <input
                         type="date"
                         onChange={(e) => setDate(prev => [...prev, e.target.value])}
@@ -1003,20 +986,21 @@ export default function Analytics() {
                     onClick={addCateghoryButton} 
                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                   >
-                    + Add Category
+                    {t('form.addCategory')}
                   </button>
                   <button 
                     type="button"
                     onClick={addTargetButton} 
                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                   >
-                    + Add Target
+                    {t('form.addTarget')}
                   </button>
                 </div>  
+                
                 {activecateghoryForm && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
                     <div>
-                      <h3 className="text-white font-medium mb-3">Categories</h3>
+                      <h3 className="text-white font-medium mb-3">{t('form.categories')}</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {editedPlan?.categorys?.map((category) => (
                           <div key={category.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
@@ -1036,47 +1020,47 @@ export default function Analytics() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-white font-medium mb-3">Add Category</h3>
+                      <h3 className="text-white font-medium mb-3">{t('form.addCategorySection')}</h3>
                       <select 
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
                         className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
                       >
-                        <option value="housing">Housing</option>
-                        <option value="utilities">Utilities</option>
-                        <option value="food">Food</option>
-                        <option value="transport">Transportation</option>
-                        <option value="health">Health</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="personal_care">Personal Care</option>
-                        <option value="entertainment">Entertainment</option>
-                        <option value="travel">Travel</option>
-                        <option value="hobbies">Hobbies</option>
-                        <option value="communication">Phone/Internet</option>
-                        <option value="subscriptions">Subscriptions</option>
-                        <option value="savings">Savings</option>
-                        <option value="investments">Investments</option>
-                        <option value="insurance">Insurance</option>
-                        <option value="family">Family</option>
-                        <option value="gifts">Gifts</option>
-                        <option value="charity">Charity</option>
-                        <option value="education">Education</option>
-                        <option value="taxes">Taxes</option>
-                        <option value="other">Other</option>
+                        <option value="housing">{t('categoryOptions.housing')}</option>
+                        <option value="utilities">{t('categoryOptions.utilities')}</option>
+                        <option value="food">{t('categoryOptions.food')}</option>
+                        <option value="transport">{t('categoryOptions.transport')}</option>
+                        <option value="health">{t('categoryOptions.health')}</option>
+                        <option value="clothing">{t('categoryOptions.clothing')}</option>
+                        <option value="personal_care">{t('categoryOptions.personal_care')}</option>
+                        <option value="entertainment">{t('categoryOptions.entertainment')}</option>
+                        <option value="travel">{t('categoryOptions.travel')}</option>
+                        <option value="hobbies">{t('categoryOptions.hobbies')}</option>
+                        <option value="communication">{t('categoryOptions.communication')}</option>
+                        <option value="subscriptions">{t('categoryOptions.subscriptions')}</option>
+                        <option value="savings">{t('categoryOptions.savings')}</option>
+                        <option value="investments">{t('categoryOptions.investments')}</option>
+                        <option value="insurance">{t('categoryOptions.insurance')}</option>
+                        <option value="family">{t('categoryOptions.family')}</option>
+                        <option value="gifts">{t('categoryOptions.gifts')}</option>
+                        <option value="charity">{t('categoryOptions.charity')}</option>
+                        <option value="education">{t('categoryOptions.education')}</option>
+                        <option value="taxes">{t('categoryOptions.taxes')}</option>
+                        <option value="other">{t('categoryOptions.other')}</option>
                       </select>
                       <input
                         type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
-                        placeholder="Amount"
+                        placeholder={t('form.categoryPlaceholder')}
                       />
                       <button 
                         type="button"
                         onClick={(e)=> addCategory(e)}
                         className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                       >
-                        Add
+                        {t('form.addCategorySection')}
                       </button>
                     </div>
                   </div>
@@ -1085,7 +1069,7 @@ export default function Analytics() {
                 {activeTargetForm && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-700/30 rounded-lg">
                     <div>
-                      <h3 className="text-white font-medium mb-3">Targets</h3>
+                      <h3 className="text-white font-medium mb-3">{t('form.targets')}</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {editedPlan?.targets?.map((target) => (
                           <div key={target.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
@@ -1105,40 +1089,40 @@ export default function Analytics() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-white font-medium mb-3">Add Target</h3>
+                      <h3 className="text-white font-medium mb-3">{t('form.addTargetSection')}</h3>
                       <input
                         type="text"
                         value={target}
                         onChange={(e) => setTarget(e.target.value)}
                         className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
-                        placeholder="Target name"
+                        placeholder={t('form.targetName')}
                       />
                       <input
                         type="text"
                         value={targetAmount}
                         onChange={(e) => setTargetAmount(e.target.value)}
                         className="w-full mb-3 bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600"
-                        placeholder="Target amount"
+                        placeholder={t('form.targetAmountPlaceholder')}
                       />
                       <button 
                         type="button"
                         onClick={addTarget}
                         className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                       >
-                        Add
+                        {t('form.addTargetSection')}
                       </button>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t('form.notes')}</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full bg-gray-700/50 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none transition-colors resize-none"
                     rows={3}
-                    placeholder="Additional information..."
+                    placeholder={t('form.notesPlaceholder')}
                   />
                 </div>
 
@@ -1148,7 +1132,7 @@ export default function Analytics() {
                     onClick={() => setActiveForm(false)}
                     className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('form.cancel')}
                   </button>
                   <button 
                     type="submit" 
@@ -1156,7 +1140,7 @@ export default function Analytics() {
                     disabled={loadingSending}
                     className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loadingSending ? 'Creating...' : 'Create Plan'}
+                    {loadingSending ? t('form.creating') : t('form.create')}
                   </button>
                 </div>
               </form>

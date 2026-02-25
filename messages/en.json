@@ -1,9 +1,459 @@
-{
-    "title": "Welcome to {{appName}}",
+{ 
+    "home":{
+    "title": "Welcome to {appName}", 
     "subtitle": "Your personal finance management solution",
     "createAccount": "Create Account",
     "learnMore": "Learn More",
-    "newHere": "New to {{appName}}?",
+    "newHere": "New to {appName}?",
     "signUpNow": "Sign Up Now"
+  },
+
+    "register": {
+        "title": "Welcome",
+        "subtitle": "Create an account to use all tracker features",
+        "alreadyRegistered": "You also registred ?",
+        "signIn": "sing in",
+        "createAccountHeading": "Create Account",
+        "usernamePlaceholder": "Username",
+        "passwordPlaceholder": "Password",
+        "repeatPasswordPlaceholder": "Repeat Password",
+        "emailPlaceholder": "Email",
+        "submitButton": "Create Account",
+        "loadingButton": "Creating Account...",
+        "successMessage": "Registration successful!",
+        "errorPasswordMismatch": "Passwords do not match",
+        "errorRegistrationError": "Registration error",
+        "errorGeneric": "An error occurred while submitting the form"
+  },
+
+    "login": {
+    "title": "Welcome Back!",
+    "subtitle": "Sign in to your account",
+    "formTitle": "Sign In",
+    "usernamePlaceholder": "Username",
+    "passwordPlaceholder": "Password",
+    "submitButton": "Sign In",
+    "loadingButton": "Signing In...",
+    "successMessage": "Login successful!",
+    "errorLogin": "Login error",
+    "errorGeneric": "An error occurred while submitting the form"
+  },
+
+
+  "operations": {
+    "addTransaction": "Add Transaction",
+    "loading": "Loading...",
+    "loadMore": "Load More Transactions",
+    "allTransactionsLoaded": "All transactions loaded",
+    "quickStats": "Quick Stats",
+    "resultPer": "Result per {count} transactions",
+    "activeBank": "Active Bank",
+    "noBankSelected": "No bank selected",
+    "noTransactions": "No transactions yet",
+    "startAdding": "Start by adding your first transaction",
+    "income": "Income",
+    "expense": "Expense",
+    "deleteTransaction": "Delete transaction",
+    "formTitle": "Add Transaction",
+    "transactionType": "Transaction Type",
+    "expenseButton": "Expense",
+    "incomeButton": "Income",
+    "amount": "Amount",
+    "amountPlaceholder": "Enter amount...",
+    "category": "Category",
+    "date": "Date",
+    "submitButton": "Add Transaction",
+    "monthNames": [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ],
+    "categoryOptions": {
+      "housing": "🏠 Housing",
+      "utilities": "💡 Utilities",
+      "food": "🍽️ Food",
+      "transport": "🚗 Transport",
+      "health": "🏥 Health",
+      "clothing": "👕 Clothing",
+      "personal_care": "🧴 Personal Care",
+      "entertainment": "🎬 Entertainment",
+      "travel": "✈️ Travel",
+      "hobbies": "🎨 Hobbies",
+      "communication": "📱 Communication",
+      "subscriptions": "📺 Subscriptions",
+      "savings": "💳 Savings",
+      "investments": "📈 Investments",
+      "insurance": "🛡️ Insurance",
+      "family": "👨‍👩‍👧‍👦 Family",
+      "gifts": "🎁 Gifts",
+      "charity": "❤️ Charity",
+      "education": "📚 Education",
+      "taxes": "📋 Taxes",
+      "other": "📦 Other"
+    },
+    "categoryIcons": {
+      "housing": "🏠",
+      "utilities": "💡",
+      "food": "🍽️",
+      "transport": "🚗",
+      "health": "🏥",
+      "clothing": "👕",
+      "personal_care": "🧴",
+      "entertainment": "🎬",
+      "travel": "✈️",
+      "hobbies": "🎨",
+      "communication": "📱",
+      "subscriptions": "📺",
+      "savings": "💳",
+      "investments": "📈",
+      "insurance": "🛡️",
+      "family": "👨‍👩‍👧‍👦",
+      "gifts": "🎁",
+      "charity": "❤️",
+      "education": "📚",
+      "taxes": "📋",
+      "other": "📦"
+    }
+  },
+  "analytics": {
+    "title": "Analytics Dashboard",
+    "plansButton": "Plans",
+    "addPlanButton": "Add Plan",
+    "planCreated": "Plan created successfully!",
+    "doublePlansError": "Cannot create multiple active plans with the same frequency.",
+    "yourPlans": "Your Plans",
+    "income": "Income",
+    "expense": "Expense",
+    "frequency": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "once": "One-time"
+    },
+    "planDetails": {
+      "type": "Type",
+      "amount": "Amount",
+      "frequency": "Frequency",
+      "created": "Created",
+      "notes": "Notes",
+      "noNotes": "No notes",
+      "categories": "Categories",
+      "targets": "Targets",
+      "addCategory": "+ Add Category",
+      "addTarget": "+ Add Target",
+      "noCategories": "No categories added to this plan",
+      "noCategoriesEdit": "No categories added yet. Click \"Add Category\" to start.",
+      "noTargets": "No targets set for this plan",
+      "noTargetsEdit": "No targets added yet. Click \"Add Target\" to start.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "title": "Create New Plan",
+      "planName": "Plan Name",
+      "planNamePlaceholder": "Enter plan name",
+      "totalAmount": "Total Amount",
+      "currency": "Currency",
+      "type": "Type",
+      "income": "Income",
+      "expense": "Expense",
+      "frequency": "Frequency",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "addCategory": "+ Add Category",
+      "addTarget": "+ Add Target",
+      "categories": "Categories",
+      "addCategorySection": "Add Category",
+      "targets": "Targets",
+      "addTargetSection": "Add Target",
+      "targetName": "Target name",
+      "targetNamePlaceholder": "🎯 Target name (e.g., Emergency Fund, Vacation)",
+      "targetAmount": "Target amount",
+      "targetAmountPlaceholder": "Target amount",
+      "categoryPlaceholder": "Amount",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional information...",
+      "cancel": "Cancel",
+      "create": "Create Plan",
+      "creating": "Creating..."
+    },
+    "currencyOptions": {
+      "EUR": "🇪🇺 EUR — Euro",
+      "USD": "🇺🇸 USD — US Dollar",
+      "GBP": "🇬🇧 GBP — British Pound",
+      "JPY": "🇯🇵 JPY — Japanese Yen",
+      "CNY": "🇨🇳 CNY — Chinese Yuan",
+      "CAD": "🇨🇦 CAD — Canadian Dollar",
+      "AUD": "🇦🇺 AUD — Australian Dollar",
+      "CHF": "🇨🇭 CHF — Swiss Franc",
+      "KRW": "🇰🇷 KRW — South Korean Won",
+      "INR": "🇮🇳 INR — Indian Rupee",
+      "BRL": "🇧🇷 BRL — Brazilian Real",
+      "RUB": "🇷🇺 RUB — Russian Ruble"
+    },
+    "categoryOptions": {
+      "housing": "🏠 Housing",
+      "utilities": "⚡ Utilities",
+      "food": "🍽️ Food",
+      "transport": "🚗 Transportation",
+      "health": "🏥 Health",
+      "clothing": "👕 Clothing",
+      "personal_care": "🧴 Personal Care",
+      "entertainment": "🎬 Entertainment",
+      "travel": "✈️ Travel",
+      "hobbies": "🎨 Hobbies",
+      "communication": "📱 Phone/Internet",
+      "subscriptions": "📺 Subscriptions",
+      "savings": "💰 Savings",
+      "investments": "📈 Investments",
+      "insurance": "🛡️ Insurance",
+      "family": "👨‍👩‍👧‍👦 Family",
+      "gifts": "🎁 Gifts",
+      "charity": "❤️ Charity",
+      "education": "📚 Education",
+      "taxes": "🏛️ Taxes",
+      "other": "📦 Other"
+    },
+    "noPlansFound": "No plans found"
+  },
+
+  "analyticsErrors": {
+    "enterPlanName": "Enter plan name",
+    "enterTotalAmount": "Enter total amount",
+    "totalAmountNumber": "Total amount must be a number",
+    "amountNumber": "Amount must be a number",
+    "enterTargetNameAndAmount": "Please enter both target name and amount",
+    "targetAmountNumber": "Target amount must be a number",
+    "failedToAddPlan": "Failed to add plan",
+    "error": "Error"
+  },
+
+  "lastsAnalytics": {
+    "loading": "Loading...",
+    "startBudget": "Start Budget:",
+    "currentBudget": "Current Budget:",
+    "monthlyResult": "Monthly Result:",
+    "transactionsCount": "Transactions in this month:",
+    "loadingPlan": "Loading plan...",
+    "plan": "Plan:",
+    "noActivePlan": "No active plan",
+    "yourLosses": "Your Losses:",
+    "yourGains": "Your Gains:",
+    "gainsVsPrev": "Gains vs prev month:",
+    "lossesVsPrev": "Losses vs prev month:",
+    "noGainsFallback": "you have no gains(",
+    "noCategoryData": "No category data yet",
+    "addTransactionsToSeeStats": "Add transactions to see statistics",
+    "categoriesHeading": "Categories",
+    "noCategories": "No categories to display",
+    "transactionTypesHeading": "Transaction Types",
+    "gainsButton": "Gains",
+    "lossesButton": "Losses",
+    "noIncomeYet": "No income yet",
+    "addGainTransactions": "Add \"gain\" transactions to see insights",
+    "gainCategoriesHeading": "Gain Categories",
+    "noIncomeCategories": "No income categories yet",
+    "noExpensesYet": "No expenses yet",
+    "addLossTransactions": "Add \"loss\" transactions to see insights",
+    "lossCategoriesHeading": "Loss Categories",
+    "noExpenseCategories": "No expense categories yet",
+    "top5Categories": "Top 5 Categories This Month",
+    "modal": {
+      "noTransactions": "No transactions found"
+    },
+    "monthNames": [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ]
+  },
+  "budget": {
+    "title": "Budget Tracking",
+    "activePlan": "Active Plan",
+    "budgetStatus": "Budget Status",
+    "selectPlan": "Select plan",
+    "categoryProgress": "Category Budget Progress",
+    "noCategories": "No categories defined for this plan",
+    "savingsGoals": "Savings Goals Progress",
+    "noTargets": "No savings goals defined for this plan",
+    "aiRecommendations": "🤖 AI Recommendations",
+    "aiAllGood": "Great job! All indicators are normal.",
+    "goalLabel": "Goal: {amount}",
+    "achieved": "✓ Achieved",
+    "saved": "saved",
+    "canAfford": "✅ Can afford this goal!",
+    "needMore": "💰 Need {amount} more",
+    "claimButton": "🎯 Claim Goal",
+    "claimingButton": "Claiming...",
+    "overBudget": "⚠️ Over budget by {amount}",
+    "frequency": {
+      "daily": "daily",
+      "weekly": "weekly",
+      "monthly": "monthly",
+      "yearly": "yearly"
+    },
+    "type": {
+      "income": "income",
+      "expense": "expense"
+    }
+},
+  "budgetErrors": {
+    "claimFailed": "Failed to claim target. Please try again."
+},
+
+  "convert": {
+    "title": "Exchange Rates",
+    "subtitle": "Real-time exchange rates and quick conversion",
+    "yourBalance": "Your Balance",
+    "budgetConverter": "Budget Converter",
+    "budgetDescription": "Convert a portion of your budget to another currency",
+    "budgetPercentage": "Budget Percentage: {percentage}%",
+    "convertTo": "Convert To",
+    "amountToConvert": "Amount to Convert",
+    "convertedAmount": "Converted Amount",
+    "exchangeRate": "Exchange Rate",
+    "exchangeRateValue": "1 {from} = {rate} {to}",
+    "updated": "Updated",
+    "loadingExchangeRate": "Loading exchange rate...",
+    "loadingRates": "Loading rates...",
+    "updating": "Updating...",
+    "currencyConverter": "Currency Converter",
+    "from": "From",
+    "to": "To",
+    "swapCurrencies": "Swap currencies",
+    "addToFavorites": "☆ Add to Favorites",
+    "favorited": "⭐ Favorited",
+    "refresh": "Refresh",
+    "saveToHistory": "💾 Save to History",
+    "clear": "🗑️ Clear",
+    "clearHistory": "Clear",
+    "popularExchangeRates": "Popular Exchange Rates",
+    "favoriteRates": "Favorite Rates",
+    "conversionHistory": "Conversion History",
+    "historyEmpty": "Conversion history is empty",
+    "historyEmptyHint": "Perform a conversion and save the result",
+    "per1": "per 1 {from}",
+    "loading": "Loading...",
+    "rateUnavailable": "N/A"
+  },
+
+  "convertErrors": {
+    "fetchFailed": "Failed to fetch exchange rates. Please try again.",
+    "ratesActual": "Rates are up to date"
+  },
+  
+  "about": {
+    "title": "About Finance Tracker",
+    "subtitle": "Your comprehensive solution for personal finance management",
+    "features": {
+      "trackExpenses": {
+        "title": "Track Expenses",
+        "description": "Monitor your spending habits with detailed transaction tracking and categorization."
+      },
+      "budgetPlanning": {
+        "title": "Budget Planning",
+        "description": "Set budgets and goals to stay on track with your financial objectives."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Gain insights into your financial patterns with comprehensive analytics and reports."
+      },
+      "multiAccount": {
+        "title": "Multi-Account",
+        "description": "Manage multiple bank accounts and currencies in one centralized platform."
+      }
+    },
+    "cta": {
+      "title": "Ready to Get Started?",
+      "description": "Join thousands of users who have taken control of their finances with our platform.",
+      "createAccount": "Create Free Account",
+      "backHome": "Back to Home"
+    }
+},
+
+  "lastsAnalyticsErrors": {
+    "loadErrorTitle": "Load error",
+    "loadErrorDesc": "Failed to load transactions",
+    "networkErrorTitle": "Network error",
+    "networkErrorDesc": "Please check your internet connection",
+    "retry": "Retry"
+  },
+
+  "bankAccount": {
+    "noName": "No name",
+    "accountsHeading": "Accounts",
+    "noAccounts": "No accounts",
+    "addAccountButton": "+ Add account",
+    "deleteAccountTitle": "Delete account",
+    "editAccountTitle": "Edit account",
+    "deleteConfirm": "Are you sure you want to delete the account \"{name}\"?",
+    "logoutButton": "Logout",
+    "notificationTitle": "Notification",
+    "errorTitle": "Error",
+    "tooManyAccounts": "Too many accounts. Maximum 6 accounts allowed.",
+    "errorRegistering": "Error registering account.",
+    "pleaseFillAllFields": "Please fill in all fields",
+    "errorDeletingAccount": "Error deleting account",
+    "accountNamePlaceholder": "Account name",
+    "notesPlaceholder": "Notes for account",
+    "amountPlaceholder": "Amount",
+    "currencyRub": "₽",
+    "currencyUsd": "$",
+    "currencyEur": "€",
+    "saveButton": "Save",
+    "cancelButton": "Cancel",
+    "settingsButton": "Settings"
+  },
+
+  "errors": {
+    "noBankAccount": {
+      "name": "No Bank Account",
+      "desc": "Please add your first bank account",
+      "interactiveName": "Create"
+    },
+    "success": {
+      "name": "Success",
+      "desc": "Transaction added successfully"
+    },
+    "addError": {
+      "name": "Error",
+      "desc": "Failed to add transaction",
+      "interactiveName": "Retry"
+    },
+    "networkError": {
+      "name": "Network Error",
+      "desc": "Failed to add transaction",
+      "interactiveName": "Retry"
+    },
+    "deleteSuccess": {
+      "name": "Success",
+      "desc": "Transaction deleted successfully"
+    },
+    "deleteError": {
+      "name": "Error",
+      "desc": "Failed to delete transaction",
+      "interactiveName": "Retry"
+    },
+    "deleteNetworkError": {
+      "name": "Network Error",
+      "desc": "Failed to delete transaction",
+      "interactiveName": "Retry"
+    },
+    "noBankSelected": {
+      "name": "Warning",
+      "desc": "No bank account selected",
+      "interactiveName": ""
+    },
+    "loadMoreError": {
+      "name": "Error",
+      "desc": "Failed to load more transactions",
+      "interactiveName": "Retry"
+    },
+    "loadMoreNetworkError": {
+      "name": "Network Error",
+      "desc": "Failed to load transactions",
+      "interactiveName": "Retry"
+    }
   }
+
+}
   

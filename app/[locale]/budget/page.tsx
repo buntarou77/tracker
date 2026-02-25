@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthContext } from '../context/AuthContext';
-import { useBankTransaction } from '../context/BankTransactionContext';
-import { usePlan } from '../context/PlanContext';
-import { useAuth } from '../hooks/useAuth';
+import { useTranslations } from 'next-intl'; // <-- import
+import { useAuthContext } from '../../context/AuthContext';
+import { useBankTransaction } from '../../context/BankTransactionContext';
+import { usePlan } from '../../context/PlanContext';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,7 +18,6 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
-import { Doughnut, Bar, Line } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -55,6 +55,9 @@ interface Plan {
 }
 
 export default function BudgetPage() {
+  const t = useTranslations('budget');           // UI translations
+  const err = useTranslations('budgetErrors');   // error translations
+
   const { login } = useAuthContext();
   const { trans, activeBank, currency, balance, setTrans } = useBankTransaction();
   const { 
@@ -284,31 +287,33 @@ export default function BudgetPage() {
         throw new Error('Failed to update plan');
       }
     } catch (error) {
-      alert('Failed to claim target. Please try again.');
+      alert(err('claimFailed')); // <-- translated error
     } finally {
       setClaimingTarget(null);
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {activePlan && (
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Budget Tracking</h1>
+          <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
           <div className="flex gap-4">
             <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-gray-400 text-sm mb-1">Active Plan</h3>
+              <h3 className="text-gray-400 text-sm mb-1">{t('activePlan')}</h3>
               <p className="text-xl font-bold text-blue-400">{activePlan?.name}</p>
-              <p className="text-sm text-gray-300 capitalize">{activePlan.frequency} • {activePlan.type}</p>
+              <p className="text-sm text-gray-300 capitalize">
+                {t(`frequency.${activePlan.frequency}`)} • {t(`type.${activePlan.type}`)}
+              </p>
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-gray-400 text-sm mb-1">Budget Status</h3>
-              <p className="text-lg font-bold text-green-400">{balance}<span className="text-gray-300">{currency}</span> </p>
+              <h3 className="text-gray-400 text-sm mb-1">{t('budgetStatus')}</h3>
+              <p className="text-lg font-bold text-green-400">
+                {balance}<span className="text-gray-300">{currency}</span>
+              </p>
               <p className={`text-sm ${budgetStatus.monthlyBalance >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                ${budgetStatus.monthlyBalance} this month
+                ${budgetStatus.monthlyBalance} {t('saved')}
               </p>
             </div>
           </div>
@@ -316,7 +321,7 @@ export default function BudgetPage() {
         )}
 
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Select plan</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">{t('selectPlan')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plans.map((plan: any) => (
               <div 
@@ -335,21 +340,23 @@ export default function BudgetPage() {
                   }`}>
                     ${plan.amount}
                   </span>
-                  <span className="text-xs text-gray-400 capitalize">{plan.frequency}</span>
+                  <span className="text-xs text-gray-400 capitalize">
+                    {t(`frequency.${plan.frequency}`)}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-white mb-6">Category Budget Progress</h2>
-          {activePlan?.categorys && activePlan?.categorys.length > 0 && activePlan? (
+          <h2 className="text-xl font-bold text-white mb-6">{t('categoryProgress')}</h2>
+          {activePlan?.categorys && activePlan?.categorys.length > 0 && activePlan ? (
             <div className="space-y-4">
               {activePlan.categorys.map((category: any) => {
                 const progress = categoryProgress[category.category] || 0;
                 const progressColor = progress > 100 ? 'bg-red-500' : progress > 80 ? 'bg-yellow-500' : 'bg-green-500';
+                const overAmount = ((category.amount * (progress - 100)) / 100).toFixed(0);
                 
                 return (
                   <div key={category.id} className="bg-gray-700 rounded-lg p-4">
@@ -372,7 +379,7 @@ export default function BudgetPage() {
                     </div>
                     {progress > 100 && (
                       <p className="text-red-400 text-sm mt-2">
-                        ⚠️ Over budget by ${((category.amount * (progress - 100)) / 100).toFixed(0)}
+                        {t('overBudget', { amount: `$${overAmount}` })}
                       </p>
                     )}
                   </div>
@@ -381,14 +388,13 @@ export default function BudgetPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">
-              <p>No categories defined for this plan</p>
+              <p>{t('noCategories')}</p>
             </div>
           )}
         </div>
 
-
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-white mb-6">Savings Goals Progress</h2>
+          <h2 className="text-xl font-bold text-white mb-6">{t('savingsGoals')}</h2>
           {activePlan?.targets && activePlan?.targets.length > 0 && activePlan ? (
             <div className="space-y-4">
               {activePlan.targets.map((target: Target) => (
@@ -396,18 +402,20 @@ export default function BudgetPage() {
                   <div className="flex justify-between items-center mb-3">
                     <div>
                       <h3 className="text-white font-medium">🎯 {target.target}</h3>
-                      <p className="text-gray-400 text-sm">Goal: ${target.amount}</p>
+                      <p className="text-gray-400 text-sm">
+                        {t('goalLabel', { amount: `$${target.amount}` })}
+                      </p>
                     </div>
                     <div className="text-right">
                       {target.achieved ? (
-                        <span className="text-green-400 font-medium text-lg">✓ Achieved</span>
+                        <span className="text-green-400 font-medium text-lg">{t('achieved')}</span>
                       ) : (
                         <div>
                           <span className="text-blue-400 font-bold text-lg">
                             {Math.round(targetsProgress[target.id] || 0)}%
                           </span>
                           <div className="text-sm text-gray-400">
-                            ${((target.amount * (targetsProgress[target.id] || 0)) / 100).toFixed(0)} saved
+                            ${((target.amount * (targetsProgress[target.id] || 0)) / 100).toFixed(0)} {t('saved')}
                           </div>
                         </div>
                       )}
@@ -423,13 +431,13 @@ export default function BudgetPage() {
                       </div>
                     </div>
                   )}
-                    {target && (
+                  {target && (
                      <div className="flex justify-between items-center">
                        <div className="text-sm text-gray-400">
                          {budgetStatus.canAffordTargets[target.id] ? (
-                           <span className="text-green-400">✅ Can afford this goal!</span>
+                           <span className="text-green-400">{t('canAfford')}</span>
                          ) : (
-                           <span>💰 Need {(target.amount - balance).toFixed(0)}{currency} more</span>
+                           <span>{t('needMore', { amount: `$${(target.amount - balance).toFixed(0)}${currency}` })}</span>
                          )}
                        </div>
                        <div className="flex gap-2">
@@ -439,7 +447,7 @@ export default function BudgetPage() {
                              disabled={claimingTarget === target.id}
                              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             {claimingTarget === target.id ? 'Claiming...' : '🎯 Claim Goal'}
+                             {claimingTarget === target.id ? t('claimingButton') : t('claimButton')}
                            </button>
                          )}
                        </div>
@@ -450,13 +458,13 @@ export default function BudgetPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">
-              <p>No savings goals defined for this plan</p>
+              <p>{t('noTargets')}</p>
             </div>
           )}
         </div>
 
         <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-white mb-4">🤖 AI Recommendations</h2>
+          <h2 className="text-xl font-bold text-white mb-4">{t('aiRecommendations')}</h2>
           {aiRecommendations.length > 0 ? (
             <div className="space-y-3">
               {aiRecommendations.map((recommendation, index) => (
@@ -466,10 +474,10 @@ export default function BudgetPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400">Great job! All indicators are normal.</p>
+            <p className="text-gray-400">{t('aiAllGood')}</p>
           )}
         </div>
       </div>
     </div>
   );
-} 
+}

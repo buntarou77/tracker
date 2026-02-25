@@ -4,9 +4,10 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { useUI } from '../../context/UIContext';
 import { useError } from '../../context/ErrorContext';
-import {TransactionType} from '../../types/shared/transactions'
+import { TransactionType } from '../../types/shared/transactions'
 import Cookies from 'js-cookie';
 import BankAccount from '../../components/BankAccount';
+import { useTranslations } from 'next-intl';
 
 interface transaction {
     amount: number, 
@@ -19,6 +20,9 @@ interface transaction {
 }
 
 export default function Operations() {
+    const t = useTranslations('operations');
+    const e = useTranslations('errors');
+    console.log(t)
     const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore, bankNames, analyticTransactions, setAnalyticTransactions } = useBankTransaction();
     const [show, setShow] = useState<boolean>(false);
     const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
@@ -30,6 +34,7 @@ export default function Operations() {
     const { login } = useAuthContext();
     const { setIsAccountsVisible, setAddBankAccountForm } = useUI();
     const { addError } = useError();
+    
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (show && formRef.current && !formRef.current.contains(event.target as Node)) {
@@ -50,11 +55,11 @@ export default function Operations() {
             if(activeBank.name.trim() === ''){
                 addError({
                     theme: 'redDark',
-                    name: 'No Bank Account',
-                    desc: 'Please add your first bank account',
+                    name: e('noBankAccount.name'),
+                    desc: e('noBankAccount.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: createBankAccountError,
-                    interactiveName: 'Create'
+                    interactiveName: e('noBankAccount.interactiveName')
                 });
                 return;
             }
@@ -92,8 +97,8 @@ export default function Operations() {
                 }));
                 addError({
                     theme: 'greenDark',
-                    name: 'Success',
-                    desc: 'Transaction added successfully',
+                    name: e('success.name'),
+                    desc: e('success.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => {},
                     interactiveName: ''
@@ -101,21 +106,21 @@ export default function Operations() {
             } else {
                 addError({
                     theme: 'redDark',
-                    name: 'Error',
-                    desc: 'Failed to add transaction',
+                    name: e('addError.name'),
+                    desc: e('addError.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => addTransaction(amount, category, date, type),
-                    interactiveName: 'Retry'
+                    interactiveName: e('addError.interactiveName')
                 });
             }
         } catch (error) {
             addError({
                 theme: 'redDark',
-                name: 'Network Error',
-                desc: 'Failed to add transaction',
+                name: e('networkError.name'),
+                desc: e('networkError.desc'),
                 stateChangeFunc: () => {},
                 interactiveFunc: () => addTransaction(amount, category, date, type),
-                interactiveName: 'Retry'
+                interactiveName: e('networkError.interactiveName')
             });
         }
     };
@@ -182,21 +187,21 @@ export default function Operations() {
         setShow(prev => !prev);
         setShouldAnimate(prev => !prev);
     }, []);
-    
+
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const amount = formData.get('amount');
         const category = formData.get('category');
         const date = formData.get('date');
-      
+
         if (amount && category && date && login) {
             addTransaction(amount, category, date, transactionType);
             setShow(false);
             setShouldAnimate(false);
         }
     };
-    
+
     const delTransaction = async (id: any, amount: any, type: any, date: any) => { 
         try {
             const data = JSON.stringify({
@@ -220,13 +225,13 @@ export default function Operations() {
                 } else {
                     setBalance(Number(balance) - Number(amount));
                 }
-                
+
                 setTrans(prev => prev.filter(trans => trans.id !== id));
 
                 addError({
                     theme: 'greenDark',
-                    name: 'Success',
-                    desc: 'Transaction deleted successfully',
+                    name: e('deleteSuccess.name'),
+                    desc: e('deleteSuccess.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => {},
                     interactiveName: ''
@@ -234,25 +239,25 @@ export default function Operations() {
             } else {
                 addError({
                     theme: 'redDark',
-                    name: 'Error',
-                    desc: 'Failed to delete transaction',
+                    name: e('deleteError.name'),
+                    desc: e('deleteError.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => delTransaction(id, amount, type, date),
-                    interactiveName: 'Retry'
+                    interactiveName: e('deleteError.interactiveName')
                 });
             }
         } catch(e) {
             addError({
                 theme: 'redDark',
-                name: 'Network Error',
-                desc: 'Failed to delete transaction',
+                name: e('deleteNetworkError.name'),
+                desc: e('deleteNetworkError.desc'),
                 stateChangeFunc: () => {},
                 interactiveFunc: () => delTransaction(id, amount, type, date),
-                interactiveName: 'Retry'
+                interactiveName: e('deleteNetworkError.interactiveName')
             });
         }
     };
-    
+
     const loadMoreTransactions = async () => {
         if (!login || !activeBank.name || isLoadingMore) return;
         setIsLoadingMore(true);
@@ -261,11 +266,11 @@ export default function Operations() {
             if(activeBank.id === '' ) {
                 addError({
                     theme: 'orangeDark',
-                    name: 'Warning',
-                    desc: 'No bank account selected',
+                    name: e('noBankSelected.name'),
+                    desc: e('noBankSelected.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => {},
-                    interactiveName: ''
+                    interactiveName: e('noBankSelected.interactiveName')
                 });
                 return;
             }
@@ -283,33 +288,30 @@ export default function Operations() {
             } else {
                 addError({
                     theme: 'redDark',
-                    name: 'Error',
-                    desc: 'Failed to load more transactions',
+                    name: e('loadMoreError.name'),
+                    desc: e('loadMoreError.desc'),
                     stateChangeFunc: () => {},
                     interactiveFunc: () => loadMoreTransactions(),
-                    interactiveName: 'Retry'
+                    interactiveName: e('loadMoreError.interactiveName')
                 });
             }
         } catch (error) {
             addError({
                 theme: 'redDark',
-                name: 'Network Error',
-                desc: 'Failed to load transactions',
+                name: e('loadMoreNetworkError.name'),
+                desc: e('loadMoreNetworkError.desc'),
                 stateChangeFunc: () => {},
                 interactiveFunc: () => loadMoreTransactions(),
-                interactiveName: 'Retry'
+                interactiveName: e('loadMoreNetworkError.interactiveName')
             });
         } finally {
             setIsLoadingMore(false);
         }
     };
-    
+
     const formatMonthYear = (monthKey: string) => {
         const [year, month] = monthKey.split('-');
-        const monthNames = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ];
+        const monthNames = t.raw('monthNames') as string[];
         return `${monthNames[parseInt(month) - 1]} ${year}`;
     };
 
@@ -330,30 +332,8 @@ export default function Operations() {
     };
 
     const getCategoryIcon = (category: string) => {
-        const icons: { [key: string]: string } = {
-            housing: '🏠',
-            utilities: '💡',
-            food: '🍽️',
-            transport: '🚗',
-            health: '🏥',
-            clothing: '👕',
-            personal_care: '🧴',
-            entertainment: '🎬',
-            travel: '✈️',
-            hobbies: '🎨',
-            communication: '📱',
-            subscriptions: '📺',
-            savings: '💳',
-            investments: '📈',
-            insurance: '🛡️',
-            family: '👨‍👩‍👧‍👦',
-            gifts: '🎁',
-            charity: '❤️',
-            education: '📚',
-            taxes: '📋',
-            other: '📦'
-        };
-        return icons[category] || '📦';
+        const key = `categoryIcons.${category}`;
+        return t.has(key) ? t(key) : '📦';
     };
 
     function createBankAccountError(){
@@ -366,8 +346,8 @@ export default function Operations() {
             return (
                 <div className="text-center py-12">
                     <div className="text-6xl mb-4">📊</div>
-                    <p className="text-gray-400 text-lg">No transactions yet</p>
-                    <p className="text-gray-500 text-sm mt-2">Start by adding your first transaction</p>
+                    <p className="text-gray-400 text-lg">{t('noTransactions')}</p>
+                    <p className="text-gray-500 text-sm mt-2">{t('startAdding')}</p>
                 </div>
             );
         }
@@ -386,8 +366,8 @@ export default function Operations() {
             return (
                 <div className="text-center py-12">
                     <div className="text-6xl mb-4">📊</div>
-                    <p className="text-gray-400 text-lg">No transactions yet</p>
-                    <p className="text-gray-500 text-sm mt-2">Start by adding your first transaction</p>
+                    <p className="text-gray-400 text-lg">{t('noTransactions')}</p>
+                    <p className="text-gray-500 text-sm mt-2">{t('startAdding')}</p>
                 </div>
             );
         }
@@ -403,7 +383,7 @@ export default function Operations() {
                     <h3 className="text-xl font-bold text-white mb-4">
                         📅 {formatMonthYear(monthKey)}
                     </h3>
-                    
+
                     <div className="space-y-3">
                         {monthTransactions
                             .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -429,7 +409,7 @@ export default function Operations() {
                                                             ? 'bg-green-900 text-green-300' 
                                                             : 'bg-red-900 text-red-300'
                                                     }`}>
-                                                        {item.type === 'gain' ? '💰 Income' : '💸 Expense'}
+                                                        {item.type === 'gain' ? `💰 ${t('income')}` : `💸 ${t('expense')}`}
                                                     </span>
                                                 </div>
                                                 <div className="text-gray-300 capitalize font-medium">
@@ -445,11 +425,11 @@ export default function Operations() {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <button
                                             onClick={() => delTransaction(item.id, Number(item.numeralAmount || item.amount), item.type, item.date)}
                                             className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
-                                            title="Delete transaction"
+                                            title={t('deleteTransaction')}
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -464,7 +444,7 @@ export default function Operations() {
             );
         });
     };
-    
+
     return (
         <div className="min-h-screen bg-gray-900 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
@@ -479,12 +459,12 @@ export default function Operations() {
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
-                                    <span>Add Transaction</span>
+                                    <span>{t('addTransaction')}</span>
                                 </button>
                             </div>
-                            
+
                             {renderTransactionsByMonth()}
-                            
+
                             {hasMore &&  (
                                 <div className="flex justify-center mt-8">
                                     <button
@@ -499,18 +479,18 @@ export default function Operations() {
                                         {isLoadingMore ? (
                                             <span className="flex items-center">
                                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                Loading...
+                                                {t('loading')}
                                             </span>
                                         ) : (
-                                            'Load More Transactions'
+                                            t('loadMore')
                                         )}
                                     </button>
                                 </div>
                             )}
-                            
+
                             {!hasMore && (
                                 <div className="text-center mt-8">
-                                    <p className="text-gray-400">All transactions loaded</p>
+                                    <p className="text-gray-400">{t('allTransactionsLoaded')}</p>
                                 </div>
                             )}
                         </div>
@@ -518,18 +498,18 @@ export default function Operations() {
 
                     <div className="space-y-6">
                         <div className="bg-gray-800 rounded-lg p-6">
-                            <h3 className="text-lg font-bold text-white mb-4">📊 Quick Stats</h3>
+                            <h3 className="text-lg font-bold text-white mb-4">📊 {t('quickStats')}</h3>
                             <div className="space-y-4">
                                 <div className="bg-gray-700 rounded-lg p-4">
-                                    <div className="text-sm text-gray-400">Result per {trans.length} transactions</div>
+                                    <div className="text-sm text-gray-400">{t('resultPer', { count: trans.length })}</div>
                                     <div className="text-2xl font-bold text-white">
                                         {trans.length ? trans.reduce((sum: number, trans: transaction) => trans.type === 'loss' ? sum - trans.amount: sum + trans.amount , 0).toFixed(2) : 0} {bankNames.find((item)=>item.id === activeBank.id)?.currency}
                                     </div>
                                 </div>
                                 <div className="bg-gray-700 rounded-lg p-4">
-                                    <div className="text-sm text-gray-400">Active Bank</div>
+                                    <div className="text-sm text-gray-400">{t('activeBank')}</div>
                                     <div className="text-lg font-semibold text-blue-400">
-                                        {activeBank.name || 'No bank selected'}
+                                        {activeBank.name || t('noBankSelected')}
                                     </div>
                                 </div>
                             </div>
@@ -545,7 +525,7 @@ export default function Operations() {
                             className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-white">Add Transaction</h3>
+                                <h3 className="text-xl font-bold text-white">{t('formTitle')}</h3>
                                 <button
                                     type="button"
                                     onClick={() => setShow(false)}
@@ -559,7 +539,7 @@ export default function Operations() {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Transaction Type</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('transactionType')}</label>
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
@@ -570,7 +550,7 @@ export default function Operations() {
                                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                         >
-                                            💸 Expense
+                                            💸 {t('expenseButton')}
                                         </button>
                                         <button
                                             type="button"
@@ -581,18 +561,18 @@ export default function Operations() {
                                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                         >
-                                            💰 Income
+                                            💰 {t('incomeButton')}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Amount</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('amount')}</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             name="amount"
-                                            placeholder="Enter amount..."
+                                            placeholder={t('amountPlaceholder')}
                                             className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             required
                                             step="0.01"
@@ -605,38 +585,38 @@ export default function Operations() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('category')}</label>
                                     <select
                                         name="category"
                                         className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         required
                                     >
-                                        <option value="housing">🏠 Housing</option>
-                                        <option value="utilities">💡 Utilities</option>
-                                        <option value="food">🍽️ Food</option>
-                                        <option value="transport">🚗 Transport</option>
-                                        <option value="health">🏥 Health</option>
-                                        <option value="clothing">👕 Clothing</option>
-                                        <option value="personal_care">🧴 Personal Care</option>
-                                        <option value="entertainment">🎬 Entertainment</option>
-                                        <option value="travel">✈️ Travel</option>
-                                        <option value="hobbies">🎨 Hobbies</option>
-                                        <option value="communication">📱 Communication</option>
-                                        <option value="subscriptions">📺 Subscriptions</option>
-                                        <option value="savings">💳 Savings</option>
-                                        <option value="investments">📈 Investments</option>
-                                        <option value="insurance">🛡️ Insurance</option>
-                                        <option value="family">👨‍👩‍👧‍👦 Family</option>
-                                        <option value="gifts">🎁 Gifts</option>
-                                        <option value="charity">❤️ Charity</option>
-                                        <option value="education">📚 Education</option>
-                                        <option value="taxes">📋 Taxes</option>
-                                        <option value="other">📦 Other</option>
+                                        <option value="housing">{t('categoryOptions.housing')}</option>
+                                        <option value="utilities">{t('categoryOptions.utilities')}</option>
+                                        <option value="food">{t('categoryOptions.food')}</option>
+                                        <option value="transport">{t('categoryOptions.transport')}</option>
+                                        <option value="health">{t('categoryOptions.health')}</option>
+                                        <option value="clothing">{t('categoryOptions.clothing')}</option>
+                                        <option value="personal_care">{t('categoryOptions.personal_care')}</option>
+                                        <option value="entertainment">{t('categoryOptions.entertainment')}</option>
+                                        <option value="travel">{t('categoryOptions.travel')}</option>
+                                        <option value="hobbies">{t('categoryOptions.hobbies')}</option>
+                                        <option value="communication">{t('categoryOptions.communication')}</option>
+                                        <option value="subscriptions">{t('categoryOptions.subscriptions')}</option>
+                                        <option value="savings">{t('categoryOptions.savings')}</option>
+                                        <option value="investments">{t('categoryOptions.investments')}</option>
+                                        <option value="insurance">{t('categoryOptions.insurance')}</option>
+                                        <option value="family">{t('categoryOptions.family')}</option>
+                                        <option value="gifts">{t('categoryOptions.gifts')}</option>
+                                        <option value="charity">{t('categoryOptions.charity')}</option>
+                                        <option value="education">{t('categoryOptions.education')}</option>
+                                        <option value="taxes">{t('categoryOptions.taxes')}</option>
+                                        <option value="other">{t('categoryOptions.other')}</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('date')}</label>
                                     <input
                                         type="date"
                                         name="date"
@@ -650,7 +630,7 @@ export default function Operations() {
                                     type="submit"
                                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
                                 >
-                                    Add Transaction
+                                    {t('submitButton')}
                                 </button>
                             </div>
                         </form>

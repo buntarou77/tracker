@@ -2,7 +2,6 @@
 
 import { Inter, Roboto_Mono } from "next/font/google";
 import Link from "next/link";
-import '../globals.css'
 import BankAccount from './BankAccount';
 import { memo } from 'react';
 

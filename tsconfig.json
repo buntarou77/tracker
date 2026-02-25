@@ -36,7 +36,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "next.config.js"
+    "next.config.mjs"
 , "app/api/_middleware"  ],
   "exclude": [
     "node_modules"
