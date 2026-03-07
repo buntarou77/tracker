@@ -6,6 +6,7 @@ interface User {
   _id?: string;
   login: string;
   email: string;
+  lastPasswordChange: Date;
   password_hash: string;
   active: number;
 }
@@ -47,9 +48,10 @@ export async function POST(request: Request) {
       const authResult = await db.collection(process.env.COLLECTION_NAME || 'users').insertOne({
         email,
         user: login,
+        lastPasswordChange: new Date(),
         password_hash: hashedPassword,
         created_at: new Date()
-      })
+      }, {})
 
 
       return NextResponse.json(

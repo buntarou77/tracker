@@ -3,12 +3,18 @@ import { createPortal } from 'react-dom';
 import { useUI } from '../context/UIContext';
 import EditBankModal from './../components/editBankModal'
 import SettingsAccountModal from '../components/settingAccountModal'
+import { useEffect } from 'react';
 export default function ModalRoot() {
   const { modal, setModal } = useUI();
   console.log(modal)
   if (modal.type === '' || !modal) return null;
-
-  const close = () => setModal({type: '', payload: null});
+  useEffect(()=>{
+    if(modal.type !== '') document.body.style.overflow = 'hidden';
+  }, [modal])
+  const close = () => {
+    setModal({type: '', payload: null})
+    document.body.style.overflow = 'auto';
+  };
     type propEditModalType = {
         name: string;
         currency: string;
@@ -16,7 +22,7 @@ export default function ModalRoot() {
         notes: string;
         createdAt: string;
     }
-  console.log(modal.type)
+  
   return createPortal(
     <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/50">
       <div className="bg-gray-800 p-6 rounded-xl relative">

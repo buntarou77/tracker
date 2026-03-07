@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate access token
     let userData;
     try {
       userData = verifyAccessToken(accessToken);

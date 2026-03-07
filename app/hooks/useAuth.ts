@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface User {
@@ -13,10 +13,11 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState<{username: string, email: string, lastPasswordChange: Date, id: string}>({username: '', email: '', lastPasswordChange: new Date(), id: ''})
   
   const router = useRouter();
   const pathname = usePathname();
-
+  console.log(pathname)
   const refreshTokens = async (): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/refresh', {
@@ -37,6 +38,7 @@ export function useAuth() {
   };
 
   useEffect(() => {
+    console.log('change')
     async function loadUser() {
       try {
         const response = await fetch('/api/me', {
@@ -67,6 +69,7 @@ export function useAuth() {
               setUser(null);
               setIsAuthenticated(false);
               if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
+                console.log('first')
                 router.push('/');
               }
             }
@@ -74,6 +77,7 @@ export function useAuth() {
             setUser(null);
             setIsAuthenticated(false);
             if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
+              console.log('second')
               router.push('/');
             }
           }
@@ -81,6 +85,7 @@ export function useAuth() {
           setUser(null);
           setIsAuthenticated(false);
           if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
+            console.log('third')
             router.push('/');
           }
         }
@@ -88,13 +93,16 @@ export function useAuth() {
         setUser(null);
         setIsAuthenticated(false);
         if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
+          console.log('four')
           router.push('/');
         }
       } finally {
         setIsLoading(false);
       }
     }
-
+    if(pathname.indexOf('login') !== -1 || pathname.indexOf('register') !== -1){
+      return 
+    }
     loadUser();
   }, [pathname, router]);
 

@@ -8,8 +8,6 @@ export default function Home({
 }: {
   params: Promise<{locale: string}>
 }) {
-  console.log('params')
-  console.log(params)
   setRequestLocale(params.locale)
   const t = useTranslations('home');
   const appName = 'Financial Tracker';
@@ -45,7 +43,7 @@ export default function Home({
             {t('newHere', { appName })}
           </p>
           <a 
-            href="/register" 
+            href={`${params.locale}/login`} 
             className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors inline-flex items-center space-x-2 shadow-lg"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
