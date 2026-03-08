@@ -1149,7 +1149,7 @@ export default function Analytics() {
         )}
 
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-          <LastsAnalitycs trans={trans} activeBank={activeBank} activePlansStatus={activePlansStatus} plans={plans} login={login} />+
+          <LastsAnalitycs trans={trans} activeBank={activeBank} activePlansStatus={activePlansStatus} plans={plans} login={login} />
         </div>
       </div>
 

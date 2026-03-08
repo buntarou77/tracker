@@ -335,6 +335,7 @@ export default memo(function LastsAnalytics() {
   const planCurrencySymbol = getCurrencySymbol(activeMonthPlan?.currency as any);
   const planDisplayCurrency = planCurrencySymbol || activeMonthPlan?.currency;
 
+  console.log(modalTransactions.length > 0 );
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
       <div className='w-[100%] flex justify-center'>
@@ -411,7 +412,7 @@ export default memo(function LastsAnalytics() {
                   </p>
                 </div>
 
-                <div className='w-full max-w-[260px] relative'>
+                <div className=' max-w-[260px] relative'>
                   <div className='relative w-full h-5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg border border-gray-500 shadow-md overflow-hidden'>
                     <div
                       style={{
@@ -485,19 +486,89 @@ export default memo(function LastsAnalytics() {
       </div>
 
       <div className="w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px]">
-        <Line className="w-full max-w-[1200px] h-[500px] m-auto" options={lineOptions} data={lineData} />
-      </div>
+        {lineData?.datasets?.[0]?.data?.length > 0 ? (
+          <Line
+            className="w-full max-w-[1200px] h-[500px] m-auto"
+            options={lineOptions}
+            data={lineData}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-700/50 flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18M7 14l3-3 4 4 5-5"/>
+              </svg>
+            </div>
+
+            <p className="text-gray-400 text-sm font-medium">
+              {t('noChartData')}
+            </p>
+
+            <p className="text-gray-500 text-xs mt-1">
+              {t('addTransactionsToSeeStats')}
+            </p>
+          </div>
+        )}
+      </div>  
 
       <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
-        <Bar className="w-full max-w-[1200px] h-[500px] m-auto" data={barLossData} />
-      </div>
+        {barLossData?.datasets?.[0]?.data?.length > 0 ? (
+          <Bar
+            className="w-full max-w-[1200px] h-[500px] m-auto"
+            data={barLossData}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center mb-4 border border-red-700/30">
+              <svg className="w-8 h-8 text-red-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6a2 2 0 012-2h6M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v4"/>
+              </svg>
+            </div>
 
+            <p className="text-red-300/80 text-sm font-medium">
+              {t('noExpenseChart')}
+            </p>
+
+            <p className="text-red-400/60 text-xs mt-1">
+              {t('addLossTransactions')}
+            </p>
+          </div>
+        )}
+      </div>
+        
       <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
         {gainBarData.length > 0 ? (
-          <Bar className="w-full max-w-[1200px] h-[500px] m-auto" data={barGainData} />
+          <Bar
+            className="w-full max-w-[1200px] h-[500px] m-auto"
+            data={barGainData}
+          />
         ) : (
-          <div className='text-[35px] font-[800] flex items-center justify-center h-full'>
-            {t('noGainsFallback')}
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            
+            <div className="w-16 h-16 rounded-full bg-green-900/30 flex items-center justify-center mb-4 border border-green-700/30">
+              <svg
+                className="w-8 h-8 text-green-400/70"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M3 17l6-6 4 4 8-8"
+                />
+              </svg>
+            </div>
+
+            <p className="text-green-300/90 text-sm font-semibold">
+              {t('noGainsFallback')}
+            </p>
+
+            <p className="text-green-400/60 text-xs mt-1">
+              {t('addGainTransactions')}
+            </p>
+
           </div>
         )}
       </div>
@@ -798,41 +869,99 @@ const TransactionModal = ({ modalOpen, modalTitle, modalTransactions, closeModal
 
         <div className="p-6">
           {modalTransactions.length > 0 ? (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+
               {modalTransactions.map((transaction, index) => (
-                <div key={index} className="group bg-gray-900/50 rounded-xl p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-300">
+                <div
+                  key={index}
+                  className="group bg-gray-900/60 backdrop-blur rounded-xl p-4 border border-gray-700/50 hover:border-gray-500 hover:bg-gray-900/80 transition-all duration-300"
+                >
                   <div className="flex items-center justify-between">
+
+                    {/* LEFT SIDE */}
                     <div className="flex items-center gap-4">
-                      <div className={`w-2 h-2 rounded-full ${
-                        transaction.type === 'gain' ? 'bg-green-400' : 'bg-red-400'
-                      }`} />
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-400 text-sm">{transaction.date}</span>
-                          <span className="text-xs text-gray-500">•</span>
-                          <span className="text-sm text-blue-400 capitalize">{transaction.category}</span>
+
+                      {/* TYPE ICON */}
+                      <div
+                        className={`flex items-center justify-center w-8 h-8 rounded-lg
+                        ${
+                          transaction.type === 'gain'
+                            ? 'bg-green-500/10 text-green-400'
+                            : 'bg-red-500/10 text-red-400'
+                        }`}
+                      >
+                        {transaction.type === 'gain' ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7"/>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* DATE + CATEGORY */}
+                      <div className="flex flex-col">
+                        <span className="text-gray-300 text-sm font-medium capitalize">
+                          {transaction.category}
+                        </span>
+
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>{transaction.date}</span>
+                          <span>•</span>
+                          <span className="uppercase tracking-wide">
+                            {transaction.type}
+                          </span>
                         </div>
                       </div>
+
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className={`text-lg font-bold ${
-                        transaction.type === 'gain' ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {transaction.type === 'gain' ? '+' : '-'}{displayCurrency}{transaction.amount}
-                      </span>
-                    </div>
+                    {/* AMOUNT */}
+                    <span
+                      className={`text-lg font-semibold tracking-wide
+                        ${
+                          transaction.type === 'gain'
+                            ? 'text-green-400'
+                            : 'text-red-400'
+                        }`}
+                    >
+                      {transaction.type === 'gain' ? '+' : '-'}
+                      {displayCurrency}
+                      {transaction.amount}
+                    </span>
+
                   </div>
                 </div>
               ))}
+
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p>{t('modal.noTransactions')}</p> {/* <-- use nested key */}
+
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 flex items-center justify-center rounded-full bg-gray-800/60 border border-gray-700 mb-4">
+                <svg
+                  className="w-8 h-8 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
+                </svg>
+              </div>
+
+              <p className="text-gray-400 text-sm font-medium">
+                {t('modal.noTransactions')}
+              </p>
+
+              <p className="text-gray-500 text-xs mt-1">
+                {t('modal.addTransactionsHint')}
+              </p>
+
             </div>
+
           )}
         </div>
       </div>

@@ -243,6 +243,8 @@
     "lossesVsPrev": "Расходы по сравнению с прошлым месяцем:",
     "noGainsFallback": "у вас пока нет доходов",
     "noCategoryData": "Данные по категориям отсутствуют",
+    "noChartData": "Данные для графиков отсутствуют",
+    "noExpenseChart": "График расходов отсутствует",
     "addTransactionsToSeeStats": "Добавьте транзакции, чтобы увидеть статистику",
     "categoriesHeading": "Категории",
     "noCategories": "Нет категорий для отображения",

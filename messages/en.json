@@ -243,6 +243,8 @@
     "lossesVsPrev": "Losses vs prev month:",
     "noGainsFallback": "you have no gains(",
     "noCategoryData": "No category data yet",
+    "noChartData": "No chart data yet",
+    "noExpenseChart": "No expense chart yet",
     "addTransactionsToSeeStats": "Add transactions to see statistics",
     "categoriesHeading": "Categories",
     "noCategories": "No categories to display",

@@ -69,7 +69,6 @@ export function useAuth() {
               setUser(null);
               setIsAuthenticated(false);
               if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-                console.log('first')
                 router.push('/');
               }
             }
@@ -77,7 +76,6 @@ export function useAuth() {
             setUser(null);
             setIsAuthenticated(false);
             if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-              console.log('second')
               router.push('/');
             }
           }
@@ -85,7 +83,6 @@ export function useAuth() {
           setUser(null);
           setIsAuthenticated(false);
           if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-            console.log('third')
             router.push('/');
           }
         }
@@ -93,7 +90,6 @@ export function useAuth() {
         setUser(null);
         setIsAuthenticated(false);
         if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-          console.log('four')
           router.push('/');
         }
       } finally {
