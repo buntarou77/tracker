@@ -74,7 +74,7 @@ export default function Analytics() {
     setPlanIsSending,
   } = useUI();
   const {login, setLogin} = useAuthContext();
-  const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, bankNames } = useBankTransaction();
+  const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, banks } = useBankTransaction();
 
   const [editedPlan, setEditedPlan] = useState<any>({});
   const [activeForm, setActiveForm] = useState(false);

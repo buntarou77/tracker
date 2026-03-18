@@ -3,9 +3,10 @@ import { cookies } from "next/headers";
 import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken';
 import { MongoClient, ObjectId } from "mongodb";
+import crypto from 'crypto';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
-type User {
+type User = {
     _id: ObjectId,
     password_hash: string,
     createdAt: string | Date,
@@ -50,23 +51,48 @@ export async function PATCH(request: Request){
     }
 
     const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017')
+    const session = client.startSession();
+    try{
+    await client.connect();
+    session.startTransaction()
     const db = client.db(process.env.MONGODB_DB_NAME || 'users')
+    const heashResetCode = crypto.createHash('sha256').update(resetCode).digest('hex');
+    const resetCodeFromDb = await db.collection('resetCodes').findOneAndUpdate({code: heashResetCode, userId: new ObjectId(userId), expireAt: {$gt: new Date()}}, {$set: {used: true}}, {session})
+
+    if(!resetCodeFromDb?.value){
+        await session.abortTransaction();
+        return NextResponse.json(
+            {error: 'reset code is invalid'},
+            {status: 401})
+    }
+
     const requestUser: {password_hash: string} | null = await db.collection<User>('users').findOne({_id: new ObjectId(userId)}, {projection: {password_hash: 1}});
     if (!requestUser) {
-    throw new Error("Пользователь не найден");
+    throw new Error("user is not found");
     }
     const passwordCompression = await bcryptjs.compare(newPassword, requestUser?.password_hash)
     if(passwordCompression){
+        await session.abortTransaction();
         return NextResponse.json(
             {error: 'passwords cannot be the same'},
              {status: 401})
     }
+
     const salt = await bcryptjs.genSalt(10);
     const passHash = await bcryptjs.hash(newPassword.trim(), salt);
-    await db.collection('users').updateOne({_id: new ObjectId(userId)}, {$set: {password_hash: passHash}});
+    await db.collection('users').updateOne({_id: new ObjectId(userId)}, {$set: {password_hash: passHash}}, {session});
 
+    await session.commitTransaction();
     return NextResponse.json(
         {status: 200}
     )
+    }catch(error){
+        await session.abortTransaction();
+        return NextResponse.json(
+            {error: 'server error'},
+            {status: 500}
+        )
+    }
+
 
 }

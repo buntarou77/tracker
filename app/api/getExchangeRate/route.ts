@@ -1,27 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || '';
 export async function GET(request: NextRequest) {
-  try {
+const cookieStore = cookies();
+    const token = cookieStore.get('accessToken')?.value;
+    
+    if (!token) {
+        return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 }
+        );
+    }
+
+    let userId: string;
+    try {
+        const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
+        userId = verified.id;
+    } catch (error) {
+        return NextResponse.json(
+            { error: 'Invalid token' },
+            { status: 401 }
+        );
+      }
+
     const { searchParams } = new URL(request.url);
     const baseCurrency = searchParams.get('base');
-    try {
-      const cookieHeader = cookies().toString();
-      const meRes = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/me`, {
-        method: 'GET',
-        headers: { Cookie: cookieHeader },
-        cache: 'no-store',
-      });
-      if (!meRes.ok) {
-        return NextResponse.json({ error: 'Unauthorized (me endpoint failed)' }, { status: 401 });
-      }
-    } catch (e) {
-      return NextResponse.json({ error: 'Authorization check failed' }, { status: 401 });
-    }
-    const KONVERT_TOKEN = process.env.KONVERT_TOKEN || '';
 
-    
-
-    
     if (!baseCurrency) {
       return NextResponse.json(
         { error: 'Base currency is required' }, 
@@ -29,8 +35,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+  try {
     const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/${KONVERT_TOKEN}/latest/${baseCurrency}`,
+      `https://open.er-api.com/v6/latest/${baseCurrency}`,
       {
         headers: {
           'Accept': 'application/json',

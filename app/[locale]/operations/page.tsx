@@ -23,7 +23,7 @@ export default function Operations() {
     const t = useTranslations('operations');
     const e = useTranslations('errors');
     console.log(t)
-    const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore, bankNames, analyticTransactions, setAnalyticTransactions } = useBankTransaction();
+    const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore, banks, analyticTransactions, setAnalyticTransactions } = useBankTransaction();
     const [show, setShow] = useState<boolean>(false);
     const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
     const formRef = useRef<HTMLFormElement>(null);
@@ -131,7 +131,7 @@ export default function Operations() {
           const activeBankData = Cookies.get('activeBank')
           let activeBankId 
           if(!activeBankData) {
-            activeBankId = bankNames[0].id
+            activeBankId = banks[0].id
           }else{
             activeBankId = JSON.parse(activeBankData)
           }
@@ -503,7 +503,7 @@ export default function Operations() {
                                 <div className="bg-gray-700 rounded-lg p-4">
                                     <div className="text-sm text-gray-400">{t('resultPer', { count: trans.length })}</div>
                                     <div className="text-2xl font-bold text-white">
-                                        {trans.length ? trans.reduce((sum: number, trans: transaction) => trans.type === 'loss' ? sum - trans.amount: sum + trans.amount , 0).toFixed(2) : 0} {bankNames.find((item)=>item.id === activeBank.id)?.currency}
+                                        {trans.length ? trans.reduce((sum: number, trans: transaction) => trans.type === 'loss' ? sum - trans.amount: sum + trans.amount , 0).toFixed(2) : 0} {banks.find((item)=>item.id === activeBank.id)?.currency}
                                     </div>
                                 </div>
                                 <div className="bg-gray-700 rounded-lg p-4">

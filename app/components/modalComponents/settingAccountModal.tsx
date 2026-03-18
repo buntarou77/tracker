@@ -71,7 +71,7 @@ export default function SettingsAccountModal({
           </button>
         </div>
 
-        <div className="flex h-[78%]">
+        <div className="flex h-[90%]">
           <div className="w-1/4 border-r border-gray-700 bg-black/20 h-full">
             <nav className="flex flex-col p-4 space-y-2">
               <button
@@ -263,20 +263,6 @@ export default function SettingsAccountModal({
             )}
 
           </div>
-        </div>
-
-        <div className="px-6 py-4 mt-auto h-[12%] border-t border-gray-700 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium min-h-[35px] text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition"
-          >
-            Cancel
-          </button>
-          <button
-            className="px-4 py-2 text-sm min-h-[35px] font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
-          >
-            Save Changes
-          </button>
         </div>
 
       </div>

@@ -6,7 +6,7 @@ import { useAuthContext } from './AuthContext';
 import { TransactionType } from '../types/shared/transactions';
 interface BankTransactionContextType {
   activeBank: { name: string; id: string };
-  bankNames: any[];
+  banks: any[];
   trans: any[];
   balance: number;
   currency: "USD" | "EUR" | "GBP" | "JPY" | "CHF" | "CNY" | "RUB";
@@ -19,12 +19,29 @@ interface BankTransactionContextType {
   setActiveBank: (bank: { name: string; id: string }) => void;
   setHasMore: (hasMore: boolean) => void;
   setNextCursor: (nextCursor: string | null) => void;
-  setBankNames: (bankNames: any[]) => void;
+  setBanks: (banks: any[]) => void;
   setTrans: (trans: any[]) => void;
   setBalance: (balance: number) => void;
   setCurrency: (currency: string) => void;
   setExchangeRates: (rates: any) => void;
 }
+
+interface bankData {
+  id: string,
+  userId: string,
+  name: string
+  notes: string,
+  currency: string,
+  balance: number,
+  createAt: Date | string,
+  stats: {
+    netBalance: number,
+    totalGains: number,
+    totalTransactions: number
+    totalLoss: number
+  }
+}
+
 interface bankType{
   name: string,
   balance: number,
@@ -42,7 +59,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
   const [nextCursor, setNextCursor] = useState<string>(`${new Date()}`)
   const [hasMore, setHasMore] = useState<boolean>(false)
   const [activeBank, setActiveBank] = useState({name: '', id: ''});
-  const [bankNames, setBankNames] = useState<any[]>([]);
+  const [banks, setBanks] = useState<bankData[]>([]);
   const [trans, setTrans] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState('');
@@ -53,7 +70,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
   useEffect(() => {
     async function loadBankData() {
 
-      if (login && bankNames.length === 0) {
+      if (login && banks.length === 0) {
         try {
           const response = await fetch(`/api/getBankNames`, {
             method: 'GET'
@@ -63,7 +80,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
           }
             const namesData = await response.json();
             const trueData = namesData.banks;
-            setBankNames(trueData)
+            setBanks(trueData)
             if (!trueData || trueData.length === 0) {
               return;
             }
@@ -74,11 +91,11 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     }
     
     loadBankData();
-  }, [login, bankNames.length]);
+  }, [login, banks.length]);
   
   const contextValue = useMemo(() => ({
     activeBank,
-    bankNames,
+    banks,
     trans,
     balance,
     exchangeRates,
@@ -89,13 +106,13 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     setHasMore,
     setNextCursor,
     setActiveBank,
-    setBankNames,
+    setBanks,
     setTrans,
     setBalance,
     setCurrency,
     analyticTransactions,
     setAnalyticTransactions
-  }), [activeBank, bankNames, trans, balance, currency, analyticTransactions]);
+  }), [activeBank, banks, trans, balance, currency, analyticTransactions]);
 
   return (
     <BankTransactionContext.Provider value={contextValue}>

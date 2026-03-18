@@ -1,0 +1,1 @@
+export type currencyType = "CHF" | "USD" | "EUR" | "GBP" | "JPY" | "CNY" | "RUB";

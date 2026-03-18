@@ -17,7 +17,6 @@ export function useAuth() {
   
   const router = useRouter();
   const pathname = usePathname();
-  console.log(pathname)
   const refreshTokens = async (): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/refresh', {
@@ -38,7 +37,6 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    console.log('change')
     async function loadUser() {
       try {
         const response = await fetch('/api/me', {

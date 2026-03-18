@@ -1,14 +1,16 @@
 'use client'
 import { createPortal } from 'react-dom';
 import { useUI } from '../context/UIContext';
-import EditBankModal from './../components/editBankModal'
-import SettingsAccountModal from '../components/settingAccountModal'
+import EditBankModal from './modalComponents/editBankModal'
+import SettingsAccountModal from './modalComponents/settingAccountModal'
+import TransactionModal from '@/app/components/modalComponents/showtransactionsModal'
 import { useEffect } from 'react';
 export default function ModalRoot() {
   const { modal, setModal } = useUI();
   console.log(modal)
   if (modal.type === '' || !modal) return null;
   useEffect(()=>{
+    console.log('root modal effect')
     if(modal.type !== '') document.body.style.overflow = 'hidden';
   }, [modal])
   const close = () => {
@@ -33,6 +35,9 @@ export default function ModalRoot() {
         )}
         {modal.type === 'settings' && (
           <SettingsAccountModal {...modal.payload} onClose={close}/>
+        )}
+        {modal.type === 'transactionsData' && (
+          <TransactionModal {...modal.payload} onClose={close}/>
         )}
       </div>
     </div>,

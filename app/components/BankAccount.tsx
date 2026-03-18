@@ -32,7 +32,7 @@ const BankAccount = () => {
   const [redirect, setRedirect] = useState<boolean>(false)
   const { isAccountsVisible, setIsAccountsVisible, addBankAccountForm, setAddBankAccountForm, setModal } = useUI();
   const { login, setLogin } = useAuthContext();
-  const { bankNames, setBankNames, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency, setHasMore, setNextCursor, trans } = useBankTransaction();
+  const { banks, setBanks, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency, setHasMore, setNextCursor, trans } = useBankTransaction();
   const [newAccount, setNewAccount] = useState<BankAccountType>({ name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login });
   const renders = useRef(0);
   renders.current++
@@ -58,8 +58,8 @@ const BankAccount = () => {
       setActiveBank({ name: bank.name, id: bank.id || '' })
       setBalance(bank?.balance?.toFixed(2) || 0)
       setCurrency(bank.currency || 'RUB')
-    } else if (bankNames?.length > 0) {
-      const firstBank = bankNames[0]
+    } else if (banks?.length > 0) {
+      const firstBank = banks[0]
       const balance = firstBank.balance
       changeBalance(balance)
       setActiveBank({ name: firstBank.name, id: firstBank.id })
@@ -70,7 +70,7 @@ const BankAccount = () => {
       setBalance(0)
       setCurrency('USD')
     }
-  }, [bankNames, activeBankCookies])
+  }, [banks, activeBankCookies])
 
   useEffect(() => {
     const times = setTimeout(() => {
@@ -111,7 +111,7 @@ const BankAccount = () => {
       } else {
         setTrans({})
         setIsAccountsVisible(false)
-        setBankNames([])
+        setBanks([])
         setActiveBank({ name: '', id: '' })
         setBalance(0)
         setCurrency('RUB')
@@ -130,7 +130,7 @@ const BankAccount = () => {
 
   const addBankAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (bankNames.length >= 6) {
+    if (banks.length >= 6) {
       setToManyBankAccounts(true)
     } else {
       try {
@@ -153,12 +153,12 @@ const BankAccount = () => {
                 })
               if (res.ok) {
                 const bankNames = await res.json()
-                setBankNames(bankNames.freshData)
+                setBanks(bankNames.freshData)
               } else {
                 throw 'error'
               }
             } catch (e) { }
-            setBankNames([...bankNames, newAccount])
+            setBanks([...banks, newAccount])
           } else {
             throw 'error'
           }
@@ -176,7 +176,7 @@ const BankAccount = () => {
         });
 
         if (response.ok) {
-          setBankNames(bankNames.filter(account => account.name !== accountName));
+          setBanks(banks.filter(account => account.name !== accountName));
           if (activeBank.id === accountId) {
             setActiveBank({ name: '', id: '' });
             setBalance(0);
@@ -248,8 +248,8 @@ const BankAccount = () => {
           >
             <h3 className="font-bold text-base text-white/80 mb-2 pl-1">{t('accountsHeading')}</h3>
             <ul className="mb-2">
-              {bankNames.length > 0 ? (
-                bankNames.map((account, index) => (
+              {banks.length > 0 ? (
+                banks.map((account, index) => (
                   <li
                     key={index}
                     className="flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-[#2e2e4d] transition-all duration-200 group"
@@ -347,7 +347,7 @@ const BankAccount = () => {
               </button>
             )}
             <button
-              onClick={() => { setModal({type: 'settings', payload: {login, banks: bankNames }}) }}
+              onClick={() => { setModal({type: 'settings', payload: {login, banks: banks }}) }}
               className="w-full mt-2 p-2 text-sm font-medium text-center text-white bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg flex items-center justify-center gap-2"
             >
               <div className="flex items-center">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl'; // <-- import
+import { useTranslations } from 'next-intl';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -41,24 +41,26 @@ const exchangeRateCache: Record<string, { rates: Record<string, number>; timesta
 
 const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record<string, number>, nextTimeUpdate?: string } | null> => {
   try {
+    console.log('CALLING API');
+    console.log(baseCurrency)
     const cached = exchangeRateCache[baseCurrency];
     if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) {
       return { rates: cached.rates };
     }
 
     const response = await fetch(`/api/getExchangeRate?base=${baseCurrency}`);
-    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
+
     if (data.result === 'success') {
       exchangeRateCache[baseCurrency] = {
-        rates: data.conversion_rates,
+        rates: data.rates,
         timestamp: Date.now()
       };
-      return { rates: data.conversion_rates, nextTimeUpdate: data.time_next_update_utc };
+      return { rates: data.rates, nextTimeUpdate: data.time_next_update_utc };
     } else {
       throw new Error(`API error: ${data['error-type']}`);
     }
@@ -68,13 +70,13 @@ const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record
 };
 
 export default function ConvertPage() {
-  const t = useTranslations('convert');       // UI translations
-  const err = useTranslations('convertErrors'); // Error translations
+  const t = useTranslations('convert'); 
+  const err = useTranslations('convertErrors');
 
   const { currency, balance, exchangeRates, setExchangeRates } = useBankTransaction();
   const { user } = useAuth();
 
-  const [fromCurrency, setFromCurrency] = useState('USD');
+  const [fromCurrency, setFromCurrency] = useState(currency);
   const [toCurrency, setToCurrency] = useState('EUR');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
@@ -85,7 +87,7 @@ export default function ConvertPage() {
   const [favoriteRates, setFavoriteRates] = useState<string[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [nextTimeUpdateRates, setNextTimeUpdateRates] = useState<string>('')
-  
+
   const [budgetPercentage, setBudgetPercentage] = useState(50);
   const [budgetFromCurrency, setBudgetFromCurrency] = useState(currency || 'USD');
   const [budgetToCurrency, setBudgetToCurrency] = useState('EUR');
@@ -98,7 +100,7 @@ export default function ConvertPage() {
     
     const baseCurrency = Object.keys(exchangeRates)[0];
     if (baseCurrency && exchangeRates[baseCurrency]?.[from] && exchangeRates[baseCurrency]?.[to]) {
-      return exchangeRates[baseCurrency][from] / exchangeRates[baseCurrency][to];
+      return exchangeRates[baseCurrency][to] / exchangeRates[baseCurrency][from];
     }
     
     return 0;
@@ -120,11 +122,13 @@ export default function ConvertPage() {
     if (fromCurrency && toCurrency) {
       const getRate = async () => {
         setIsLoadingRates(true);
+        
         if (exchangeRates[fromCurrency]?.[toCurrency]) {
           setExchangeRate(exchangeRates[fromCurrency][toCurrency]);
           setIsLoadingRates(false);
           return;
         }
+        
         const newExchangeRate = calculateRate(fromCurrency, toCurrency);
         if (newExchangeRate > 0) {
           setExchangeRate(newExchangeRate);
@@ -136,6 +140,7 @@ export default function ConvertPage() {
             }
           }));
         }
+        
         setLastUpdated(new Date().toLocaleString('en-US'));
         setIsLoadingRates(false);
       };
@@ -152,7 +157,7 @@ export default function ConvertPage() {
       }
     }
   }, [budgetFromCurrency, budgetToCurrency, exchangeRates]);
-  
+
   useEffect(() => {
     if (currency) {
       setBudgetFromCurrency(currency);
@@ -160,6 +165,9 @@ export default function ConvertPage() {
   }, [currency]);
 
   useEffect(() => {
+    if(!currency){
+      return 
+    }
     const preloadRates = async () => {
       if(!exchangeRates[currency]){
         const result = await fetchExchangeRates(currency);
@@ -247,6 +255,7 @@ export default function ConvertPage() {
   const getCurrentCurrencyInfo = (code: string) => {
     return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
   };
+
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { 
       minimumFractionDigits: 2,
@@ -465,7 +474,6 @@ export default function ConvertPage() {
                       } else {
                         setIsLoadingRates(true);
                         delete exchangeRateCache[fromCurrency];
-                        
                         const result = await fetchExchangeRates(fromCurrency);
                         if (result && result.rates[toCurrency]) {
                           setExchangeRate(result.rates[toCurrency]);
