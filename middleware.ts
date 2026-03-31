@@ -11,6 +11,7 @@ const publicRoutes = [
   '/api/noSql',
   '/login',
   '/register',
+  'about'
 ];
 
 const protectedRoutes = [
@@ -40,6 +41,7 @@ const protectedRoutes = [
   '/analytics',
   '/operations',
   '/profile',
+  '/'
 ];
 
 const intlMiddleware = createMiddleware(routing);

@@ -38,12 +38,12 @@ export function useAuth() {
 
   useEffect(() => {
     async function loadUser() {
+    const isPublicPath = pathname === '/login' || pathname === '/register' || pathname === '/about';
       try {
         const response = await fetch('/api/me', {
           method: 'GET',
           credentials: 'include'
         });
-        
         if (response.ok) {
           const data = await response.json();
           setUser(data);
@@ -51,13 +51,13 @@ export function useAuth() {
         } else if (response.status === 401) {
   
           const refreshSuccess = await refreshTokens();
-          
+
           if (refreshSuccess) {
             const retryResponse = await fetch('/api/me', {
               method: 'GET',
               credentials: 'include'
             });
-            
+
             if (retryResponse.ok) {
               const retryData = await retryResponse.json();
               setUser(retryData);
@@ -66,30 +66,22 @@ export function useAuth() {
             } else {
               setUser(null);
               setIsAuthenticated(false);
-              if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-                router.push('/');
-              }
+              if(!isPublicPath) router.push('/login');
             }
           } else {
             setUser(null);
             setIsAuthenticated(false);
-            if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-              router.push('/');
-            }
+            if(!isPublicPath) router.push('/login');
           }
         } else {
           setUser(null);
           setIsAuthenticated(false);
-          if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-            router.push('/');
-          }
+          if(!isPublicPath) router.push('/login');
         }
       } catch (error) {
         setUser(null);
         setIsAuthenticated(false);
-        if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-          router.push('/');
-        }
+        if(!isPublicPath) router.push('/login');
       } finally {
         setIsLoading(false);
       }
