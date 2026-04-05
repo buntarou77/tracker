@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { useAuth } from '../../hooks/useAuth';
+import { sendEvent } from '../../services/broadcastChannel';
 
 interface ExchangeRate {
   from: string;
@@ -132,13 +133,15 @@ export default function ConvertPage() {
         const newExchangeRate = calculateRate(fromCurrency, toCurrency);
         if (newExchangeRate > 0) {
           setExchangeRate(newExchangeRate);
-          setExchangeRates((prev: any) => ({
-            ...prev,
+          const updatedRates = {
+            ...exchangeRates,
             [fromCurrency]: {
-              ...prev[fromCurrency],
+              ...exchangeRates[fromCurrency],
               [toCurrency]: newExchangeRate
             }
-          }));
+          };
+          setExchangeRates(updatedRates);
+          sendEvent({ type: 'SYNC_EXCHANGE_RATES', payload: updatedRates });
         }
         
         setLastUpdated(new Date().toLocaleString('en-US'));
@@ -172,10 +175,12 @@ export default function ConvertPage() {
       if(!exchangeRates[currency]){
         const result = await fetchExchangeRates(currency);
         if (result) {
-          setExchangeRates((prev: any) => ({
-            ...prev,
+          const updatedRates = {
+            ...exchangeRates,
             [currency]: result.rates
-          }));
+          };
+          setExchangeRates(updatedRates);
+          sendEvent({ type: 'SYNC_EXCHANGE_RATES', payload: updatedRates });
           setNextTimeUpdateRates(result.nextTimeUpdate || '')
         }
       }
@@ -477,10 +482,12 @@ export default function ConvertPage() {
                         const result = await fetchExchangeRates(fromCurrency);
                         if (result && result.rates[toCurrency]) {
                           setExchangeRate(result.rates[toCurrency]);
-                          setExchangeRates((prev: any) => ({
-                            ...prev,
+                          const updatedRates = {
+                            ...exchangeRates,
                             [fromCurrency]: result.rates
-                          }));
+                          };
+                          setExchangeRates(updatedRates);
+                          sendEvent({ type: 'SYNC_EXCHANGE_RATES', payload: updatedRates });
                           setLastUpdated(new Date().toLocaleString('en-US'));
                           if (result.nextTimeUpdate) {
                             setNextTimeUpdateRates(result.nextTimeUpdate);

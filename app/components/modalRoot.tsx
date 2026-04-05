@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 export default function ModalRoot() {
   const { modal, setModal } = useUI();
   console.log(modal)
-  if (modal.type === '' || !modal) return null;
+  if (modal?.type === '' || !modal) return null;
   useEffect(()=>{
     console.log('root modal effect')
     if(modal.type !== '') document.body.style.overflow = 'hidden';

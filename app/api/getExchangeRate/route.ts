@@ -41,8 +41,7 @@ const cookieStore = cookies();
       {
         headers: {
           'Accept': 'application/json',
-        },
-        next: { revalidate: 600 }
+        }
       }
     );
     

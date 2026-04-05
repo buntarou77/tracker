@@ -8,7 +8,6 @@ import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
 import { useAuthContext } from '../context/AuthContext';
 import { useTranslations } from 'next-intl';
-
 export default function RegisterForm() {
   const t = useTranslations('register');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,8 +50,6 @@ export default function RegisterForm() {
       const result = await response.json();
       
       if (!response.ok) {
-        // If server returns a custom error message, display it directly,
-        // otherwise use the translation key.
         setError(result.error || 'errorRegistrationError');
         return;
       }
@@ -97,7 +94,6 @@ export default function RegisterForm() {
 
       {error && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center backdrop-blur-sm">
-          {/* If error is a translation key, translate it; otherwise display raw server message */}
           {t.has(error) ? t(error) : error}
         </div>
       )}

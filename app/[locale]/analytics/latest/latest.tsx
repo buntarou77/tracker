@@ -1,6 +1,6 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
-import { useState, useEffect, memo } from 'react'; // removed useTransition as not used
+import { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { filtredCategorys } from '../../../utils/filtredTrans';
@@ -13,10 +13,11 @@ import { usePlan } from '@/app/context/PlanContext';
 import { useAuthContext } from '@/app/context/AuthContext';
 import { useError } from '@/app/context/ErrorContext';
 import { getCurrencySymbol } from '@/app/lib/symbols';
-import getMonthName from '@/app/utils/getMonthName'; // This will still return English; consider replacing with t.raw('monthNames') later
+import getMonthName from '@/app/utils/getMonthName';
 import { TransactionType } from '@/app/types/shared/transactions';
-import { useTranslations } from 'next-intl'; // <-- import
-import { useUI } from '@/app/context/UIContext'
+import { useTranslations } from 'next-intl';
+import { useUI } from '@/app/context/UIContext';
+import { sendEvent } from '@/app/services/broadcastChannel';
 
 ChartJS.register(
   CategoryScale,
@@ -31,8 +32,8 @@ ChartJS.register(
 );
 
 export default memo(function LastsAnalytics() {
-  const t = useTranslations('lastsAnalytics');      // <-- main UI translations
-  const err = useTranslations('lastsAnalyticsErrors'); // <-- error translations
+  const t = useTranslations('lastsAnalytics');
+  const err = useTranslations('lastsAnalyticsErrors');
   
   const {setModal} = useUI();
   const { analyticTransactions, setAnalyticTransactions, activeBank, banks, trans } = useBankTransaction();
@@ -75,8 +76,12 @@ export default memo(function LastsAnalytics() {
     const isMonthTransactionsOperations = trans.some((item)=> new Date(item.date) < startDate)
     const key = `${startDate.getFullYear()}-${endDate.getMonth() + 1}`
     if(isMonthTransactionsOperations){
-      setAnalyticTransactions((prev: Record<string, TransactionType[]>)=> ({...prev, [key]: trans.filter(item=> new Date(item.date) > startDate && new Date(item.date) < endDate)}))
-      return
+      const filteredData = trans.filter(item=> new Date(item.date) > startDate && new Date(item.date) < endDate);
+      const nextAnalytics = { ...analyticTransactions, [key]: filteredData };
+      setAnalyticTransactions(nextAnalytics);
+      sendEvent({ type: 'SYNC_ANALYTICS', payload: nextAnalytics });
+      setIsLoadingMonth(false);
+      return;
     }
     try {
       const response = await fetch(
@@ -86,36 +91,36 @@ export default memo(function LastsAnalytics() {
       if (!response.ok) {
         addError({
           theme: 'redDark',
-          name: err('loadErrorTitle'),               // <-- translated
-          desc: err('loadErrorDesc'),                 // <-- translated
+          name: err('loadErrorTitle'),
+          desc: err('loadErrorDesc'),
           stateChangeFunc: () => { },
           interactiveFunc: () => loadMonth(offset),
-          interactiveName: err('retry')               // <-- translated
+          interactiveName: err('retry')
         });
         return;
       }
 
       const data = await response.json();
-      setAnalyticTransactions((prev: Record<string, any[]>)=> {
-        return {...prev, [key]: data.data}
+      setAnalyticTransactions((prev: Record<string, any[]>) => {
+        const updated = { ...prev, [key]: data.data };
+        queueMicrotask(() =>
+          sendEvent({ type: 'SYNC_ANALYTICS', payload: updated })
+        );
+        return updated;
       });
     } catch (error) {
       addError({
         theme: 'redDark',
-        name: err('networkErrorTitle'),               // <-- translated
-        desc: err('networkErrorDesc'),                 // <-- translated
+        name: err('networkErrorTitle'),
+        desc: err('networkErrorDesc'),
         stateChangeFunc: () => { },
         interactiveFunc: () => loadMonth(offset),
-        interactiveName: err('retry')                  // <-- translated
+        interactiveName: err('retry')
       });
     } finally {
       setIsLoadingMonth(false);
     }
   };
-
-  // ... (rest of the data fetching functions remain unchanged)
-
-  useEffect(()=>{console.log('modalOpen')}, [modalOpen])
 
   const getMonthTransactions = (year: number, month: number): TransactionType[] =>
     analyticTransactions[`${year}-${month}`] || [];
@@ -152,7 +157,7 @@ export default memo(function LastsAnalytics() {
     setEndBudget(startBudgetValue + monthResult);
     setMonthRes(monthResult);
 
-    setPeriodInfo({year: year.toString(), month: getMonthName(month - 1)}); // getMonthName returns English; could be replaced with t.raw('monthNames')[month-1]
+    setPeriodInfo({year: year.toString(), month: getMonthName(month - 1)});
   };
 
   const loadActivePlan = () => {
@@ -163,6 +168,7 @@ export default memo(function LastsAnalytics() {
     try {
       if (!plans || plans.length === 0) {
         setActiveMonthPlan(null);
+        sendEvent({ type: 'SYNC_ACTIVE_MONTH_PLAN', payload: null });
         return;
       }
 
@@ -177,9 +183,11 @@ export default memo(function LastsAnalytics() {
 
       const active = activePlanId ? plans.find((plan: any) => plan.id === activePlanId) : null;
       setActiveMonthPlan(active || null);
+      sendEvent({ type: 'SYNC_ACTIVE_MONTH_PLAN', payload: active || null });
 
     } catch (error) {
       setActiveMonthPlan(null);
+      sendEvent({ type: 'SYNC_ACTIVE_MONTH_PLAN', payload: null });
     } finally {
       setIsLoadingPlan(false);
     }
@@ -197,7 +205,7 @@ export default memo(function LastsAnalytics() {
 
   useEffect(() => {
     if (periodInfo.month === '') {
-      setPeriodInfo({year: new Date().getFullYear().toString(), month: getMonth(new Date().getMonth()) || ''}); // getMonth returns English
+      setPeriodInfo({year: new Date().getFullYear().toString(), month: getMonth(new Date().getMonth()) || ''});
     }
   }, []);
 
@@ -266,14 +274,11 @@ export default memo(function LastsAnalytics() {
 
   const showCategoryTransactions = (categoryName: string): void => {
     const categoryTrans = filteredTrans.filter((t: any) => t.category === categoryName);
-    console.log(1)
-    console.log(categoryName)
     setModal({type: 'transactionsData', payload: {transactions: categoryTrans, modalTitle: categoryName}});
   };
 
   const showTypeTransactions = (type: string): void => {
     const typeTrans = type === 'gains' ? filteredGainTrans : filteredLossTrans;
-    console.log(2)
     setModal({type: 'transactionsData', payload: {transactions: typeTrans, modalTitle: type === 'gains' ? 'Gains' : 'Losses'}});
   };
 
@@ -339,7 +344,7 @@ export default memo(function LastsAnalytics() {
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
-            <img className='w-[40px] h-[40px]' src={leftArrow.src} alt={t('loading')} /> {/* alt translated */}
+            <img className='w-[40px] h-[40px]' src={leftArrow.src} alt={t('loading')} />
           </button>
           <div className='flex flex-col items-center'>
             <div>
@@ -358,7 +363,7 @@ export default memo(function LastsAnalytics() {
             className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
             disabled={isLoadingMonth}
           >
-            <img src={rigthArrow.src} alt={t('loading')} /> {/* alt translated */}
+            <img src={rigthArrow.src} alt={t('loading')} />
           </button>
         </div>
       </div>
@@ -667,7 +672,7 @@ export default memo(function LastsAnalytics() {
               >
                 <div className='flex items-center justify-between'>
                   <span className='font-semibold'>{t('gainsButton')}</span>
-                  <span className='text-emerald-100'>{filteredGainTrans.length} {t('transactionsCount')?.split(' ')[0]}</span> {/* quick fix: just show number, but better to have a separate key */}
+                  <span className='text-emerald-100'>{filteredGainTrans.length} {t('transactionsCount')?.split(' ')[0]}</span>
                 </div>
                 <div className='text-emerald-200 text-sm mt-1'>{totalGains}{displayCurrency}</div>
               </button>

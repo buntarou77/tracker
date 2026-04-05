@@ -4,7 +4,7 @@ function getChannel() {
   if (typeof window === "undefined") return null;
 
   if (!channel) {
-    channel = new BroadcastChannel("app_channel");
+    channel = new BroadcastChannel("app");
   }
 
   return channel;

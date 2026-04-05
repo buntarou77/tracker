@@ -1,9 +1,8 @@
 import { TransactionType } from '../types/shared/transactions';
 import { useBankTransaction } from '../context/BankTransactionContext';
 import { usePlan } from '../context/PlanContext';
-import { useAuth } from '../hooks/useAuth';
-import { useUI } from '../context/UIContext';
 import logout from '../services/logout';
+import { useAuthContext } from '../context/AuthContext';
 export default function broadcastEventBus(
   event: { type: string; payload: any }
 ) {
@@ -36,6 +35,7 @@ export default function broadcastEventBus(
     setStoragePlans,
   } = usePlan();
 
+  const { setLogin } = useAuthContext();
   switch (event.type) {
     case 'ADD_TRANSACTION': {
       const newTransaction: TransactionType = event.payload;
@@ -407,8 +407,51 @@ export default function broadcastEventBus(
 
       break;
     }
+
+    case 'SYNC_STORAGE_PLANS': {
+      setStoragePlans(event.payload);
+      break;
+    }
+
+    case 'SYNC_ANALYTICS': {
+      setAnalyticTransactions(event.payload);
+      break;
+    }
+
+    case 'SYNC_ACTIVE_MONTH_PLAN': {
+      const p = event.payload;
+      if (p == null) {
+        setActiveMonthPlan(null);
+        break;
+      }
+      if (typeof p === 'object') {
+        setActiveMonthPlan(p);
+        const freq = (p as { frequency?: string }).frequency;
+        if (freq && activePlansStatus[freq as keyof typeof activePlansStatus]) {
+          setActivePlansStatus({
+            ...activePlansStatus,
+            [freq]: {
+              status: true,
+              id: (p as { _id?: string; id?: string })._id || (p as { id?: string }).id,
+            },
+          });
+        }
+      }
+      break;
+    }
+
+    case 'SYNC_EXCHANGE_RATES': {
+      setExchangeRates(event.payload);
+      break;
+    }
+
     case 'LOGOUT':{
       logout();
+      break;
+    }
+    case 'LOGIN': {
+      const login = event.payload.login;
+      setLogin(login);
       break;
     }
 

@@ -7,6 +7,7 @@ import React, {  useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
 import { useAuthContext } from '../context/AuthContext';
+import { sendEvent } from '../services/broadcastChannel';
 
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -101,6 +102,7 @@ export default function RegisterForm() {
         Cookies.set(`bank_account_${result.user.user}`, '0')
         setLogin(result.user.user as string)
         setSucces("Login successful");
+        sendEvent({ type: 'LOGIN', payload: { login: result.user.user } });
       } else {
         setError('Login error');
       }

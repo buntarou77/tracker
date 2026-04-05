@@ -8,6 +8,7 @@ import { TransactionType } from '../../types/shared/transactions'
 import Cookies from 'js-cookie';
 import BankAccount from '../../components/BankAccount';
 import { useTranslations } from 'next-intl';
+import { sendEvent } from '../../services/broadcastChannel';
 
 interface transaction {
     amount: number, 
@@ -22,7 +23,6 @@ interface transaction {
 export default function Operations() {
     const t = useTranslations('operations');
     const e = useTranslations('errors');
-    console.log(t)
     const { trans, setTrans, balance, setBalance, activeBank, currency, hasMore, nextCursor, setNextCursor, setHasMore, banks, analyticTransactions, setAnalyticTransactions } = useBankTransaction();
     const [show, setShow] = useState<boolean>(false);
     const [shouldAnimate, setShouldAnimate] = useState<boolean>(false);
@@ -90,11 +90,15 @@ export default function Operations() {
                 const data = await response.json();
                 const singleTransaction = data.data;
                 setTrans(prev => [...prev, singleTransaction]);
+                
+                sendEvent({ type: 'ADD_TRANSACTION', payload: singleTransaction });
+
                 const analyticKey = `${new Date(singleTransaction.date).getFullYear()}-${new Date(singleTransaction.date).getMonth() + 1}`;
                 setAnalyticTransactions(prev=> ({
                     ...prev,
                     [analyticKey]: [...(prev[analyticKey] || []), singleTransaction]
                 }));
+
                 addError({
                     theme: 'greenDark',
                     name: e('success.name'),
@@ -140,6 +144,8 @@ export default function Operations() {
             if(res.data.length > 0){
                 setTrans(res.data)
                 setNextCursor(res.cursor)
+                // Send event for transactions sync from cache
+                sendEvent({ type: 'SYNC_TRANSACTIONS', payload: res.data });
             }else{
                 setCanUseCachedTransactions(res.data.length < 20)
             }
@@ -154,6 +160,8 @@ export default function Operations() {
             setTrans(responseData.data);
             setHasMore(responseData.meta.hasMore)
             setNextCursor(responseData.meta.cursor)
+            // Send event for transactions sync from API
+            sendEvent({ type: 'SYNC_TRANSACTIONS', payload: responseData.data });
           }
         }
         getTrans()
@@ -220,13 +228,15 @@ export default function Operations() {
                 body: data
             });
             if(response.ok){
-                if(type === 'loss'){
-                    setBalance(Number(balance) + Number(amount));
-                } else {
-                    setBalance(Number(balance) - Number(amount));
-                }
+                const newBalance = type === 'loss' 
+                  ? Number(balance) + Number(amount)
+                  : Number(balance) - Number(amount);
+                  
+                setBalance(newBalance);
 
                 setTrans(prev => prev.filter(trans => trans.id !== id));
+                
+                sendEvent({ type: 'DELETE_TRANSACTION', payload: id });
 
                 addError({
                     theme: 'greenDark',
@@ -246,7 +256,7 @@ export default function Operations() {
                     interactiveName: e('deleteError.interactiveName')
                 });
             }
-        } catch(e) {
+        } catch(error) {
             addError({
                 theme: 'redDark',
                 name: e('deleteNetworkError.name'),
@@ -281,10 +291,14 @@ export default function Operations() {
 
             if (response.ok) {
                 const data = await response.json();
-                setTrans([...trans, ...data.data]);
+                const updatedTransactions = [...trans, ...data.data];
+                setTrans(updatedTransactions);
                 setMonthSkip(nextSkip);
                 setHasMore(data.meta.hasMore)
                 setNextCursor(data.meta.cursor)
+                
+                // Send event for transactions sync
+                sendEvent({ type: 'SYNC_TRANSACTIONS', payload: updatedTransactions });
             } else {
                 addError({
                     theme: 'redDark',

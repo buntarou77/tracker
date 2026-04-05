@@ -15,6 +15,7 @@ import { usePlan } from '../../context/PlanContext';
 import { useUI } from '../../context/UIContext';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { useAuthContext } from '../../context/AuthContext';
+import { sendEvent } from '../../services/broadcastChannel';
 import Cookies from 'js-cookie';
 import LastsAnalitycs from './latest/latest';
 import InfoSvg from '../../../public/info-icon.svg';
@@ -119,12 +120,15 @@ export default function Analytics() {
       if (!activePlans.includes(planId)) {
         activePlans.push(planId);
         setStoragePlans([...storagePlans, planId]);
+        sendEvent({ type: 'SYNC_STORAGE_PLANS', payload: [...storagePlans, planId] });
       }
     } else {
       const index = activePlans.indexOf(planId);
       if (index > -1) {
         activePlans.splice(index, 1);
-        setStoragePlans(storagePlans.filter((id: number) => id !== planId));
+        const updated = storagePlans.filter((id: number) => id !== planId);
+        setStoragePlans(updated);
+        sendEvent({ type: 'SYNC_STORAGE_PLANS', payload: updated });
       }
     }
     localStorage.setItem('activePlans', JSON.stringify(activePlans));
@@ -136,13 +140,16 @@ export default function Analytics() {
       alert(e('error'));
       return 
     }
-    setActivePlansStatus((prev: ActivePlansStatus) => ({
-      ...prev,
+    const updated = {
+      ...activePlansStatus,
       [frequency]: {
         status: isChecked,
         id: isChecked ? itemId : 0
       }
-    }));
+    };
+    setActivePlansStatus(updated);
+    sendEvent({ type: 'SYNC_ACTIVE_PLANS_STATUS', payload: updated });
+    
     changeActivePlan(itemId, isChecked);
     let activePlansIds = JSON.parse(localStorage.getItem('activePlanIds') ?? '[]')
     activePlansIds = [...activePlansIds, itemId]
@@ -168,12 +175,14 @@ export default function Analytics() {
       return
     }else if(Number(totalAmount) === 0){
       alert(e('enterTotalAmount'));
+      setLoadingSending(false)
       return 
     }else if(isNaN(Number(totalAmount))){
       alert(e('totalAmountNumber'));
+      setLoadingSending(false)
       return 
     }
-    const newPlan = {
+    const newPlanData = {
       frequency,
       categorys: editedPlan.categorys || [],
       currency: newBankCurrency,
@@ -184,26 +193,39 @@ export default function Analytics() {
       date,
       notes,
     };
+    try {
       const request = await fetch('api/addPlan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(newPlan)
+        body: JSON.stringify(newPlanData)
       })
       if(!request.ok) throw new Error(e('failedToAddPlan'))
       const data = await request.json()
+      
+      const updatedPlans = [...plans, data.plan];
+      setPlans(updatedPlans);
+      sendEvent({ type: 'ADD_PLAN', payload: data.plan });
+      
       setPlanIsSending(true)
       setLoadingSending(false)
       setActiveForm(false)
       setNewBankCurrnecy("")
       setEditedPlan({})
-      setPlans(prev=> [...prev, data.plan])
+      setPlanName('');
+      setTotalAmount('');
+      setNotes('');
+      setFrequency('once');
+    } catch (error) {
+      setLoadingSending(false)
+    }
   }
 
   const handleChange = (field: string, value: any)=>{
     setNewPlan({...newPlan, [field]: value})
   }
+  
   const delPlan = async (id: number) => {
     try{
       const res = await fetch(`api/deletePlan?planId=${id}`, {
@@ -212,7 +234,9 @@ export default function Analytics() {
       })
       if(res.ok){
         setActivePlanWindow(false)
-        setPlans(prev=>prev.filter(item=> item.id !== id))
+        const updatedPlans = plans.filter(item=> item.id !== id);
+        setPlans(updatedPlans);
+        sendEvent({ type: 'DELETE_PLAN', payload: id });
       }
     }catch(e){
     }
@@ -224,40 +248,47 @@ export default function Analytics() {
       const res = await fetch(`api/rewritePlan?login=${login}&id=${id}`, {
         method: 'POST',
          body: JSON.stringify(newPlan)}
-    )
-    if(res.ok){
-      setPlans((prev: any[]) => prev.map((item: any) => item.id === id ? newPlan : item))
-      setActivePlan(newPlan)
-    }else{
-    }
+      )
+      if(res.ok){
+        const updatedPlans = plans.map((item: any) => item.id === id ? newPlan : item);
+        setPlans(updatedPlans);
+        sendEvent({ type: 'UPDATE_PLAN', payload: newPlan });
+        setActivePlan(newPlan)
+      }else{
+      }
     }catch(e){
     }
     setEditPlanStatus(false);
   };
+  
   const addCateghoryButton = (e: React.MouseEvent) => {
     e.preventDefault();
     setActiveCateghoryForm((m) => !m);
   };
+  
   const removeCategory = (e: React.MouseEvent, id: number)=>{
     e.preventDefault()
-    setEditedPlan((prev: any) => ({
-      ...prev, 
-      categorys: prev.categorys?.filter((item: any) => item.id !== id) || []  
-    }))
+    const updated = {
+      ...editedPlan, 
+      categorys: editedPlan.categorys?.filter((item: any) => item.id !== id) || []  
+    };
+    setEditedPlan(updated);
   }
 
   const removeTarget = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
     e.preventDefault();
-    setEditedPlan((prev: any) => ({
-      ...prev,                                                 
-      targets: prev.targets?.filter((item: any) => item.id !== id) || [] 
-    }))
+    const updated = {
+      ...editedPlan,                                                 
+      targets: editedPlan.targets?.filter((item: any) => item.id !== id) || [] 
+    };
+    setEditedPlan(updated);
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setActiveForm(false);
   };
+  
   useEffect(() => {
     setTimeout(() => {
       setPlanIsSending(false)
@@ -275,11 +306,15 @@ export default function Analytics() {
       amount: Number(amount),
       id: Date.now()
     }
-    setEditedPlan((prev: any) => ({
-      ...prev,
-      categorys: [...(prev.categorys || []), newCategory]
-    }))
+    const updated = {
+      ...editedPlan,
+      categorys: [...(editedPlan.categorys || []), newCategory]
+    };
+    setEditedPlan(updated);
+    setAmount('');
+    setCategory('food');
   }
+  
   const addTargetToEditedPlan = (e: React.MouseEvent) => {
     e.preventDefault()
     if (!target.trim() || Number(targetAmount) <= 0) {
@@ -295,22 +330,23 @@ export default function Analytics() {
       amount: Number(targetAmount),
       id: Date.now()
     }
-    setEditedPlan((prev: any) => ({
-      ...prev,
-      targets: [...(prev.targets || []), newTarget]
-    }))
-
+    const updated = {
+      ...editedPlan,
+      targets: [...(editedPlan.targets || []), newTarget]
+    };
+    setEditedPlan(updated);
     setTarget('')
     setTargetAmount('')
     setActiveAddTargetForm(false)
   }
+  
   useEffect(()=>{
-  if(doublePlansError){
-  const time = setTimeout(()=>{
-  setDoublePlansError(false)
-  return ()=> clearTimeout(time)
-  }, 50000)
-  }
+    if(doublePlansError){
+      const time = setTimeout(()=>{
+        setDoublePlansError(false)
+        return ()=> clearTimeout(time)
+      }, 50000)
+    }
   }, [doublePlansError])
   
   if (error) return <div className="text-red-500 text-center p-4">{e('error')}</div>;
@@ -335,18 +371,14 @@ export default function Analytics() {
       amount: targetAmount,
       id: Date.now()
     };
-    setEditedPlan(prev => ({...prev, targets: [...(prev.targets || []), newTarget]}));
+    const updated = {
+      ...editedPlan,
+      targets: [...(editedPlan.targets || []), newTarget]
+    };
+    setEditedPlan(updated);
     setTarget('');
     setTargetAmount('');
   };
-  
-  // if(!canShowAnalytics) { 
-  //   return (
-  //     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-  //   <div className="text-center text-white text-2xl font-bold">{t('noPlansFound')}</div>
-  //     </div>
-  //   )
-  // }  
 
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">

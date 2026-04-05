@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl'; // <-- import
+import { useTranslations } from 'next-intl';
 import { useAuthContext } from '../../context/AuthContext';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { usePlan } from '../../context/PlanContext';
 import { useAuth } from '../../hooks/useAuth';
+import { sendEvent } from '../../services/broadcastChannel';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -55,8 +56,8 @@ interface Plan {
 }
 
 export default function BudgetPage() {
-  const t = useTranslations('budget');           // UI translations
-  const err = useTranslations('budgetErrors');   // error translations
+  const t = useTranslations('budget');
+  const err = useTranslations('budgetErrors');
 
   const { login } = useAuthContext();
   const { trans, activeBank, currency, balance, setTrans } = useBankTransaction();
@@ -252,6 +253,11 @@ export default function BudgetPage() {
         throw new Error('Failed to record expense');
       }
 
+      const expenseData = await expenseResponse.json();
+      
+      // Send event for transaction addition
+      sendEvent({ type: 'ADD_TRANSACTION', payload: expenseData.transaction });
+
       const updatedPlan = {
         ...activePlan,
         targets: activePlan?.targets?.filter((target: Target) => target.id !== targetId)
@@ -273,21 +279,26 @@ export default function BudgetPage() {
             : plan
         );
         setPlans(updatedPlans);
+        // Send event for plan update
+        sendEvent({ type: 'UPDATE_PLAN', payload: updatedPlan });
         
         if (activePlan?.id === planId) {
           setActivePlan(updatedPlan as Plan);
         }
+
         console.log('getTrans', {component: 'app/bankTransactionsContext/278'})
         const newTrans = await fetch(`/api/getTrans?bankId=${activeBank.id}`);
         if (newTrans.ok) {
           const transData = await newTrans.json();
           setTrans(transData.value);
+          // Send event for transactions sync
+          sendEvent({ type: 'SYNC_TRANSACTIONS', payload: transData.value });
         }
       } else {
         throw new Error('Failed to update plan');
       }
     } catch (error) {
-      alert(err('claimFailed')); // <-- translated error
+      alert(err('claimFailed'));
     } finally {
       setClaimingTarget(null);
     }
@@ -326,7 +337,11 @@ export default function BudgetPage() {
             {plans.map((plan: any) => (
               <div 
                 key={plan.id}
-                onClick={() => setActivePlan(plan)}
+                onClick={() => {
+                  setActivePlan(plan);
+                  // Send event for plan selection change
+                  sendEvent({ type: 'CHANGE_ACTIVE_MONTH_PLAN', payload: plan.id });
+                }}
                 className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ${
                   activePlan?.id === plan.id 
                     ? 'bg-blue-600 border-2 border-blue-400' 

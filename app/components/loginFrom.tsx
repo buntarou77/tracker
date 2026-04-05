@@ -8,6 +8,7 @@ import Cookies from 'js-cookie';
 import deleteCookiesStartingWith from '../utils/delCookies'
 import { useAuthContext } from '../context/AuthContext';
 import { useTranslations } from 'next-intl';
+import { sendEvent } from '../services/broadcastChannel';
 
 export default function LoginForm() {
   const t = useTranslations('login');
@@ -49,6 +50,7 @@ export default function LoginForm() {
         Cookies.set(`bank_account_${result.user.user}`, '0')
         setLogin(result.user.user as string)
         setSuccess(true);
+        sendEvent({ type: 'LOGIN', payload: { login: result.user.user } });
       } else {
         setError('errorLogin');
       }
