@@ -10,7 +10,11 @@ interface UIContextType {
   isBankAccountMissing: boolean;
   isAccountsVisible: boolean;
   addBankAccountForm: boolean;
+  modal: { type: string; payload: any };
+  authLoading: boolean;
 
+  setAuthLoading: (authLoading: boolean) => void
+  setModal: (modal: { type: string; payload: any }) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setLoadingSending: (loading: boolean) => void;
@@ -29,8 +33,11 @@ interface UIProviderProps {
 export function UIProvider({ children }: UIProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [modal, setModal] = useState<{ type: string; payload: any }>({type: '', payload: null});
   const [loadingSending, setLoadingSending] = useState(false);
+  
   const [isBankAccountMissing, setIsBankAccountMissing] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false)
   const [planIsSending, setPlanIsSending] = useState(false);
   const [isAccountsVisible, setIsAccountsVisible] = useState(false);
   const [addBankAccountForm, setAddBankAccountForm] = useState(false);
@@ -43,7 +50,11 @@ export function UIProvider({ children }: UIProviderProps) {
     isBankAccountMissing,
     addBankAccountForm,
     isAccountsVisible,
+    modal,
+    authLoading,
 
+    setAuthLoading,
+    setModal,
     setIsLoading,
     setError,
     setIsAccountsVisible,
@@ -51,7 +62,7 @@ export function UIProvider({ children }: UIProviderProps) {
     setLoadingSending,
     setIsBankAccountMissing,
     setPlanIsSending,
-  }), [isLoading, error, loadingSending, planIsSending, isBankAccountMissing, addBankAccountForm, isAccountsVisible]);
+  }), [isLoading, error, loadingSending, planIsSending, isBankAccountMissing, addBankAccountForm, isAccountsVisible, modal, authLoading, setAuthLoading]);
 
   return (
     <UIContext.Provider value={contextValue}>

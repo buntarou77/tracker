@@ -6,13 +6,15 @@ import SettingsAccountModal from './modalComponents/settingAccountModal'
 import TransactionModal from '@/app/components/modalComponents/showtransactionsModal'
 import { useEffect } from 'react';
 export default function ModalRoot() {
-  const { modal, setModal } = useUI();
-  console.log(modal)
-  if (modal?.type === '' || !modal) return null;
+  console.log('modalRoot')
+  const { modal, setModal } = useUI(); 
+  console.log('modalRoot', modal)
   useEffect(()=>{
     console.log('root modal effect')
     if(modal.type !== '') document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'auto';
   }, [modal])
+  if (modal?.type === '' || !modal) return null;
   const close = () => {
     setModal({type: '', payload: null})
     document.body.style.overflow = 'auto';

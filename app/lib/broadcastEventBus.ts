@@ -1,11 +1,10 @@
 import { TransactionType } from '../types/shared/transactions';
-import { useBankTransaction } from '../context/BankTransactionContext';
-import { usePlan } from '../context/PlanContext';
 import logout from '../services/logout';
-import { useAuthContext } from '../context/AuthContext';
 export default function broadcastEventBus(
-  event: { type: string; payload: any }
+  event: { type: string; payload: any },
+  context: { bankTransactionContext: any, planContext: any, authContext: any }
 ) {
+  console.log('err')
   const {
     trans,
     setTrans,
@@ -20,8 +19,9 @@ export default function broadcastEventBus(
     setExchangeRates,
     currency,
     setCurrency,
-  } = useBankTransaction();
+  } = context.bankTransactionContext;
 
+  console.log('err2')
   const {
     plans,
     setPlans,
@@ -33,9 +33,9 @@ export default function broadcastEventBus(
     setActivePlansStatus,
     storagePlans,
     setStoragePlans,
-  } = usePlan();
+  } = context.planContext;
 
-  const { setLogin } = useAuthContext();
+  const { setLogin } = context.authContext;
   switch (event.type) {
     case 'ADD_TRANSACTION': {
       const newTransaction: TransactionType = event.payload;
@@ -97,13 +97,13 @@ export default function broadcastEventBus(
     case 'DELETE_TRANSACTION': {
       const transactionId: string = event.payload;
 
-      const transactionToDelete = trans.find(t => t.id === transactionId);
+      const transactionToDelete = trans.find((t: TransactionType) => t.id === Number(transactionId));
 
       if (!transactionToDelete) {
         break;
       }
 
-      const updatedTrans = trans.filter(t => t.id !== transactionId);
+      const updatedTrans = trans.filter((t: TransactionType) => t.id !== Number(transactionId));
       setTrans(updatedTrans);
 
       const newBalance =

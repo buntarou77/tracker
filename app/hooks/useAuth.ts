@@ -2,19 +2,20 @@
 
 import { use, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-
+import Cookies from 'js-cookie';
 interface User {
   id: number;
   login: string;
   email: string;
 }
 
-export function useAuth() {
+export function useAuth(loadingFunc: any = null ) {
+  console.log('call')
+  if(loadingFunc)loadingFunc(true)
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState<{username: string, email: string, lastPasswordChange: Date, id: string}>({username: '', email: '', lastPasswordChange: new Date(), id: ''})
-  
   const router = useRouter();
   const pathname = usePathname();
   const refreshTokens = async (): Promise<boolean> => {
@@ -23,7 +24,7 @@ export function useAuth() {
         method: 'POST',
         credentials: 'include'
       });
-
+      console.log('refreshTokens', response)
       if (response.ok) {
 
         return true;
@@ -49,9 +50,9 @@ export function useAuth() {
           setUser(data);
           setIsAuthenticated(true);
         } else if (response.status === 401) {
-  
+          console.log('ref')
           const refreshSuccess = await refreshTokens();
-
+          console.log('refreshSuccess', refreshSuccess)
           if (refreshSuccess) {
             const retryResponse = await fetch('/api/me', {
               method: 'GET',
@@ -87,11 +88,13 @@ export function useAuth() {
       }
     }
     if(pathname.indexOf('login') !== -1 || pathname.indexOf('register') !== -1){
+      if(loadingFunc)loadingFunc(false)
       return 
     }
     loadUser();
   }, [pathname, router]);
 
+  if(loadingFunc)loadingFunc(false)
   return { 
     user, 
     isAuthenticated,

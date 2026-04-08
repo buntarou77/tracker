@@ -17,8 +17,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [login, setLogin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  console.log('useAuth')
   const auth = useAuth();
-
+  console.log(auth)
   useEffect(() => {
     if (auth.user && auth.isAuthenticated) {
       setLogin(auth.user.login);

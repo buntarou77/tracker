@@ -55,7 +55,7 @@ const BankTransactionContext = createContext<BankTransactionContextType | undefi
 
 interface BankTransactionProviderProps {
   children: ReactNode;
-}
+} 
 
 export function BankTransactionProvider({ children }: BankTransactionProviderProps) {
   const [nextCursor, setNextCursor] = useState<string>(`${new Date()}`);
@@ -172,14 +172,16 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshBalance = async () => {
     try {
-      const response = await fetch('/api/getBankAccountInfo', {
+      console.log('activeBank', activeBank)
+      if(!activeBank.id) return;
+      const response = await fetch(`/api/getBankAccountInfo?bankId=${activeBank.id}`, {
         method: 'GET',
       });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch balance: ${response.status}`);
       }
-
+      console.log('RESPONSE OK')
       const data = await response.json();
       const newBalance = data.balance || 0;
 

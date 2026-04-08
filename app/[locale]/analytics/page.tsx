@@ -22,7 +22,8 @@ import InfoSvg from '../../../public/info-icon.svg';
 import editSvg from '../../../public/edit-icon.svg';   
 import {DetailItem, getFrequencyLabel} from '@/app/utils/createDitailsComponent';
 import { useTranslations } from 'next-intl';
-
+import { useAuth } from '@/app/hooks/useAuth';
+import Skeleton from 'react-loading-skeleton'
 interface Plan {
   categories: [], 
   name: string,
@@ -74,9 +75,10 @@ export default function Analytics() {
     setError,
     setPlanIsSending,
   } = useUI();
-  const {login, setLogin} = useAuthContext();
+  const {login, setLogin, } = useAuthContext();
   const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, banks } = useBankTransaction();
-
+  const {authLoading, setAuthLoading} = useUI();
+  useAuth(setAuthLoading);
   const [editedPlan, setEditedPlan] = useState<any>({});
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
@@ -380,6 +382,9 @@ export default function Analytics() {
     setTargetAmount('');
   };
 
+  if(authLoading){
+    return(<><h1>hello</h1><div className="animate-spin rounded-full h-20 w-20 border-b-2 border-white-900" /></>)
+  }
   return (
     <div style={{zIndex: 1}} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="sticky top-0 z-49 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700/50">

@@ -36,19 +36,13 @@ const protectedRoutes = [
   '/api/rewritePlan',
   '/api/transactions',
   '/api/types',
-  '/budget',
-  '/convert',
-  '/analytics',
-  '/operations',
-  '/profile',
-  '/'
 ];
 
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  
+  console.log('middleware')
   if (pathname.startsWith('/api')) {
     
     const isPublicApiRoute = publicRoutes.some(route => pathname.includes(route));
@@ -74,19 +68,23 @@ export default async function middleware(request: NextRequest) {
   }
   
   
-  const isPublicRoute = publicRoutes.some(route => pathname.includes(route));
-  if (isPublicRoute) {
-    return intlMiddleware(request);
-  }
+  // const isPublicRoute = publicRoutes.some(route => pathname.includes(route));
+  // if (isPublicRoute) {
+  //   return intlMiddleware(request);
+  // }
   
-  const isProtectedRoute = protectedRoutes.some(route => pathname.includes(route));
-  if (isProtectedRoute) {
-    const accessToken = request.cookies.get('accessToken')?.value;
-    
-    if (!accessToken) {
-      return NextResponse.redirect(new URL('/en/login', request.url));
-    }
-  }
+  // const isProtectedRoute = protectedRoutes.some(route => pathname.includes(route));
+  // if (isProtectedRoute) {
+  //   const accessToken = request.cookies.get('accessToken')?.value;
+  //   const refreshToken = request.cookies.get('refreshToken')?.value;
+  //   if(refreshToken){
+  //     return intlMiddleware(request);
+  //   }
+  //   if (!accessToken) {
+  //     console.log('redirect')
+  //     return NextResponse.redirect(new URL('/en/login', request.url));
+  //   }
+  // }
   
   return intlMiddleware(request);
 }

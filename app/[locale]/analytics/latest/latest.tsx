@@ -18,7 +18,6 @@ import { TransactionType } from '@/app/types/shared/transactions';
 import { useTranslations } from 'next-intl';
 import { useUI } from '@/app/context/UIContext';
 import { sendEvent } from '@/app/services/broadcastChannel';
-
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -274,11 +273,13 @@ export default memo(function LastsAnalytics() {
 
   const showCategoryTransactions = (categoryName: string): void => {
     const categoryTrans = filteredTrans.filter((t: any) => t.category === categoryName);
+    console.log(1)
     setModal({type: 'transactionsData', payload: {transactions: categoryTrans, modalTitle: categoryName}});
   };
 
   const showTypeTransactions = (type: string): void => {
     const typeTrans = type === 'gains' ? filteredGainTrans : filteredLossTrans;
+    console.log(2)
     setModal({type: 'transactionsData', payload: {transactions: typeTrans, modalTitle: type === 'gains' ? 'Gains' : 'Losses'}});
   };
 
@@ -334,6 +335,8 @@ export default memo(function LastsAnalytics() {
 
   const planCurrencySymbol = getCurrencySymbol(activeMonthPlan?.currency as any);
   const planDisplayCurrency = planCurrencySymbol || activeMonthPlan?.currency;
+
+
 
   return (
     <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
