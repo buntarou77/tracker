@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import Cookies from 'js-cookie';
 import { useAuthContext } from './AuthContext';
 import { TransactionType } from '../types/shared/transactions';
-import { CacheService, CACHE_CONFIGS } from '../services/cacheService';
 import { authFetch } from '../services/authFetch';
 import { ErrorObjectType } from '../types/shared/error';
 import { sendEvent } from '../services/broadcastChannel';
@@ -141,12 +140,8 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     try {
       setLoading(true);
 
-      const cachedBanks = CacheService.get<bankData[]>(CACHE_CONFIGS.BANKS);
-      if (cachedBanks) {
-        setBanks(cachedBanks);
-      } else {
-        await refreshBanks();
-      }
+      await refreshBanks();
+
       const activeBankCookie = Cookies.get('ActiveBankId');
       if (activeBankCookie) {
         setActiveBank(JSON.parse(activeBankCookie));
@@ -157,38 +152,13 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
         setCurrency(currencyCookie);
       }
 
-      const cachedBalance = CacheService.get<number>(CACHE_CONFIGS.BALANCE);
-      if (cachedBalance) {
-        setBalance(cachedBalance);
-      } else {
-        await refreshBalance();
-      }
-
-      const cachedRates = CacheService.get<any>(CACHE_CONFIGS.EXCHANGE_RATES);
-      if (cachedRates) {
-        setExchangeRates(cachedRates);
-      } else {
-        await refreshExchangeRates();
-      }
-
-      const cachedTrans = CacheService.get<any[]>(CACHE_CONFIGS.TRANSACTIONS);
-      if (cachedTrans) {
-        setTrans(cachedTrans);
-      } else {
-        await refreshTransactions();
-      }
+      await refreshBalance();
+      await refreshTransactions();
 
     } catch (error) {
       console.error('Error loading initial data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkAndRefreshIfExpired = async (config: any, refreshFn: () => Promise<void>) => {
-    const ttlExpired = CacheService.isTTLExpired(config);
-    if (ttlExpired) {
-      await refreshFn();
     }
   };
 
@@ -209,7 +179,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
       setBanks(trueData);
       setLastUpdated(Date.now());
-      CacheService.set(CACHE_CONFIGS.BANKS, trueData);
 
       if (trueData.length > 0 && !activeBank.id) {
         const firstBank = trueData[0];
@@ -231,7 +200,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshBalance = async () => {
     try {
-      console.log('activeBank', activeBank)
       if(!activeBank.id) return;
       const response = await authFetch(`/api/getBankAccountInfo?bankId=${activeBank.id}`, {
         method: 'GET',
@@ -240,13 +208,12 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       if (!response.ok) {
         throw new Error(`Failed to fetch balance: ${response.status}`);
       }
-      console.log('RESPONSE OK')
+
       const data = await response.json();
       const newBalance = data.balance || 0;
 
       setBalance(newBalance);
       setLastUpdated(Date.now());
-      CacheService.set(CACHE_CONFIGS.BALANCE, newBalance);
 
     } catch (error) {
       console.error('Error refreshing balance:', error);
@@ -256,7 +223,8 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshTransactions = async () => {
     try {
-      const response = await authFetch('/api/getTrans', {
+      if(!activeBank.id) return;
+      const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}`, {
         method: 'GET',
       });
 
@@ -269,7 +237,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
       setTrans(transactions);
       setLastUpdated(Date.now());
-      CacheService.set(CACHE_CONFIGS.TRANSACTIONS, transactions);
 
     } catch (error) {
       console.error('Error refreshing transactions:', error);
@@ -279,6 +246,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshExchangeRates = async () => {
     try {
+      console.log('[BankTransactionContext] ExchangeRates: запрос начат');
       const response = await authFetch('/api/getExchangeRate', {
         method: 'GET',
       });
@@ -288,10 +256,10 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       }
 
       const data = await response.json();
+      console.log('[BankTransactionContext] ExchangeRates: ответ получен', data);
 
       setExchangeRates(data);
       setLastUpdated(Date.now());
-      CacheService.set(CACHE_CONFIGS.EXCHANGE_RATES, data);
 
     } catch (error) {
       console.error('Error refreshing exchange rates:', error);

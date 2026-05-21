@@ -208,6 +208,7 @@ export default function Operations() {
             const res =  getCashedTransactions(nextCursor, 20)
             if(res.data.length > 0){
                 setTrans(res.data)
+                console.log(`next cursor: ${res.cursor}  operations 221`)
                 setNextCursor(res.cursor)
                 // Send event for transactions sync from cache
                 sendEvent({ type: 'SYNC_TRANSACTIONS', payload: res.data });
@@ -224,6 +225,7 @@ export default function Operations() {
             const responseData = await response.json()
             setTrans(responseData.data);
             setHasMore(responseData.meta.hasMore)
+            console.log(`setnextCursor: ${responseData.meta.cursor}  operations 228`)
             setNextCursor(responseData.meta.cursor)
             // Send event for transactions sync from API
             sendEvent({ type: 'SYNC_TRANSACTIONS', payload: responseData.data });
@@ -248,7 +250,9 @@ export default function Operations() {
         const resultArray = []
         while(limitLeft > 0){
             const targetDate = new Date(cursorDate.getFullYear(), cursorDate.getMonth() - offset)
-            let cursorKey = `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}` 
+            let cursorKey = `${targetDate.getFullYear()}-${targetDate.getMonth() + 1 > 10 ? targetDate.getMonth() + 1 : '0' + (targetDate.getMonth() + 1)}` 
+            console.log(cursorKey)
+            console.log(analyticTransactions[cursorKey])
             if(!analyticTransactions[cursorKey]) break
             for(let item of analyticTransactions[cursorKey]){
                 limitLeft--
@@ -353,6 +357,7 @@ export default function Operations() {
                 setTrans(updatedTransactions);
                 setMonthSkip(nextSkip);
                 setHasMore(data.meta.hasMore)
+                console.log(`setNExtCursor ${data.meta.cursor} operations 358`)
                 setNextCursor(data.meta.cursor)
                 
                 // Send event for transactions sync

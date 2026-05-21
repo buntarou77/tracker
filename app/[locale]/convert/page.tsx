@@ -43,19 +43,19 @@ const exchangeRateCache: Record<string, { rates: Record<string, number>; timesta
 
 const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record<string, number>, nextTimeUpdate?: string } | null> => {
   try {
-    console.log('CALLING API');
-    console.log(baseCurrency)
     const cached = exchangeRateCache[baseCurrency];
     if (cached && Date.now() - cached.timestamp < 10 * 60 * 1000) {
       return { rates: cached.rates };
     }
 
+    console.log('[convert/page] ExchangeRates: запрос начат, base currency:', baseCurrency);
     const response = await authFetch(`/api/getExchangeRate?base=${baseCurrency}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
+    console.log('[convert/page] ExchangeRates: ответ получен', data);
 
     if (data.result === 'success') {
       exchangeRateCache[baseCurrency] = {
