@@ -1,6 +1,7 @@
 'use client'
 import {usePathname, useRouter} from '@/i18n/navigation'
 import { useLocale } from 'next-intl'
+import { authFetch } from '@/app/services/authFetch';
 
 import { useState, useEffect} from 'react'
 
@@ -24,9 +25,8 @@ export default function SettingsAccountModal({
   const pathname = usePathname();
 
   const getUserData = async() => {
-    const response = await fetch('/api/getUserData', {
+    const response = await authFetch('/api/getUserData', {
       method: 'GET',
-      credentials: 'include'
     })
     if(response.status === 200){
       const data = await response.json();

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useBankTransaction } from '../../context/BankTransactionContext';
 import { useAuth } from '../../hooks/useAuth';
 import { sendEvent } from '../../services/broadcastChannel';
+import { authFetch } from '../../services/authFetch';
 
 interface ExchangeRate {
   from: string;
@@ -49,7 +50,7 @@ const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record
       return { rates: cached.rates };
     }
 
-    const response = await fetch(`/api/getExchangeRate?base=${baseCurrency}`);
+    const response = await authFetch(`/api/getExchangeRate?base=${baseCurrency}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -74,9 +75,9 @@ export default function ConvertPage() {
   const t = useTranslations('convert'); 
   const err = useTranslations('convertErrors');
 
-  const { currency, balance, exchangeRates, setExchangeRates } = useBankTransaction();
+  const { currency, balance, exchangeRates, setExchangeRates, activeBank } = useBankTransaction();
   const { user } = useAuth();
-
+  const isInitializedRef = useRef(false)
   const [fromCurrency, setFromCurrency] = useState(currency);
   const [toCurrency, setToCurrency] = useState('EUR');
   const [fromAmount, setFromAmount] = useState('');
@@ -107,8 +108,21 @@ export default function ConvertPage() {
     return 0;
   };
 
+  useEffect(()=>{
+    if(!isInitializedRef.current && currency){
+      setFromCurrency(currency)
+      isInitializedRef.current = true
+    }
+  }, [currency])
+
+  useEffect(()=>{
+    console.log('START WATCH FROM CURRENCY: ' + fromCurrency)
+  }, [fromCurrency])
+  useEffect(()=>{
+        console.log('START WATCH CURRENCY: ' + currency)
+  }, [currency])
   useEffect(() => {
-    const savedHistory = localStorage.getItem('conversionHistory');
+    const savedHistory = localStorage.getItem('conversionHistory'); 
     if (savedHistory) {
       setConversionHistory(JSON.parse(savedHistory));
     }
@@ -120,11 +134,16 @@ export default function ConvertPage() {
   }, []);
 
   useEffect(() => {
+    console.log(9)
+    console.log(currency)
+    console.log(fromCurrency, toCurrency)
     if (fromCurrency && toCurrency) {
+      console.log(1)
       const getRate = async () => {
         setIsLoadingRates(true);
         
         if (exchangeRates[fromCurrency]?.[toCurrency]) {
+          console.log('USING CACHE');
           setExchangeRate(exchangeRates[fromCurrency][toCurrency]);
           setIsLoadingRates(false);
           return;
@@ -218,7 +237,7 @@ export default function ConvertPage() {
   const swapCurrencies = () => {
     const tempCurrency = fromCurrency;
     const tempAmount = fromAmount;
-    
+    console.log(toCurrency)
     setFromCurrency(toCurrency);
     setToCurrency(tempCurrency);
     setFromAmount(toAmount);

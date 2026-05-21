@@ -9,6 +9,8 @@ import Cookies from 'js-cookie';
 import BankAccount from '../../components/BankAccount';
 import { useTranslations } from 'next-intl';
 import { sendEvent } from '../../services/broadcastChannel';
+import { authFetch } from '../../services/authFetch';
+import { NextResponse } from 'next/server';
 
 interface transaction {
     amount: number, 
@@ -32,9 +34,151 @@ export default function Operations() {
     const [monthSkip, setMonthSkip] = useState<number>(1);
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
     const { login } = useAuthContext();
-    const { setIsAccountsVisible, setAddBankAccountForm } = useUI();
+    const { setIsAccountsVisible, setAddBankAccountForm, setModal } = useUI();
     const { addError } = useError();
+
+    async function addTransactionOrchestrator(
+        transaction: TransactionType
+    ) {
+        try {
+            if (!activeBank.id) {
+                addError({
+                    theme: 'redDark',
+                    name: e('noBankAccount.name'),
+                    desc: e('noBankAccount.desc'),
+                    stateChangeFunc: () => {},
+                    interactiveFunc: createBankAccountError,
+                    interactiveName: e('noBankAccount.interactiveName')
+                });
     
+                return;
+            }
+    
+            const response = await requestAddTransaction(
+                transaction,
+                activeBank.id
+            );
+    
+            if (response.ok) {
+                await handleAddTransactionSuccess(
+                    response,
+                    transaction
+                );
+    
+                return;
+            }
+    
+            handleAddTransactionError(transaction);
+    
+        } catch {
+            handleAddTransactionNetworkError(transaction);
+        }
+    }
+
+    async function requestAddTransaction(
+        transaction: TransactionType,
+        bankId: string
+    ) {
+        return authFetch('/api/addTrans', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...transaction,
+                bankId
+            })
+        });
+    }
+
+    async function handleAddTransactionSuccess(
+        response: Response,
+        transaction: TransactionType
+    ) {
+        const data = await response.json();
+    
+        const singleTransaction = data.data;
+    
+        // balance
+        const newBalance =
+            transaction.type === 'gain'
+                ? Number(balance) + Number(transaction.amount)
+                : Number(balance) - Number(transaction.amount);
+    
+        setBalance(newBalance);
+    
+        // cookies
+        const balanceToken =
+            Cookies.get(`bank_account_${login}`) || '0';
+    
+        Cookies.set(
+            `bank_account_${login}`,
+            String(newBalance)
+        );
+    
+        // transactions
+        setTrans(prev => [...prev, singleTransaction]);
+    
+        // analytics
+        const analyticKey = `${
+            new Date(singleTransaction.date).getFullYear()
+        }-${
+            new Date(singleTransaction.date).getMonth() + 1
+        }`;
+    
+        setAnalyticTransactions(prev => ({
+            ...prev,
+            [analyticKey]: [
+                ...(prev[analyticKey] || []),
+                singleTransaction
+            ]
+        }));
+    
+        // sync
+        sendEvent({
+            type: 'ADD_TRANSACTION',
+            payload: singleTransaction
+        });
+    
+        // success ui
+        addError({
+            theme: 'greenDark',
+            name: e('success.name'),
+            desc: e('success.desc'),
+            stateChangeFunc: () => {},
+            interactiveFunc: () => {},
+            interactiveName: ''
+        });
+    }
+
+    function handleAddTransactionError(
+        transaction: TransactionType
+    ) {
+        addError({
+            theme: 'redDark',
+            name: e('addError.name'),
+            desc: e('addError.desc'),
+            stateChangeFunc: () => {},
+            interactiveFunc: () =>
+                addTransactionOrchestrator(transaction),
+            interactiveName: e('addError.interactiveName')
+        });
+    }
+
+    function handleAddTransactionNetworkError(
+        transaction: TransactionType
+    ) {
+        addError({
+            theme: 'redDark',
+            name: e('networkError.name'),
+            desc: e('networkError.desc'),
+            stateChangeFunc: () => {},
+            interactiveFunc: () =>
+                addTransactionOrchestrator(transaction),
+            interactiveName: e('networkError.interactiveName')
+        });
+    }
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (show && formRef.current && !formRef.current.contains(event.target as Node)) {
@@ -49,85 +193,6 @@ export default function Operations() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [show]);
-
-    const addTransaction = async (amount: any, category: any, date: any, type: any) => {
-        try {
-            if(activeBank.name.trim() === ''){
-                addError({
-                    theme: 'redDark',
-                    name: e('noBankAccount.name'),
-                    desc: e('noBankAccount.desc'),
-                    stateChangeFunc: () => {},
-                    interactiveFunc: createBankAccountError,
-                    interactiveName: e('noBankAccount.interactiveName')
-                });
-                return;
-            }
-
-            const response = await fetch('/api/addTrans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount,
-                    category,
-                    date,
-                    login,
-                    type,
-                    bankId: activeBank.id
-                })
-            });
-
-            if (response.ok) {
-                if(type === 'gain'){
-                    setBalance(Number(balance) + Number(amount));
-                    const balanceToken = Cookies.get(`bank_account_${login}`) || '0';
-                    Cookies.set(`bank_account_${login}`, String(Number(balanceToken) + Number(amount)));
-                } else {
-                    setBalance(Number(balance) - Number(amount));
-                    const balanceToken = Cookies.get(`bank_account_${login}`) || '0';
-                    Cookies.set(`bank_account_${login}`, String(Number(balanceToken) - Number(amount)));
-                }
-                const data = await response.json();
-                const singleTransaction = data.data;
-                setTrans(prev => [...prev, singleTransaction]);
-                
-                sendEvent({ type: 'ADD_TRANSACTION', payload: singleTransaction });
-
-                const analyticKey = `${new Date(singleTransaction.date).getFullYear()}-${new Date(singleTransaction.date).getMonth() + 1}`;
-                setAnalyticTransactions(prev=> ({
-                    ...prev,
-                    [analyticKey]: [...(prev[analyticKey] || []), singleTransaction]
-                }));
-
-                addError({
-                    theme: 'greenDark',
-                    name: e('success.name'),
-                    desc: e('success.desc'),
-                    stateChangeFunc: () => {},
-                    interactiveFunc: () => {},
-                    interactiveName: ''
-                });
-            } else {
-                addError({
-                    theme: 'redDark',
-                    name: e('addError.name'),
-                    desc: e('addError.desc'),
-                    stateChangeFunc: () => {},
-                    interactiveFunc: () => addTransaction(amount, category, date, type),
-                    interactiveName: e('addError.interactiveName')
-                });
-            }
-        } catch (error) {
-            addError({
-                theme: 'redDark',
-                name: e('networkError.name'),
-                desc: e('networkError.desc'),
-                stateChangeFunc: () => {},
-                interactiveFunc: () => addTransaction(amount, category, date, type),
-                interactiveName: e('networkError.interactiveName')
-            });
-        }
-    };
 
     useEffect(()=>{
         async function getTrans(){
@@ -152,7 +217,7 @@ export default function Operations() {
             setHasMore(true)
             return 
           }
-          const response = await fetch(`/api/getTrans?bankId=${activeBank.id}`, {
+          const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}`, {
             method: 'GET'
           })
           if(response.ok){
@@ -166,6 +231,15 @@ export default function Operations() {
         }
         getTrans()
       },[activeBank])
+
+      useEffect(()=>{
+        function closeModal(){
+            setShow(false)
+        }
+        if(show){
+        setModal({type: 'addTransaction', payload: {closeModal, addTransactionOrchestrator}})
+        }
+      }, [show])
 
     function getCashedTransactions(cursor: string ,limit: number = 20): {hesNext: boolean, cursor: string, data: any[]} {
         let limitLeft = limit + 1
@@ -196,20 +270,6 @@ export default function Operations() {
         setShouldAnimate(prev => !prev);
     }, []);
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const amount = formData.get('amount');
-        const category = formData.get('category');
-        const date = formData.get('date');
-
-        if (amount && category && date && login) {
-            addTransaction(amount, category, date, transactionType);
-            setShow(false);
-            setShouldAnimate(false);
-        }
-    };
-
     const delTransaction = async (id: any, amount: any, type: any, date: any) => { 
         try {
             const data = JSON.stringify({
@@ -222,7 +282,7 @@ export default function Operations() {
                 bankId: activeBank.id,
                 includeUpdatedBank: true
             });
-            const response = await fetch(`api/delTrans`, {
+            const response = await authFetch(`/api/delTrans`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: data
@@ -285,9 +345,7 @@ export default function Operations() {
                 return;
             }
 
-            const response = await fetch(`/api/getTrans?bankId=${activeBank.id}&cursor=${nextCursor}`, {
-                credentials: 'include'
-            });
+            const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}&cursor=${nextCursor}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -530,126 +588,6 @@ export default function Operations() {
                         </div>
                     </div>
                 </div>
-
-                {show && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <form
-                            ref={formRef}
-                            onSubmit={handleSubmit}
-                            className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-white">{t('formTitle')}</h3>
-                                <button
-                                    type="button"
-                                    onClick={() => setShow(false)}
-                                    className="text-gray-400 hover:text-white"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('transactionType')}</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setTransactionType('loss')}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                                                transactionType === 'loss'
-                                                    ? 'bg-red-600 text-white'
-                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                            }`}
-                                        >
-                                            💸 {t('expenseButton')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setTransactionType('gain')}
-                                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                                                transactionType === 'gain'
-                                                    ? 'bg-green-600 text-white'
-                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                            }`}
-                                        >
-                                            💰 {t('incomeButton')}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('amount')}</label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            name="amount"
-                                            placeholder={t('amountPlaceholder')}
-                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            required
-                                            step="0.01"
-                                            min="0"
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                            <span className="text-gray-400">{getCurrencySymbol()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('category')}</label>
-                                    <select
-                                        name="category"
-                                        className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        required
-                                    >
-                                        <option value="housing">{t('categoryOptions.housing')}</option>
-                                        <option value="utilities">{t('categoryOptions.utilities')}</option>
-                                        <option value="food">{t('categoryOptions.food')}</option>
-                                        <option value="transport">{t('categoryOptions.transport')}</option>
-                                        <option value="health">{t('categoryOptions.health')}</option>
-                                        <option value="clothing">{t('categoryOptions.clothing')}</option>
-                                        <option value="personal_care">{t('categoryOptions.personal_care')}</option>
-                                        <option value="entertainment">{t('categoryOptions.entertainment')}</option>
-                                        <option value="travel">{t('categoryOptions.travel')}</option>
-                                        <option value="hobbies">{t('categoryOptions.hobbies')}</option>
-                                        <option value="communication">{t('categoryOptions.communication')}</option>
-                                        <option value="subscriptions">{t('categoryOptions.subscriptions')}</option>
-                                        <option value="savings">{t('categoryOptions.savings')}</option>
-                                        <option value="investments">{t('categoryOptions.investments')}</option>
-                                        <option value="insurance">{t('categoryOptions.insurance')}</option>
-                                        <option value="family">{t('categoryOptions.family')}</option>
-                                        <option value="gifts">{t('categoryOptions.gifts')}</option>
-                                        <option value="charity">{t('categoryOptions.charity')}</option>
-                                        <option value="education">{t('categoryOptions.education')}</option>
-                                        <option value="taxes">{t('categoryOptions.taxes')}</option>
-                                        <option value="other">{t('categoryOptions.other')}</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">{t('date')}</label>
-                                    <input
-                                        type="date"
-                                        name="date"
-                                        defaultValue={new Date().toISOString().split('T')[0]}
-                                        className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        required
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                                >
-                                    {t('submitButton')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
             </div>
         </div>
     );

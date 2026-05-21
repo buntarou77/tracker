@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { useAuthContext } from './AuthContext';
 import { useAuth } from '../hooks/useAuth';
 import { getPlanType } from '../types/shared/plan';
+import { authFetch } from '../services/authFetch';
 interface PlanContextType {
   plans: any[];
   activePlans: any[];
@@ -47,7 +48,7 @@ export function PlanProvider({ children }: PlanProviderProps) {
     async function loadPlans() {
       if (login) {
         try {
-          const res = await fetch(`api/getPlans?`, {
+          const res = await authFetch('/api/getPlans', {
             method: 'GET'
           });
           

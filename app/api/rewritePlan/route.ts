@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -42,10 +42,9 @@ export async function PATCH(request: NextRequest) {
         );
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const client = await clientPromise;
 
     try {
-        await client.connect();
         const db = client.db('users');
 
         const updateData: any = { updatedAt: new Date() };
@@ -82,6 +81,5 @@ export async function PATCH(request: NextRequest) {
             { status: 500 }
         );
     } finally {
-        await client.close();
     }
 }

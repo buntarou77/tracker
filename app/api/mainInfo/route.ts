@@ -1,13 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import clientPromise from '@/app/lib/mongodb';
+import { ObjectId } from 'mongodb';
+import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
 interface TokenPayload {
-  id: string;
-  login: string;
+    id: string;
+    login: string;
+}
+
+interface resultInfo {
+    
 }
 
 export async function GET(request: NextRequest) {
@@ -31,47 +36,36 @@ export async function GET(request: NextRequest) {
             { status: 401 }
         );
     }
-
     const { searchParams } = new URL(request.url);
     const bankId = searchParams.get('bankId');
-
+    const date = new Date();
+    const to = new Date(date)
+    to.setMonth(date.getMonth() - 1)
     if (!bankId) {
         return NextResponse.json(
             { error: 'bankId parameter is required' },
             { status: 400 }
         );
     }
-
-    const client = await clientPromise;
-
-    try {
+    try{
+        const client = await clientPromise;
         const db = client.db('users');
-
-        const bankAccount = await db.collection('bankAccounts').findOne({
-            id: bankId,
-            userId: userId
-        });
-
-        if (!bankAccount) {
+        const transactions = await db.collection('transactions').find({userId: userId, bankId: bankId, date: {$gt: to}}).sort({date: -1}).toArray();
+        if (!transactions) {
             return NextResponse.json(
-                { error: 'Bank account not found' },
+                { error: 'User not found' },
                 { status: 404 }
             );
         }
-
         return NextResponse.json(
-            { 
-                success: true,
-                bank: bankAccount
-            },
+            { success: true, data: transactions },
             { status: 200 }
         );
-
-    } catch (error) {
+    }catch(e){
         return NextResponse.json(
-            { error: 'Failed to retrieve bank account info' },
-            { status: 500 }
-        );
-    } finally {
+            {error: e},
+            {status: 500}
+        )
     }
+
 }

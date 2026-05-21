@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken';
-import { MongoClient, ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 import crypto from 'crypto';
+import clientPromise from '@/app/lib/mongodb';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
 type User = {
@@ -50,10 +51,9 @@ export async function PATCH(request: Request){
             {status: 401})
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017')
+    const client = await clientPromise
     const session = client.startSession();
     try{
-    await client.connect();
     session.startTransaction()
     const db = client.db(process.env.MONGODB_DB_NAME || 'users')
     const heashResetCode = crypto.createHash('sha256').update(resetCode).digest('hex');

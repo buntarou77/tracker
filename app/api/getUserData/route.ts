@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -32,8 +33,7 @@ export async function GET(request: NextRequest) {
         );
     }
     try{
-        const client = new MongoClient('mongodb://localhost:27017');
-        await client.connect();
+        const client = await clientPromise;
         const db = client.db('users');
         const user = await db.collection('users').findOne({ _id: new ObjectId(userId)}, { projection: { password_hash: 0 } });
         

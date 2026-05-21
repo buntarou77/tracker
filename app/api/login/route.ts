@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
-import { MongoClient } from 'mongodb';
 import { generateTokens } from '../auth/auth';
+import clientPromise from '@/app/lib/mongodb';
 
 interface User {
   _id: string;
@@ -19,9 +19,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const client = await clientPromise;
     try {
-      await client.connect();
       const db = client.db(process.env.MONGODB_DB_NAME || 'users');
       const user = await db.collection(process.env.COLLECTION_NAME || 'users').findOne({
         user: login
@@ -78,7 +77,6 @@ export async function POST(request: Request) {
 
       return response;
     } finally {
-      await client.close();
     }
   } catch (error) {
 

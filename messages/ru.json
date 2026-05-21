@@ -300,7 +300,8 @@
       "daily": "ежедневно",
       "weekly": "еженедельно",
       "monthly": "ежемесячно",
-      "yearly": "ежегодно"
+      "yearly": "ежегодно",
+      "once": "один раз"
     },
     "type": {
       "income": "доход",
@@ -457,5 +458,31 @@
       "desc": "Не удалось загрузить транзакции",
       "interactiveName": "Повторить"
     }
+  },
+  "Index": {
+    "noBank": "Счёт не выбран",
+    "balance": "Баланс",
+    "currency": "Валюта",
+    "addTransaction": "Добавить транзакцию",
+    "currentMonth": "Текущий месяц",
+    "transactionsCount": "Количество транзакций",
+    "gains": "Доходы",
+    "losses": "Расходы",
+    "previousMonth": "Предыдущий месяц",
+    "monthlyComparison": "Сравнение с прошлым месяцем",
+    "transactionsDelta": "Изменение транзакций",
+    "gainsVsPrev": "Доходы к предыдущему месяцу",
+    "lossesVsPrev": "Расходы к предыдущему месяцу",
+    "lastTransactions": "Последние транзакции",
+    "noTransactions": "Нет транзакций",
+    "amount": "Сумма",
+    "category": "Категория",
+    "type": "Тип",
+    "gain": "Доход",
+    "loss": "Расход",
+    "date": "Дата",
+    "save": "Сохранить",
+    "expenseBreakdown": "Разбивка расходов",
+    "noExpensesThisMonth": "В этом месяце расходов нет"
   }
 }

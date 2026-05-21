@@ -1,10 +1,8 @@
 import { TransactionType } from '../types/shared/transactions';
-import logout from '../services/logout';
 export default function broadcastEventBus(
   event: { type: string; payload: any },
-  context: { bankTransactionContext: any, planContext: any, authContext: any }
+  context: { bankTransactionContext: any, planContext: any, authContext: any, logout: any }
 ) {
-  console.log('err')
   const {
     trans,
     setTrans,
@@ -21,7 +19,9 @@ export default function broadcastEventBus(
     setCurrency,
   } = context.bankTransactionContext;
 
-  console.log('err2')
+  const {setLogin} = context.authContext
+  const {logout} = context
+
   const {
     plans,
     setPlans,
@@ -35,7 +35,6 @@ export default function broadcastEventBus(
     setStoragePlans,
   } = context.planContext;
 
-  const { setLogin } = context.authContext;
   switch (event.type) {
     case 'ADD_TRANSACTION': {
       const newTransaction: TransactionType = event.payload;

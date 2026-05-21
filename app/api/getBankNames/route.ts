@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -38,10 +38,9 @@ export async function GET(request: NextRequest) {
     const includeStats = searchParams.get('includeStats') === 'true';
     const currency = searchParams.get('currency');
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const client = await clientPromise;
 
     try {
-        await client.connect();
         const db = client.db('users');
 
         const filter: Record<string, any> = { userId };
@@ -101,6 +100,5 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     } finally {
-        await client.close();
     }
 }

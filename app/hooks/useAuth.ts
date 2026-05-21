@@ -9,9 +9,7 @@ interface User {
   email: string;
 }
 
-export function useAuth(loadingFunc: any = null ) {
-  console.log('call')
-  if(loadingFunc)loadingFunc(true)
+export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -87,14 +85,9 @@ export function useAuth(loadingFunc: any = null ) {
         setIsLoading(false);
       }
     }
-    if(pathname.indexOf('login') !== -1 || pathname.indexOf('register') !== -1){
-      if(loadingFunc)loadingFunc(false)
-      return 
-    }
     loadUser();
   }, [pathname, router]);
 
-  if(loadingFunc)loadingFunc(false)
   return { 
     user, 
     isAuthenticated,

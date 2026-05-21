@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -35,9 +35,8 @@ export async function POST(request: NextRequest) {
   const data = await request.json();
   const { name, notes = '', currency, balance = 0 } = data;
 
-  const client = new MongoClient('mongodb://localhost:27017');
+  const client = await clientPromise;
   try {
-    await client.connect();
     const db = client.db('users');
 
     const bankExists = await db.collection('bankAccounts').findOne({
@@ -88,6 +87,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await client.close();
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
+    const client = await clientPromise;
 
     try {
     const { searchParams } = new URL(request.url);
@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') === 'desc' ? -1 : 1;
 
-        await client.connect();
         const db = client.db('users');
 
         const query: any = { userId: userId };
@@ -87,6 +86,5 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     } finally {
-        await client.close();
     }
 }

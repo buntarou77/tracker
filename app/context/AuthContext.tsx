@@ -5,7 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 
 interface AuthContextType {
   login: string;
+  isAuthenticated: boolean;
   setLogin: (login: string) => void;
+  setIsAuthenticated: (isAuthenticated: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,9 +19,8 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [login, setLogin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  console.log('useAuth')
   const auth = useAuth();
-  console.log(auth)
+
   useEffect(() => {
     if (auth.user && auth.isAuthenticated) {
       setLogin(auth.user.login);
@@ -40,6 +41,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 }
 
+
+
 export function useAuthContext() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -47,5 +50,3 @@ export function useAuthContext() {
   }
   return context;
 }
-
-export default AuthContext; 

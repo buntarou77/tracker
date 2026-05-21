@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -59,8 +60,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const mongoClient = new MongoClient('mongodb://localhost:27017');
-    await mongoClient.connect();
+  const mongoClient = await clientPromise;
 
     const session = mongoClient.startSession();
   try {
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
   } finally {
     try {
       session.endSession()
-      await mongoClient.close();
+      
     } catch (error) {
     }
   }

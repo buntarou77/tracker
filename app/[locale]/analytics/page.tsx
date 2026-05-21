@@ -23,7 +23,7 @@ import editSvg from '../../../public/edit-icon.svg';
 import {DetailItem, getFrequencyLabel} from '@/app/utils/createDitailsComponent';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/app/hooks/useAuth';
-import Skeleton from 'react-loading-skeleton'
+import { authFetch } from '../../services/authFetch';
 interface Plan {
   categories: [], 
   name: string,
@@ -77,8 +77,6 @@ export default function Analytics() {
   } = useUI();
   const {login, setLogin, } = useAuthContext();
   const {trans, currency, setCurrency, setTrans, activeBank, setActiveBank, banks } = useBankTransaction();
-  const {authLoading, setAuthLoading} = useUI();
-  useAuth(setAuthLoading);
   const [editedPlan, setEditedPlan] = useState<any>({});
   const [activeForm, setActiveForm] = useState(false);
   const [activecateghoryForm, setActiveCateghoryForm] = useState(false);
@@ -105,7 +103,7 @@ export default function Analytics() {
   const [activeAddTargetForm, setActiveAddTargetForm] = useState(false);
   const [activeAddCategoryForm, setActiveAddCategoryForm] = useState(false);
   const [canShowAnalytics, setCanShowAnalytics] = useState(false);
-
+  const auth = useAuth();
   useEffect(()=>{
     const filteredPlans = plans.filter((item)=> item.frequency === 'monthly' && storagePlans.includes(item.id));
     setLastsPlan(filteredPlans[0] || {});
@@ -146,14 +144,14 @@ export default function Analytics() {
       ...activePlansStatus,
       [frequency]: {
         status: isChecked,
-        id: isChecked ? itemId : 0
+        id: isChecked ? itemId : 0 
       }
     };
     setActivePlansStatus(updated);
     sendEvent({ type: 'SYNC_ACTIVE_PLANS_STATUS', payload: updated });
     
     changeActivePlan(itemId, isChecked);
-    let activePlansIds = JSON.parse(localStorage.getItem('activePlanIds') ?? '[]')
+    let activePlansIds = JSON.parse(localStorage.getItem('activePlansIds') ?? '[]')
     activePlansIds = [...activePlansIds, itemId]
     localStorage.setItem('activePlansIds', JSON.stringify(activePlansIds))
   }; 
@@ -196,7 +194,7 @@ export default function Analytics() {
       notes,
     };
     try {
-      const request = await fetch('api/addPlan', {
+      const request = await authFetch('/api/addPlan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -230,7 +228,7 @@ export default function Analytics() {
   
   const delPlan = async (id: number) => {
     try{
-      const res = await fetch(`api/deletePlan?planId=${id}`, {
+      const res = await authFetch(`/api/deletePlan?planId=${id}`, {
         method: 'DELETE',
         body: JSON.stringify({planId: id})
       })
@@ -247,7 +245,7 @@ export default function Analytics() {
   const addPlanButton = async(id: number) => {
     const login = Cookies.get('info_token');
     try{
-      const res = await fetch(`api/rewritePlan?login=${login}&id=${id}`, {
+      const res = await authFetch(`/api/rewritePlan?login=${login}&id=${id}`, {
         method: 'POST',
          body: JSON.stringify(newPlan)}
       )
@@ -382,7 +380,7 @@ export default function Analytics() {
     setTargetAmount('');
   };
 
-  if(authLoading){
+  if(!auth){
     return(<><h1>hello</h1><div className="animate-spin rounded-full h-20 w-20 border-b-2 border-white-900" /></>)
   }
   return (

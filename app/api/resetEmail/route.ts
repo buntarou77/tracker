@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
-import { MongoClient, ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 import bcryptjs from "bcryptjs";
 import { TokenPayload } from "@/app/types/api";
+import clientPromise from '@/app/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
@@ -47,9 +48,8 @@ export default async function POST(request: Request){
             {status: 401})
     }
 
-    const client = new MongoClient('mongodb://localhost:27017');
+    const client = await clientPromise;
     try{
-        await client.connect();
         const db = client.db('users');
         const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
         

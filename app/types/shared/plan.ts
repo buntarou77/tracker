@@ -24,10 +24,21 @@ export interface PlanDocumentType {
   color?: string
 }
 
-export interface CreatePlanType {
-  frequency: frequencyType
+export type CreatePlanType = PlanOnce | PlanRecurring
+
+export type PlanOnce = BasePlan & {
+  frequency: 'once'
+  date: dateType
+}
+
+export type PlanRecurring = BasePlan & {
+  frequency: "daily" | "monthly" | "yearly" | "weekly" 
+  date?: never
+}
+
+export interface BasePlan {
   userId: string
-  currnecy: string
+  currency: string
   name: string
   type: 'expense' | 'income'
   amount: number
@@ -36,6 +47,6 @@ export interface CreatePlanType {
   color: string 
 }
 
-
+export type dateType = {startDate: string, endDate: string}
 export type getPlanType = Omit<PlanDocumentType, '_id'> & { id: string; }
-export type frequencyType = "daily" | "monthly" | "yearly" | "weekly" | "one-time"
+export type frequencyType = "daily" | "monthly" | "yearly" | "weekly" | "once"

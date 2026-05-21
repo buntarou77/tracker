@@ -42,7 +42,6 @@ const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log('middleware')
   if (pathname.startsWith('/api')) {
     
     const isPublicApiRoute = publicRoutes.some(route => pathname.includes(route));
@@ -81,7 +80,6 @@ export default async function middleware(request: NextRequest) {
   //     return intlMiddleware(request);
   //   }
   //   if (!accessToken) {
-  //     console.log('redirect')
   //     return NextResponse.redirect(new URL('/en/login', request.url));
   //   }
   // }

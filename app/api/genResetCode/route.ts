@@ -1,9 +1,10 @@
-import { ObjectId, MongoClient } from "mongodb";
+import { ObjectId } from "mongodb";
 import jwt from 'jsonwebtoken';
 import {  NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from 'crypto';
 import type { TokenPayload } from "@/app/types/api";
+import clientPromise from '@/app/lib/mongodb';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 export default async function POST(request: Request) {
     const cookieStore = cookies();
@@ -27,9 +28,8 @@ export default async function POST(request: Request) {
         );
     }
 
-    const client = new MongoClient('mongodb://localhost:27017');
+    const client = await clientPromise;
     try {
-        client.connect();
         const data = {
             userId: new ObjectId(userId),
             resetCode: crypto.randomBytes(32).toString('hex'),

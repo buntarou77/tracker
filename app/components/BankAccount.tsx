@@ -4,10 +4,11 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useBankTransaction } from '../context/BankTransactionContext';
-import { useAuthContext } from '../context/AuthContext';  
 import { useUI } from '../context/UIContext';
 import { sendEvent } from '../services/broadcastChannel';
+import { authFetch } from '../services/authFetch';
 import settingSvg from '../../public/settingsSvg.svg';  
+import { useAuthContext } from '../context/AuthContext';
 type BankAccountType = {
   name: string;
   balance: string;
@@ -26,7 +27,7 @@ const BankAccount = () => {
     const [tooManyBankAccounts, setToManyBankAccounts] = useState<boolean>(false)
     const [redirect, setRedirect] = useState<boolean>(false)
     const {isAccountsVisible, setIsAccountsVisible, addBankAccountForm, setAddBankAccountForm} = useUI();
-    const { login, setLogin } = useAuthContext(); 
+    const {login, setLogin} = useAuthContext();
     const { banks, setBanks, setTrans, setActiveBank, activeBank, balance, setBalance, currency, setCurrency, setHasMore, setNextCursor, trans } = useBankTransaction();
     const [newAccount, setNewAccount] = useState<BankAccountType>({name: '', balance: '', currency: 'RUB', notes: '', active: false, login: login});
     const renders = useRef(0);
@@ -93,9 +94,9 @@ const BankAccount = () => {
         setIsAccountsVisible(!isAccountsVisible);
     };
     const logout = async ()=>{
-      const logoutResponse = await fetch('api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
+      const logoutResponse = await authFetch('/api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
       if(logoutResponse.ok){
-        const res = await fetch('api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
+        const res = await authFetch('/api/auth/logout',{method: 'POST', headers: {'Content-Type': 'application/json'}})
         if(!res.ok){
           setRegisterError(true)
         }else{
@@ -127,7 +128,7 @@ const BankAccount = () => {
           if(!newAccount.name || !newAccount.currency || !newAccount.balance ){
             alert('Please fill in all fields')
           }else{
-            const response = await fetch(`/api/addNewAccount`,
+            const response = await authFetch(`/api/addNewAccount`,
               {method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(
@@ -136,7 +137,7 @@ const BankAccount = () => {
            if(response.status === 201){
             let nextBanks = [...banks, newAccount as BankAccountType & { id?: string }];
             try{
-              const res = await fetch(`/api/revalidateBankNames?`, 
+              const res = await authFetch(`/api/revalidateBankNames?`, 
                 {method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({login, notes: newAccount.notes || '', name: newAccount.name, currency: newAccount.currency, balance: newAccount.balance || 0})
@@ -162,7 +163,7 @@ const BankAccount = () => {
       e.stopPropagation();
       if (window.confirm(`Are you sure you want to delete the account "${accountName}"?`)) {
         try {
-          const response = await fetch(`/api/deleteAccount?&bankId=${accountId}`, {
+          const response = await authFetch(`/api/deleteAccount?&bankId=${accountId}`, {
             method: 'DELETE'
           });
           

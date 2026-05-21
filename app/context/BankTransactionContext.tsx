@@ -5,7 +5,10 @@ import Cookies from 'js-cookie';
 import { useAuthContext } from './AuthContext';
 import { TransactionType } from '../types/shared/transactions';
 import { CacheService, CACHE_CONFIGS } from '../services/cacheService';
-
+import { authFetch } from '../services/authFetch';
+import { ErrorObjectType } from '../types/shared/error';
+import { sendEvent } from '../services/broadcastChannel';
+import {useError} from './ErrorContext'
 interface BankTransactionContextType {
   activeBank: { name: string; id: string };
   banks: any[];
@@ -18,6 +21,7 @@ interface BankTransactionContextType {
   analyticTransactions: Record<string, TransactionType[]>;
   loading: boolean;
   lastUpdated: number;
+  orchestator: (transaction: TransactionType, bankId: string) => Promise<void>;
 
   refreshBanks: () => Promise<void>;
   refreshBalance: () => Promise<void>;
@@ -33,6 +37,18 @@ interface BankTransactionContextType {
   setBalance: (balance: number) => void;
   setCurrency: (currency: string) => void;
   setExchangeRates: (rates: any) => void;
+}
+
+interface addTransactionEventType {
+  type: string;
+  payload: TransactionType
+}
+
+interface dependenciesType {
+  addError: (error: ErrorObjectType)=> void,
+  setBalance: React.Dispatch<React.SetStateAction<number>>,
+  setTransactions: React.Dispatch<React.SetStateAction<Record<string, TransactionType[]>>>,
+  sendEvent: (event: addTransactionEventType) => void
 }
 
 interface bankData {
@@ -61,6 +77,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
   const [nextCursor, setNextCursor] = useState<string>(`${new Date()}`);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [activeBank, setActiveBank] = useState({ name: '', id: '' });
+  const {addError} = useError();
   const [banks, setBanks] = useState<bankData[]>([]);
   const [trans, setTrans] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
@@ -77,6 +94,48 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       loadInitialData();
     }
   }, [isAuthenticated, login]);
+
+  function createTransactionOrchestrator(deps: dependenciesType){
+    return async function addTransactionOrchestrator(transaction: TransactionType, bankId: string){
+      const {addError, setBalance, setTransactions, sendEvent } = deps;
+      try{
+        if(!bankId.trim()){
+          throw new Error('Please select a bank')
+        }
+        const response = await authFetch(`/api/addTrans`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({...transaction, bankId}),
+        });
+        if(!response.ok){
+          throw new Error('Transaction failed')
+        }
+
+        const data = await response.json();
+        const newTransaction = data.data;
+        const key = data.monthKey;
+        setBalance((prev) => prev + (newTransaction.type === 'gain' ? newTransaction.amount : -newTransaction.amount));
+        setTransactions((prev) => {
+          return {
+          ...prev,
+          [key]: [...(prev[key] || []), newTransaction]
+          }
+        });
+
+        sendEvent({type: 'ADD_TRANSACTION', payload: newTransaction});
+
+      }catch(e){
+        addError({
+          theme: 'redDark',
+          name: 'Error',
+          desc: 'Transaction failed'
+        })
+        return;
+      }
+    }
+  }
 
   const loadInitialData = async () => {
     try {
@@ -137,7 +196,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     try {
       setLoading(true);
 
-      const response = await fetch('/api/getBankNames', {
+      const response = await authFetch('/api/getBankNames', {
         method: 'GET',
       });
 
@@ -174,7 +233,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     try {
       console.log('activeBank', activeBank)
       if(!activeBank.id) return;
-      const response = await fetch(`/api/getBankAccountInfo?bankId=${activeBank.id}`, {
+      const response = await authFetch(`/api/getBankAccountInfo?bankId=${activeBank.id}`, {
         method: 'GET',
       });
 
@@ -197,7 +256,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshTransactions = async () => {
     try {
-      const response = await fetch('/api/getTrans', {
+      const response = await authFetch('/api/getTrans', {
         method: 'GET',
       });
 
@@ -220,7 +279,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
 
   const refreshExchangeRates = async () => {
     try {
-      const response = await fetch('/api/getExchangeRate', {
+      const response = await authFetch('/api/getExchangeRate', {
         method: 'GET',
       });
 
@@ -249,6 +308,14 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
     setCurrency(curr as any);
     Cookies.set('Currency', curr, { expires: 30 });
   };
+  const orchestator = useMemo(()=>{
+    return createTransactionOrchestrator({
+      addError,
+      setBalance,
+      setTransactions: setAnalyticTransactions,
+      sendEvent
+    })
+  }, [ sendEvent, addError])
 
   const contextValue = useMemo(
     () => ({
@@ -263,6 +330,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       analyticTransactions,
       loading,
       lastUpdated,
+      orchestator,
 
       refreshBanks,
       refreshBalance,

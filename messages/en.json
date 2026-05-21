@@ -291,7 +291,8 @@
       "daily": "daily",
       "weekly": "weekly",
       "monthly": "monthly",
-      "yearly": "yearly"
+      "yearly": "yearly",
+      "once": "once"
     },
     "type": {
       "income": "income",
@@ -455,6 +456,33 @@
       "desc": "Failed to load transactions",
       "interactiveName": "Retry"
     }
+  },
+  
+  "Index": {
+    "noBank": "No bank selected",
+    "balance": "Balance",
+    "currency": "Currency",
+    "addTransaction": "Add Transaction",
+    "currentMonth": "Current Month",
+    "transactionsCount": "Transactions count",
+    "gains": "Gains",
+    "losses": "Losses",
+    "previousMonth": "Previous Month",
+    "monthlyComparison": "Monthly Comparison",
+    "transactionsDelta": "Transactions Δ",
+    "gainsVsPrev": "Gains vs prev month",
+    "lossesVsPrev": "Losses vs prev month",
+    "lastTransactions": "Last Transactions",
+    "noTransactions": "No transactions",
+    "amount": "Amount",
+    "category": "Category",
+    "type": "Type",
+    "gain": "Gain",
+    "loss": "Loss",
+    "date": "Date",
+    "save": "Save",
+    "expenseBreakdown": "Expense Breakdown",
+    "noExpensesThisMonth": "No expenses this month"
   }
 
 }

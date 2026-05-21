@@ -7,6 +7,7 @@ import { useBankTransaction } from '../../context/BankTransactionContext';
 import { usePlan } from '../../context/PlanContext';
 import { useAuth } from '../../hooks/useAuth';
 import { sendEvent } from '../../services/broadcastChannel';
+import { authFetch } from '../../services/authFetch';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -128,7 +129,6 @@ export default function BudgetPage() {
     setCategoryProgress(progress);
   }, [activePlan, trans]);
 
-  console.log(activePlan)
   useEffect(() => {
     if (!activePlan || !trans) return;
 
@@ -235,7 +235,7 @@ export default function BudgetPage() {
     setClaimingTarget(targetId);
     
     try {
-      const expenseResponse = await fetch('/api/addTrans', {
+      const expenseResponse = await authFetch('/api/addTrans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,7 +263,7 @@ export default function BudgetPage() {
         targets: activePlan?.targets?.filter((target: Target) => target.id !== targetId)
       };
 
-      const updateResponse = await fetch(`/api/rewritePlan?login=${login}&id=${planId}`, {
+      const updateResponse = await authFetch(`/api/rewritePlan?login=${login}&id=${planId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedPlan)
@@ -287,7 +287,7 @@ export default function BudgetPage() {
         }
 
         console.log('getTrans', {component: 'app/bankTransactionsContext/278'})
-        const newTrans = await fetch(`/api/getTrans?bankId=${activeBank.id}`);
+        const newTrans = await authFetch(`/api/getTrans?bankId=${activeBank.id}`);
         if (newTrans.ok) {
           const transData = await newTrans.json();
           setTrans(transData.value);

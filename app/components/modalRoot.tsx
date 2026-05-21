@@ -4,6 +4,7 @@ import { useUI } from '../context/UIContext';
 import EditBankModal from './modalComponents/editBankModal'
 import SettingsAccountModal from './modalComponents/settingAccountModal'
 import TransactionModal from '@/app/components/modalComponents/showtransactionsModal'
+import AddTransactionModal from './modalComponents/addTransaction';
 import { useEffect } from 'react';
 export default function ModalRoot() {
   console.log('modalRoot')
@@ -40,6 +41,9 @@ export default function ModalRoot() {
         )}
         {modal.type === 'transactionsData' && (
           <TransactionModal {...modal.payload} onClose={close}/>
+        )}
+        {modal.type === 'addTransaction' && (
+          <AddTransactionModal {...modal.payload} onClose={close}></AddTransactionModal>
         )}
       </div>
     </div>,
