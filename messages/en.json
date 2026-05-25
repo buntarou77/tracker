@@ -1,32 +1,30 @@
-{ 
-    "home":{
-    "title": "Welcome to {appName}", 
+{
+  "home": {
+    "title": "Welcome to {appName}",
     "subtitle": "Your personal finance management solution",
     "createAccount": "Create Account",
     "learnMore": "Learn More",
     "newHere": "New to {appName}?",
     "signUpNow": "Sign Up Now"
   },
-
-    "register": {
-        "title": "Welcome",
-        "subtitle": "Create an account to use all tracker features",
-        "alreadyRegistered": "You also registred ?",
-        "signIn": "sing in",
-        "createAccountHeading": "Create Account",
-        "usernamePlaceholder": "Username",
-        "passwordPlaceholder": "Password",
-        "repeatPasswordPlaceholder": "Repeat Password",
-        "emailPlaceholder": "Email",
-        "submitButton": "Create Account",
-        "loadingButton": "Creating Account...",
-        "successMessage": "Registration successful!",
-        "errorPasswordMismatch": "Passwords do not match",
-        "errorRegistrationError": "Registration error",
-        "errorGeneric": "An error occurred while submitting the form"
+  "register": {
+    "title": "Welcome",
+    "subtitle": "Create an account to use all tracker features",
+    "alreadyRegistered": "You also registred ?",
+    "signIn": "sing in",
+    "createAccountHeading": "Create Account",
+    "usernamePlaceholder": "Username",
+    "passwordPlaceholder": "Password",
+    "repeatPasswordPlaceholder": "Repeat Password",
+    "emailPlaceholder": "Email",
+    "submitButton": "Create Account",
+    "loadingButton": "Creating Account...",
+    "successMessage": "Registration successful!",
+    "errorPasswordMismatch": "Passwords do not match",
+    "errorRegistrationError": "Registration error",
+    "errorGeneric": "An error occurred while submitting the form"
   },
-
-    "login": {
+  "login": {
     "title": "Welcome Back!",
     "subtitle": "Sign in to your account",
     "formTitle": "Sign In",
@@ -38,8 +36,6 @@
     "errorLogin": "Login error",
     "errorGeneric": "An error occurred while submitting the form"
   },
-
-
   "operations": {
     "addTransaction": "Add Transaction",
     "loading": "Loading...",
@@ -64,8 +60,18 @@
     "date": "Date",
     "submitButton": "Add Transaction",
     "monthNames": [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
     ],
     "categoryOptions": {
       "housing": "🏠 Housing",
@@ -112,7 +118,14 @@
       "education": "📚",
       "taxes": "📋",
       "other": "📦"
-    }
+    },
+    "transactionHistory": "Transaction History",
+    "totalIncome": "Total Income",
+    "totalExpenses": "Total Expenses",
+    "allTransactions": "All Transactions",
+    "transactionsCount": "Transactions",
+    "activity": "Activity",
+    "overview": "Overview"
   },
   "analytics": {
     "title": "Analytics Dashboard",
@@ -216,7 +229,6 @@
     },
     "noPlansFound": "No plans found"
   },
-
   "analyticsErrors": {
     "enterPlanName": "Enter plan name",
     "enterTotalAmount": "Enter total amount",
@@ -227,7 +239,6 @@
     "failedToAddPlan": "Failed to add plan",
     "error": "Error"
   },
-
   "lastsAnalytics": {
     "loading": "Loading...",
     "startBudget": "Start Budget:",
@@ -264,8 +275,18 @@
       "noTransactions": "No transactions found"
     },
     "monthNames": [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
     ]
   },
   "budget": {
@@ -298,11 +319,10 @@
       "income": "income",
       "expense": "expense"
     }
-},
+  },
   "budgetErrors": {
     "claimFailed": "Failed to claim target. Please try again."
-},
-
+  },
   "convert": {
     "title": "Exchange Rates",
     "subtitle": "Real-time exchange rates and quick conversion",
@@ -338,12 +358,10 @@
     "loading": "Loading...",
     "rateUnavailable": "N/A"
   },
-
   "convertErrors": {
     "fetchFailed": "Failed to fetch exchange rates. Please try again.",
     "ratesActual": "Rates are up to date"
   },
-  
   "about": {
     "title": "About Finance Tracker",
     "subtitle": "Your comprehensive solution for personal finance management",
@@ -371,8 +389,7 @@
       "createAccount": "Create Free Account",
       "backHome": "Back to Home"
     }
-},
-
+  },
   "lastsAnalyticsErrors": {
     "loadErrorTitle": "Load error",
     "loadErrorDesc": "Failed to load transactions",
@@ -380,7 +397,6 @@
     "networkErrorDesc": "Please check your internet connection",
     "retry": "Retry"
   },
-
   "bankAccount": {
     "noName": "No name",
     "accountsHeading": "Accounts",
@@ -406,7 +422,6 @@
     "cancelButton": "Cancel",
     "settingsButton": "Settings"
   },
-
   "errors": {
     "noBankAccount": {
       "name": "No Bank Account",
@@ -457,7 +472,6 @@
       "interactiveName": "Retry"
     }
   },
-  
   "Index": {
     "noBank": "No bank selected",
     "balance": "Balance",
@@ -484,6 +498,4 @@
     "expenseBreakdown": "Expense Breakdown",
     "noExpensesThisMonth": "No expenses this month"
   }
-
 }
-  

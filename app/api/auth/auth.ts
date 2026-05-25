@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { serialize, parse } from 'cookie';
 import { NextApiResponse } from 'next';
+import getEnv from '@/app/lib/getEnv';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || '';
+const JWT_SECRET = getEnv('JWT_SECRET');
+const REFRESH_SECRET = getEnv('JWT_REFRESH_SECRET');
 const ACCESS_TOKEN_EXPIRES = '15m';
 const REFRESH_TOKEN_EXPIRES = '7d';
 

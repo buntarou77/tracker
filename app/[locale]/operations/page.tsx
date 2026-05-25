@@ -208,9 +208,9 @@ export default function Operations() {
             const res =  getCashedTransactions(nextCursor, 20)
             if(res.data.length > 0){
                 setTrans(res.data)
-                console.log(`next cursor: ${res.cursor}  operations 221`)
                 setNextCursor(res.cursor)
                 // Send event for transactions sync from cache
+
                 sendEvent({ type: 'SYNC_TRANSACTIONS', payload: res.data });
             }else{
                 setCanUseCachedTransactions(res.data.length < 20)
@@ -218,14 +218,13 @@ export default function Operations() {
             setHasMore(true)
             return 
           }
-          const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}`, {
+          const response = await authFetch(`/api/transactions?bankId=${activeBank.id}`, {
             method: 'GET'
           })
           if(response.ok){
             const responseData = await response.json()
             setTrans(responseData.data);
             setHasMore(responseData.meta.hasMore)
-            console.log(`setnextCursor: ${responseData.meta.cursor}  operations 228`)
             setNextCursor(responseData.meta.cursor)
             // Send event for transactions sync from API
             sendEvent({ type: 'SYNC_TRANSACTIONS', payload: responseData.data });
@@ -251,8 +250,6 @@ export default function Operations() {
         while(limitLeft > 0){
             const targetDate = new Date(cursorDate.getFullYear(), cursorDate.getMonth() - offset)
             let cursorKey = `${targetDate.getFullYear()}-${targetDate.getMonth() + 1 > 10 ? targetDate.getMonth() + 1 : '0' + (targetDate.getMonth() + 1)}` 
-            console.log(cursorKey)
-            console.log(analyticTransactions[cursorKey])
             if(!analyticTransactions[cursorKey]) break
             for(let item of analyticTransactions[cursorKey]){
                 limitLeft--
@@ -349,7 +346,7 @@ export default function Operations() {
                 return;
             }
 
-            const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}&cursor=${nextCursor}`);
+            const response = await authFetch(`/api/transactions?bankId=${activeBank.id}&cursor=${nextCursor}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -357,7 +354,6 @@ export default function Operations() {
                 setTrans(updatedTransactions);
                 setMonthSkip(nextSkip);
                 setHasMore(data.meta.hasMore)
-                console.log(`setNExtCursor ${data.meta.cursor} operations 358`)
                 setNextCursor(data.meta.cursor)
                 
                 // Send event for transactions sync
@@ -522,40 +518,53 @@ export default function Operations() {
         });
     };
 
+    const totalNet = trans.length
+        ? trans.reduce((sum: number, tx: transaction) => tx.type === 'loss' ? sum - tx.amount : sum + tx.amount, 0)
+        : 0;
+    const totalGains = trans.filter((tx: transaction) => tx.type === 'gain').reduce((sum: number, tx: transaction) => sum + tx.amount, 0);
+    const totalLosses = trans.filter((tx: transaction) => tx.type === 'loss').reduce((sum: number, tx: transaction) => sum + tx.amount, 0);
+    const activeBankCurrency = banks.find((item) => item.id === activeBank.id)?.currency;
+
     return (
-        <div className="min-h-screen bg-gray-900 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="lg:col-span-3">
-                        <div className="bg-gray-800 rounded-lg p-6">
-                            <div className="flex justify-end mb-6">
+        <div className="min-h-screen bg-[#050816] text-white overflow-x-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_35%)] pointer-events-none" />
+
+            <div className="relative max-w-7xl mx-auto px-6 py-8">
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+
+                    {/* TRANSACTIONS LIST */}
+                    <div className="xl:col-span-3">
+                        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#101827] to-[#0b1220] p-6 shadow-2xl backdrop-blur-xl">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                                <div>
+                                    <p className="text-sm text-gray-400">{t('activity')}</p>
+                                    <h2 className="text-3xl font-bold mt-1">{t('allTransactions')}</h2>
+                                </div>
                                 <button
                                     onClick={handleToggle}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                                    className="group bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all duration-200 text-white px-5 py-3 rounded-2xl flex items-center gap-3 shadow-lg shadow-blue-500/20"
                                 >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
-                                    <span>{t('addTransaction')}</span>
+                                    {t('addTransaction')}
                                 </button>
                             </div>
 
                             {renderTransactionsByMonth()}
 
-                            {hasMore &&  (
+                            {hasMore && (
                                 <div className="flex justify-center mt-8">
                                     <button
                                         onClick={loadMoreTransactions}
                                         disabled={isLoadingMore}
-                                        className={`px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 ${
-                                            isLoadingMore 
-                                                ? 'opacity-50 cursor-not-allowed' 
-                                                : 'hover:shadow-lg'
+                                        className={`px-6 py-3 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-medium transition-all duration-200 hover:border-white/20 hover:bg-white/[0.06] ${
+                                            isLoadingMore ? 'opacity-50 cursor-not-allowed' : ''
                                         }`}
                                     >
                                         {isLoadingMore ? (
-                                            <span className="flex items-center">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            <span className="flex items-center gap-2">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                                                 {t('loading')}
                                             </span>
                                         ) : (
@@ -565,29 +574,41 @@ export default function Operations() {
                                 </div>
                             )}
 
-                            {!hasMore && (
+                            {!hasMore && trans.length > 0 && (
                                 <div className="text-center mt-8">
-                                    <p className="text-gray-400">{t('allTransactionsLoaded')}</p>
+                                    <p className="text-gray-500 text-sm">{t('allTransactionsLoaded')}</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="bg-gray-800 rounded-lg p-6">
-                            <h3 className="text-lg font-bold text-white mb-4">📊 {t('quickStats')}</h3>
+                    {/* SIDEBAR STATS */}
+                    <div className="space-y-4">
+                        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 shadow-xl">
+                            <p className="text-sm text-gray-400 mb-1">{t('quickStats')}</p>
+                            <h3 className="text-xl font-bold mb-6">{t('overview')}</h3>
+
                             <div className="space-y-4">
-                                <div className="bg-gray-700 rounded-lg p-4">
-                                    <div className="text-sm text-gray-400">{t('resultPer', { count: trans.length })}</div>
-                                    <div className="text-2xl font-bold text-white">
-                                        {trans.length ? trans.reduce((sum: number, trans: transaction) => trans.type === 'loss' ? sum - trans.amount: sum + trans.amount , 0).toFixed(2) : 0} {banks.find((item)=>item.id === activeBank.id)?.currency}
-                                    </div>
+                                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                                    <p className="text-xs text-emerald-300 mb-1">{t('totalIncome')}</p>
+                                    <p className="text-xl font-bold text-emerald-400">+{formatNumber(totalGains)} {activeBankCurrency}</p>
                                 </div>
-                                <div className="bg-gray-700 rounded-lg p-4">
-                                    <div className="text-sm text-gray-400">{t('activeBank')}</div>
-                                    <div className="text-lg font-semibold text-blue-400">
-                                        {activeBank.name || t('noBankSelected')}
-                                    </div>
+
+                                <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
+                                    <p className="text-xs text-red-300 mb-1">{t('totalExpenses')}</p>
+                                    <p className="text-xl font-bold text-red-400">-{formatNumber(totalLosses)} {activeBankCurrency}</p>
+                                </div>
+
+                                <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                                    <p className="text-xs text-gray-400 mb-1">{t('resultPer', { count: trans.length })}</p>
+                                    <p className={`text-xl font-bold ${totalNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {totalNet >= 0 ? '+' : ''}{formatNumber(totalNet)} {activeBankCurrency}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                                    <p className="text-xs text-gray-400 mb-1">{t('transactionsCount')}</p>
+                                    <p className="text-2xl font-bold text-white">{trans.length}</p>
                                 </div>
                             </div>
                         </div>

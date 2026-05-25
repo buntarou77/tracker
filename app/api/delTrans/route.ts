@@ -3,8 +3,9 @@ import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import clientPromise from '@/app/lib/mongodb';
+import getEnv from "@/app/lib/getEnv";
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getEnv('JWT_SECRET');
 
 interface TokenPayload {
   id: string;
@@ -50,7 +51,8 @@ export async function DELETE(request: NextRequest) {
         session.startTransaction()
         const result = await db.collection('transactions').findOneAndDelete(
             { 
-                _id: new ObjectId(`${transactionId}`)
+                _id: new ObjectId(`${transactionId}`),
+                userId: userId
             },  
             {session}
         );
@@ -61,16 +63,17 @@ export async function DELETE(request: NextRequest) {
             );
         }
         const deletedTransaction = result;
-        const newBalance = type === 'loss' 
+        const newBalance = type === 'loss'
             ? Number(balance) + Number(amount)
             : Number(balance) - Number(amount);
-        const gainAmount = type === 'loss' ? Number(amount) - Number(amount) * 2 : Number(amount)
-        const lossAmount = type === 'loss' ? Number(amount): Number(amount) - Number(amount) * 2 
+        const balanceDelta = type === 'loss' ? Number(amount) : -Number(amount);
+        const gainsDelta  = type === 'gain' ? -Number(amount) : 0;
+        const lossDelta   = type === 'loss' ? -Number(amount) : 0;
         const bankUpdateResult = await db.collection('bankAccounts').findOneAndUpdate(
-            { 
+            {
                 _id: new ObjectId(`${bankId}`)
             },
-            { $inc: {'balance' : gainAmount, 'stats.netBalance': gainAmount,  'stats.totalGains': gainAmount, 'stats.totalLoss': lossAmount, 'stats.totalTransactions': -1}},
+            { $inc: { 'balance': balanceDelta } },
             { returnDocument: 'after' , session}
         );
         if (!bankUpdateResult) {

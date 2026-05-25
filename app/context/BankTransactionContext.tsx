@@ -58,12 +58,6 @@ interface bankData {
   currency: string;
   balance: number;
   createAt: Date | string;
-  stats: {
-    netBalance: number;
-    totalGains: number;
-    totalTransactions: number;
-    totalLoss: number;
-  };
 }
 
 const BankTransactionContext = createContext<BankTransactionContextType | undefined>(undefined);
@@ -156,7 +150,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       await refreshTransactions();
 
     } catch (error) {
-      console.error('Error loading initial data:', error);
     } finally {
       setLoading(false);
     }
@@ -191,7 +184,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       }
 
     } catch (error) {
-      console.error('Error refreshing banks:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -216,7 +208,6 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       setLastUpdated(Date.now());
 
     } catch (error) {
-      console.error('Error refreshing balance:', error);
       throw error;
     }
   };
@@ -224,7 +215,7 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
   const refreshTransactions = async () => {
     try {
       if(!activeBank.id) return;
-      const response = await authFetch(`/api/getTrans?bankId=${activeBank.id}`, {
+      const response = await authFetch(`/api/transactions?bankId=${activeBank.id}`, {
         method: 'GET',
       });
 
@@ -239,14 +230,12 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       setLastUpdated(Date.now());
 
     } catch (error) {
-      console.error('Error refreshing transactions:', error);
       throw error;
     }
   };
 
   const refreshExchangeRates = async () => {
     try {
-      console.log('[BankTransactionContext] ExchangeRates: запрос начат');
       const response = await authFetch('/api/getExchangeRate', {
         method: 'GET',
       });
@@ -256,13 +245,11 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
       }
 
       const data = await response.json();
-      console.log('[BankTransactionContext] ExchangeRates: ответ получен', data);
 
       setExchangeRates(data);
       setLastUpdated(Date.now());
 
     } catch (error) {
-      console.error('Error refreshing exchange rates:', error);
       throw error;
     }
   };

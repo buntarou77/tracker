@@ -455,6 +455,6 @@ export default function broadcastEventBus(
     }
 
     default:
-      console.warn('Unknown event type:', event.type);
+      break;
   }
 }

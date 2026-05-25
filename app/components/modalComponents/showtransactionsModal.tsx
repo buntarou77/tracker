@@ -9,7 +9,6 @@ interface transactionModalProps {
 }
 
 export default function TransactionModal(payload: transactionModalProps){
-  console.log(payload)
   const t = useTranslations('lastsAnalytics');
   const { modalTitle, transactions, onClose }: transactionModalProps = payload;
   const { activeBank,  banks} = useBankTransaction();

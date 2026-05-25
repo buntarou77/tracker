@@ -69,23 +69,14 @@ export const getTransactionsQuerySchema = z.object({
   bankId: z.string().min(1),
   cursor: z.string().optional(),
   limit: z.string().optional().transform(val => (val ? parseInt(val, 10) : 20)),
-  to: z.string().optional(),
   from: z.string().optional(),
+  to: z.string().optional(),
   category: z.string().optional(),
   type: z.enum(['gain', 'loss']).optional(),
 }).refine(data => {
-  if ((data.cursor && data.to) || (data.cursor && data.from)) return false;
+  if (data.cursor && (data.from || data.to)) return false;
   return true;
-});
-
-export const getTransactionsRangeQuerySchema = z.object({
-  bankId: z.string().min(1),
-  from: z.string().min(1),
-  to: z.string().min(1),
-  category: z.string().optional(),
-  type: z.enum(['gain', 'loss']).optional(),
-  pagination: z.string().optional().transform(val => val === 'true'),
-});
+}, { message: 'cursor and from/to are incompatible' });
 
 const currencyEnum = z.enum(['USD', 'EUR', 'RUB', 'GBP', 'CNY', 'JPY', 'CHF', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK', 'PLN', 'INR', 'BRL']);
 

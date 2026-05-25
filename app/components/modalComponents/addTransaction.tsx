@@ -58,7 +58,6 @@ export default function AddTransactionModal({
             addTransaction(transactionData, activeBank.id);
             onClose();
         } catch (error) {
-            console.error(error);
         }
     };
 

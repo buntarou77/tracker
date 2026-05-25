@@ -104,7 +104,6 @@ export class CacheService {
       };
       localStorage.setItem(config.key, JSON.stringify(cacheData));
     } catch (error) {
-      console.error('Error saving cache:', error);
     }
   }
 
@@ -130,7 +129,6 @@ export class CacheService {
 
       localStorage.removeItem(config.key);
     } catch (error) {
-      console.error('Error clearing cache:', error);
     }
   }
 
@@ -142,7 +140,6 @@ export class CacheService {
         this.clear(config);
       });
     } catch (error) {
-      console.error('Error clearing all cache:', error);
     }
   }
 
@@ -215,29 +212,6 @@ export class CacheService {
   }
 
   static printDebugInfo(): void {
-    if (typeof window === 'undefined') return;
-
-    const allConfigs = CACHE_CONFIGS as Record<string, CacheConfig>;
-
-    console.group('🗂️ Cache Debug Info');
-
-    Object.entries(allConfigs).forEach(([name, config]) => {
-      const cached = localStorage.getItem(config.key);
-      if (cached) {
-        const { timestamp } = JSON.parse(cached);
-        const isExpired = Date.now() - timestamp > config.ttl;
-        const timeLeft = config.ttl - (Date.now() - timestamp);
-        const expiryTime = new Date(timestamp + config.ttl).toLocaleTimeString();
-
-        console.log(
-          `${isExpired ? '❌' : '✅'} ${name}: ${isExpired ? 'EXPIRED' : 'VALID'} | Expires: ${expiryTime} | Time left: ${Math.round(timeLeft / 1000)}s`
-        );
-      } else {
-        console.log(`⚪ ${name}: NOT CACHED`);
-      }
-    });
-
-    console.groupEnd();
   }
 }
 

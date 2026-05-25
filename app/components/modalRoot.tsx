@@ -7,11 +7,8 @@ import TransactionModal from '@/app/components/modalComponents/showtransactionsM
 import AddTransactionModal from './modalComponents/addTransaction';
 import { useEffect } from 'react';
 export default function ModalRoot() {
-  console.log('modalRoot')
-  const { modal, setModal } = useUI(); 
-  console.log('modalRoot', modal)
+  const { modal, setModal } = useUI();
   useEffect(()=>{
-    console.log('root modal effect')
     if(modal.type !== '') document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'auto';
   }, [modal])

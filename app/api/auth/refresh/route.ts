@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRefreshToken, generateTokens } from '../auth';
 import { cookies } from 'next/headers';
+import getEnv from '@/app/lib/getEnv';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const domainNmae = getEnv('DOMAIN_NAME');
 
     let decoded;
     try {
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 15 * 60,
-      domain: 'localhost',
+      domain: domainNmae,
       path: '/',
       sameSite: 'lax',
     });
@@ -46,7 +49,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60,
-      domain: 'localhost',
+      domain: domainNmae,
       path: '/',
       sameSite: 'lax',
     });

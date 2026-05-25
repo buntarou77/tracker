@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import clientPromise from '@/app/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
         const db = client.db('users');
 
         const bankAccount = await db.collection('bankAccounts').findOne({
-            id: bankId,
+            _id: new ObjectId(bankId),
             userId: userId
         });
 

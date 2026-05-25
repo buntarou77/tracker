@@ -48,14 +48,12 @@ const fetchExchangeRates = async (baseCurrency: string): Promise<{ rates: Record
       return { rates: cached.rates };
     }
 
-    console.log('[convert/page] ExchangeRates: запрос начат, base currency:', baseCurrency);
     const response = await authFetch(`/api/getExchangeRate?base=${baseCurrency}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('[convert/page] ExchangeRates: ответ получен', data);
 
     if (data.result === 'success') {
       exchangeRateCache[baseCurrency] = {
@@ -115,12 +113,6 @@ export default function ConvertPage() {
     }
   }, [currency])
 
-  useEffect(()=>{
-    console.log('START WATCH FROM CURRENCY: ' + fromCurrency)
-  }, [fromCurrency])
-  useEffect(()=>{
-        console.log('START WATCH CURRENCY: ' + currency)
-  }, [currency])
   useEffect(() => {
     const savedHistory = localStorage.getItem('conversionHistory'); 
     if (savedHistory) {
@@ -134,16 +126,11 @@ export default function ConvertPage() {
   }, []);
 
   useEffect(() => {
-    console.log(9)
-    console.log(currency)
-    console.log(fromCurrency, toCurrency)
     if (fromCurrency && toCurrency) {
-      console.log(1)
       const getRate = async () => {
         setIsLoadingRates(true);
         
         if (exchangeRates[fromCurrency]?.[toCurrency]) {
-          console.log('USING CACHE');
           setExchangeRate(exchangeRates[fromCurrency][toCurrency]);
           setIsLoadingRates(false);
           return;
@@ -237,7 +224,6 @@ export default function ConvertPage() {
   const swapCurrencies = () => {
     const tempCurrency = fromCurrency;
     const tempAmount = fromAmount;
-    console.log(toCurrency)
     setFromCurrency(toCurrency);
     setToCurrency(tempCurrency);
     setFromAmount(toAmount);

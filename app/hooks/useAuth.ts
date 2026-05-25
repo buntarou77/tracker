@@ -22,7 +22,6 @@ export function useAuth() {
         method: 'POST',
         credentials: 'include'
       });
-      console.log('refreshTokens', response)
       if (response.ok) {
 
         return true;
@@ -48,9 +47,7 @@ export function useAuth() {
           setUser(data);
           setIsAuthenticated(true);
         } else if (response.status === 401) {
-          console.log('ref')
           const refreshSuccess = await refreshTokens();
-          console.log('refreshSuccess', refreshSuccess)
           if (refreshSuccess) {
             const retryResponse = await fetch('/api/me', {
               method: 'GET',

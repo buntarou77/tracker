@@ -30,7 +30,6 @@ export default function SettingsAccountModal({
     })
     if(response.status === 200){
       const data = await response.json();
-      console.log(data)
       setUserData(data);
       setChangedUserName(data.user)
     }else{

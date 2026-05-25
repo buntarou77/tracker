@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
     }
       const update =
         type === 'loss'
-          ? { $inc: {'balance' : -numeralAmount, 'stats.netBalance': -numeralAmount,  'stats.totalLoss': numeralAmount, 'stats.totalTransactions': 1} }
-          : { $inc: {'balance' : numeralAmount, 'stats.netBalance': numeralAmount, 'stats.totalGains': numeralAmount, 'stats.totalTransactions': 1} }
+          ? { $inc: { 'balance': -numeralAmount } }
+          : { $inc: { 'balance': numeralAmount } }
         
       const balanceResult = await db
         .collection('bankAccounts')

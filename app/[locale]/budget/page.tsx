@@ -241,6 +241,7 @@ export default function BudgetPage() {
         body: JSON.stringify({
           login,
           bankName: activeBank.name,
+          bankId: activeBank.id,
           amount: targetAmount,
           category: 'savings',
           type: 'loss',
@@ -286,8 +287,7 @@ export default function BudgetPage() {
           setActivePlan(updatedPlan as Plan);
         }
 
-        console.log('getTrans', {component: 'app/bankTransactionsContext/278'})
-        const newTrans = await authFetch(`/api/getTrans?bankId=${activeBank.id}`);
+        const newTrans = await authFetch(`/api/transactions?bankId=${activeBank.id}`);
         if (newTrans.ok) {
           const transData = await newTrans.json();
           setTrans(transData.value);
