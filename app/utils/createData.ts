@@ -58,7 +58,7 @@ const prepareMonthBarData= (data: any[])=>{
     for (let i = 0; i < data.length; i++) {
       const { amount, date , numeralAmount} = data[i];
       const day = new Date(date).getDate();
-      monthsGainAmounts[day] = (monthsGainAmounts[day] || 0) + amount || numeralAmount;
+      monthsGainAmounts[day] = (monthsGainAmounts[day] || 0) + (amount || numeralAmount);
     }
     return{
         label: Object.keys(monthsGainAmounts),

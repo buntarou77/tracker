@@ -292,7 +292,7 @@ export default function Operations() {
                 const newBalance = type === 'loss' 
                   ? Number(balance) + Number(amount)
                   : Number(balance) - Number(amount);
-                  
+
                 setBalance(newBalance);
 
                 setTrans(prev => prev.filter(trans => trans.id !== id));

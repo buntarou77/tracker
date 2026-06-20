@@ -1,7 +1,6 @@
 'use client';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement, BarElement } from 'chart.js';
 import { useState, useEffect, memo } from 'react';
-import { createPortal } from 'react-dom';
 import { Line, Pie, Doughnut, Bar } from 'react-chartjs-2';
 import { filtredCategorys } from '../../../utils/filtredTrans';
 import { preparePieTransactions, getMonth, prepareMonthBarData } from '@/app/utils/createData';
@@ -36,11 +35,10 @@ export default memo(function LastsAnalytics() {
   const err = useTranslations('lastsAnalyticsErrors');
   
   const {setModal} = useUI();
-  const { analyticTransactions, setAnalyticTransactions, activeBank, banks, trans } = useBankTransaction();
+  const { analyticTransactions, setAnalyticTransactions, activeBank, banks, trans, balance } = useBankTransaction();
   const { setActiveMonthPlan, activeMonthPlan, activePlansStatus, setActivePlansStatus, plans, setPlans } = usePlan();
   const { login } = useAuthContext();
   const { addError } = useError();
-  const { balance } = useBankTransaction();
 
   const [startBudget, setStartBudget] = useState(0);
   const [endBudget, setEndBudget] = useState(0);
@@ -60,10 +58,6 @@ export default memo(function LastsAnalytics() {
   const [prevMonthGain, setPrevMonthGain] = useState(0);
   const [isLoadingMonth, setIsLoadingMonth] = useState(false);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalTransactions, setModalTransactions] = useState<any[]>([]);
-  const [mounted, setMounted] = useState(false);
 
   const loadMonth = async (offset: number) => {
     if (!activeBank?.id) return;
@@ -76,7 +70,7 @@ export default memo(function LastsAnalytics() {
     const isMonthTransactionsOperations = trans.some((item)=> new Date(item.date) < startDate)
     const key = `${startDate.getFullYear()}-${endDate.getMonth() + 1}`
     if(isMonthTransactionsOperations){
-      const filteredData = trans.filter(item=> new Date(item.date) > startDate && new Date(item.date) < endDate);
+      const filteredData = trans.filter(item=> new Date(item.date) >= startDate && new Date(item.date) <= endDate);
       const nextAnalytics = { ...analyticTransactions, [key]: filteredData };
       setAnalyticTransactions(nextAnalytics);
       sendEvent({ type: 'SYNC_ANALYTICS', payload: nextAnalytics });
@@ -210,10 +204,6 @@ export default memo(function LastsAnalytics() {
   }, []);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     const loadPrevMonthData = async () => {
       setPrevMonthLoss(0);
       setPrevMonthGain(0);
@@ -255,11 +245,11 @@ export default memo(function LastsAnalytics() {
 
   useEffect(() => {
     if (activeMonthPlan && activeMonthPlan.type === 'expense') {
-      setExpenseProgress((monthRes / activeMonthPlan.amount) * 100);
+      setExpenseProgress((totalLosses / activeMonthPlan.amount) * 100);
     } else if (activeMonthPlan && activeMonthPlan.type === 'income') {
-      setIncomeProgress((monthRes / activeMonthPlan.amount) * 100);
+      setIncomeProgress((totalGains / activeMonthPlan.amount) * 100);
     }
-  }, [filteredTrans, activeMonthPlan, monthRes]);
+  }, [activeMonthPlan, totalLosses, totalGains]);
 
   const handlePreviousMonth = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -338,40 +328,41 @@ export default memo(function LastsAnalytics() {
 
 
     return (
-      <div className="header bg-dark m-auto flex justify-center flex-col pl-[100px] pr-[100px]">
-        <div className='w-[100%] flex justify-center'>
-          <div className='flex justify-between items-center w-[500px]'>
+      <div className="m-auto flex justify-center flex-col">
+        <div className="w-full flex justify-center mb-8">
+          <div className="flex items-center gap-6 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-3">
             <button
               onClick={handlePreviousMonth}
-              className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
               disabled={isLoadingMonth}
+              className="w-8 h-8 flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all duration-200 disabled:opacity-40"
             >
-              <img className='w-[40px] h-[40px]' src={leftArrow.src} alt={t('loading')} />
+              <img className="w-4 h-4 opacity-70" src={leftArrow.src} alt="previous month" />
             </button>
-            <div className='flex flex-col items-center'>
-              <div>
-                {isLoadingMonth ? (
-                  <span className="text-sm text-gray-400 mt-1 h-[5px]">{t('loading')}</span>
-                ) : (
-                  <div className={'flex flex-col'}>
-                    <p className={'opacity-50 flex justify-center items-center'}>{periodInfo.year}</p>
-                    <p className={'flex justify-center items-center opacity-80'}>{periodInfo.month}</p>
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-col items-center min-w-[100px]">
+              {isLoadingMonth ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" />
+                  <span className="text-sm text-gray-400">{t('loading')}</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500">{periodInfo.year}</p>
+                  <p className="text-base font-semibold text-white">{periodInfo.month}</p>
+                </>
+              )}
             </div>
             <button
               onClick={handleNextMonth}
-              className='opacity-[0.8] hover:opacity-[1] w-[20px] h-[40px]'
               disabled={isLoadingMonth}
+              className="w-8 h-8 flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-all duration-200 disabled:opacity-40"
             >
-              <img src={rigthArrow.src} alt={t('loading')} />
+              <img className="w-4 h-4 opacity-70" src={rigthArrow.src} alt="next month" />
             </button>
           </div>
         </div>
 
-        <div className='flex justify-between'>
-          <div className=" p-4 rounded-lg shadow-md text-white w-[300px] space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-400">{t('startBudget')}</span>
               <span className="font-semibold text-blue-300">{startBudget.toFixed(2)}{displayCurrency}</span>
@@ -398,8 +389,8 @@ export default memo(function LastsAnalytics() {
               </span>
             </div>
           </div>
-          <div className='m-3'>
-            <div className='min-w-[280px] bg-gray-800/40 backdrop-blur-sm p-4 rounded-lg border border-gray-600 shadow-lg'>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5 flex items-center justify-center">
+            <div className="w-full">
               {isLoadingPlan ? (
                 <div className='flex items-center justify-center py-4 '>
                   <span className='text-gray-400 text-xs '>{t('loadingPlan')}</span>
@@ -460,8 +451,8 @@ export default memo(function LastsAnalytics() {
             </div>
           </div>
 
-          <div className='flex gap-[10px] flex-col'>
-            <div className='flex flex-col gap-2 text-white  p-4 rounded-lg shadow-md min-w-[280px]'>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5">
+            <div className="flex flex-col gap-3">
               <div className='flex justify-between items-center '>
                 <span className='text-gray-400'>{t('yourLosses')}</span>
                 <span className='text-red-400 font-semibold'>{totalLosses}{displayCurrency}</span>
@@ -486,7 +477,7 @@ export default memo(function LastsAnalytics() {
           </div>
         </div>
 
-        <div className="w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px]">
+        <div className="w-full max-w-[1200px] h-[500px] m-auto rounded-3xl border border-white/10 overflow-hidden mb-6">
           {lineData?.datasets?.[0]?.data?.length > 0 ? (
             <Line
               className="w-full max-w-[1200px] h-[500px] m-auto"
@@ -512,7 +503,7 @@ export default memo(function LastsAnalytics() {
           )}
         </div>  
 
-        <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
+        <div className="w-full max-w-[1200px] h-[500px] m-auto rounded-3xl border border-white/10 overflow-hidden mb-6">
           {barLossData?.datasets?.[0]?.data?.length > 0 ? (
             <Bar
               className="w-full max-w-[1200px] h-[500px] m-auto"
@@ -537,7 +528,7 @@ export default memo(function LastsAnalytics() {
           )}
         </div>
           
-        <div className='w-full max-w-[1200px] h-[500px] m-auto border-[2px] border-[#5e5e5e] rounded-[10px] mt-[10px]'>
+        <div className="w-full max-w-[1200px] h-[500px] m-auto rounded-3xl border border-white/10 overflow-hidden mb-8">
           {gainBarData.length > 0 ? (
             <Bar
               className="w-full max-w-[1200px] h-[500px] m-auto"
@@ -574,9 +565,9 @@ export default memo(function LastsAnalytics() {
           )}
         </div>
 
-        <div className='flex flex-col w-[1200px] pt-[50px] gap-[20px]'>
-          <div className='flex flex-row gap-[20px] w-[90%] bg-gray-800/60 backdrop-blur-sm border border-gray-600 rounded-xl shadow-lg p-4'>
-            <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-gray-700/50'>
+        <div className="flex flex-col w-full max-w-[1200px] gap-6">
+          <div className="flex flex-row gap-6 w-full rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+            <div className="rounded-2xl border border-white/5 bg-black/20 w-[50%] h-[400px] flex items-center justify-center">
               {categorysArray.length > 0 ? (
                 <Doughnut
                   style={{ width: '100%' }}
@@ -617,7 +608,7 @@ export default memo(function LastsAnalytics() {
                     <button
                       key={index}
                       onClick={() => showCategoryTransactions(category)}
-                      className='bg-gray-700/80 hover:bg-gray-600/90 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-gray-600/50 hover:border-gray-500'
+                      className="rounded-xl border border-white/5 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06] text-white p-2 text-sm transition-all duration-200 text-left"
                     >
                       {category}: {categoryAmountsArray[index]}{displayCurrency}
                     </button>
@@ -631,8 +622,8 @@ export default memo(function LastsAnalytics() {
             </div>
           </div>
 
-          <div className='flex flex-row gap-[20px] w-[90%] bg-gray-800/60 backdrop-blur-sm border border-gray-600 rounded-xl shadow-lg p-4'>
-            <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-gray-700/50'>
+          <div className="flex flex-row gap-6 w-full rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+            <div className="rounded-2xl border border-white/5 bg-black/20 w-[50%] h-[400px] flex items-center justify-center">
               {filteredGainTrans.length > 0 || filteredLossTrans.length > 0 ? (
                 <Pie
                   style={{ width: '100%' }}
@@ -692,8 +683,8 @@ export default memo(function LastsAnalytics() {
             </div>
           </div>
 
-          <div className='flex flex-row gap-[20px] w-[90%] bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 backdrop-blur-sm border border-emerald-600/30 rounded-xl shadow-lg p-4'>
-            <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-emerald-700/30'>
+          <div className="flex flex-row gap-6 w-full rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl p-6">
+            <div className="rounded-2xl border border-emerald-500/20 bg-black/20 w-[50%] h-[400px] flex items-center justify-center">
               {gainCategorys.length > 0 ? (
                 <Doughnut
                   style={{ width: '100%' }}
@@ -734,7 +725,7 @@ export default memo(function LastsAnalytics() {
                     <button
                       key={index}
                       onClick={() => showCategoryTransactions(category)}
-                      className='bg-emerald-700/60 hover:bg-emerald-600/70 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-emerald-500/30 hover:border-emerald-400/50'
+                      className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/15 text-white p-2 text-sm transition-all duration-200 text-left"
                     >
                       {category}: {gainAmounts[index]}{displayCurrency}
                     </button>
@@ -748,8 +739,8 @@ export default memo(function LastsAnalytics() {
             </div>
           </div>
 
-          <div className='flex flex-row gap-[20px] w-[90%] bg-gradient-to-br from-orange-900/20 to-red-800/10 backdrop-blur-sm border border-red-600/30 rounded-xl shadow-lg p-4'>
-            <div className='bg-gray-900/50 rounded-lg w-[50%] h-[400px] flex items-center justify-center border border-red-700/30'>
+          <div className="flex flex-row gap-6 w-full rounded-3xl border border-red-500/20 bg-red-500/5 backdrop-blur-xl p-6">
+            <div className="rounded-2xl border border-red-500/20 bg-black/20 w-[50%] h-[400px] flex items-center justify-center">
               {lossCategorys.length > 0 ? (
                 <Doughnut
                   style={{ width: '100%' }}
@@ -790,7 +781,7 @@ export default memo(function LastsAnalytics() {
                     <button
                       key={index}
                       onClick={() => showCategoryTransactions(category)}
-                      className='bg-red-700/60 hover:bg-red-600/70 text-white p-2 rounded-lg text-sm transition-all duration-200 text-left border border-red-500/30 hover:border-red-400/50'
+                      className="rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/15 text-white p-2 text-sm transition-all duration-200 text-left"
                     >
                       {category}: {lossAmounts[index]}{displayCurrency}
                     </button>
@@ -805,8 +796,8 @@ export default memo(function LastsAnalytics() {
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-lg">
+        <div className="w-full max-w-[1200px]">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 shadow-xl">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <h3 className="text-xl font-bold text-white">{t('top5Categories')}</h3>
