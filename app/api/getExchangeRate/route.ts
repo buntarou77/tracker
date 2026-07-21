@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET: string = process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not set'); })();
 export async function GET(request: NextRequest) {
 const cookieStore = cookies();
     const token = cookieStore.get('accessToken')?.value;

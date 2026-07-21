@@ -1,31 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
 import clientPromise from "@/app/lib/mongodb";
-
-const JWT_SECRET = process.env.JWT_SECRET || "";
-
-interface TokenPayload {
-  id: string;
-  login: string;
-}
+import { getAuthUser } from "@/app/api/_lib/auth";
 
 export async function POST(request: NextRequest) {
-  const cookieStore = cookies();
-  const token = cookieStore.get("accessToken")?.value;
-
-  if (!token) {
+  const user = getAuthUser();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  let userId: string;
-  try {
-    const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
-    userId = verified.id;
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const userId = user.userId;
 
   let data;
   try {
@@ -57,81 +40,92 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const mongoClient = await clientPromise;
+  // Reject malformed bankId before new ObjectId() throws and turns into a 500.
+  if (!ObjectId.isValid(bankId)) {
+    return NextResponse.json({ error: "Invalid bankId" }, { status: 400 });
+  }
 
+  const transactionDate = new Date(date);
+  if (isNaN(transactionDate.getTime())) {
+    return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+  }
+
+  const year = transactionDate.getFullYear();
+  const month = String(transactionDate.getMonth() + 1).padStart(2, "0");
+  const monthKey = `${year}-${month}`;
+
+  const newTransaction = {
+    userId,
+    bankId,
+    amount: numeralAmount,
+    category,
+    date: transactionDate,
+    monthKey,
+    createdAt: new Date(),
+    type,
+  };
+
+  const mongoClient = await clientPromise;
   const session = mongoClient.startSession();
   try {
-    let transactionDate;
-    try {
-      transactionDate = new Date(date);
-      if (isNaN(transactionDate.getTime())) {
-        throw new Error("Invalid date");
+    let insertedId: ObjectId | undefined;
+    let newBalance: number | undefined;
+
+    await session.withTransaction(async () => {
+      const db = mongoClient.db("users");
+
+      // Update the balance first and require the bank to exist AND belong to
+      // this user. If it doesn't, throw so the whole transaction rolls back and
+      // we never leave an orphan transaction without a matching balance change.
+      const update =
+        type === "loss"
+          ? { $inc: { balance: -numeralAmount } }
+          : { $inc: { balance: numeralAmount } };
+
+      const updatedBank = await db
+        .collection("bankAccounts")
+        .findOneAndUpdate({ userId, _id: new ObjectId(bankId) }, update, {
+          returnDocument: "after",
+          session,
+        });
+
+      if (!updatedBank) {
+        throw new Error("BANK_NOT_FOUND");
       }
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid date format" },
-        { status: 400 },
-      );
-    }
+      newBalance = updatedBank.balance;
 
-    const year = transactionDate.getFullYear();
-    const month = String(transactionDate.getMonth() + 1).padStart(2, "0");
-    const monthKey = `${year}-${month}`;
-    const newTransaction = {
-      userId,
-      bankId,
-      amount: numeralAmount,
-      category,
-      date: new Date(date),
-      createdAt: new Date(),
-      type,
-    };
-    session.startTransaction();
-    const db = mongoClient.db("users");
-    const result = await db
-      .collection("transactions")
-      .insertOne(newTransaction, { session });
+      const result = await db
+        .collection("transactions")
+        .insertOne(newTransaction, { session });
+      insertedId = result.insertedId;
+    });
 
-    if (!result.acknowledged) {
-      return NextResponse.json(
-        { error: "Failed to add transaction - no changes made" },
-        { status: 500 },
-      );
-    }
-    const update =
-      type === "loss"
-        ? { $inc: { balance: -numeralAmount } }
-        : { $inc: { balance: numeralAmount } };
-
-    const balanceResult = await db
-      .collection("bankAccounts")
-      .findOneAndUpdate({ userId, _id: new ObjectId(bankId) }, update, {
-        returnDocument: "after",
-        session,
-      });
-    await session.commitTransaction();
     return NextResponse.json(
       {
         success: true,
-        data: { ...newTransaction, _id: result.insertedId },
+        data: { ...newTransaction, _id: insertedId },
+        balance: newBalance,
         monthKey,
         transactionAdded: true,
       },
       { status: 201 },
     );
   } catch (error: any) {
-    await session.abortTransaction();
+    if (error?.message === "BANK_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "Bank account not found" },
+        { status: 404 },
+      );
+    }
     return NextResponse.json(
       {
         error: "Internal server error",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === "development" ? error?.message : undefined,
       },
       { status: 500 },
     );
   } finally {
-    try {
-      session.endSession();
-    } catch (error) {}
+    await session.endSession();
   }
 }

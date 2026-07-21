@@ -109,7 +109,13 @@ export function BankTransactionProvider({ children }: BankTransactionProviderPro
         const data = await response.json();
         const newTransaction = data.data;
         const key = data.monthKey;
-        setBalance((prev) => prev + (newTransaction.type === 'gain' ? newTransaction.amount : -newTransaction.amount));
+        // Trust the server-computed balance when present; fall back to optimistic
+        // local math only if the API didn't return it.
+        if (typeof data.balance === 'number') {
+          setBalance(data.balance);
+        } else {
+          setBalance((prev) => prev + (newTransaction.type === 'gain' ? newTransaction.amount : -newTransaction.amount));
+        }
         setTransactions((prev) => {
           return {
           ...prev,

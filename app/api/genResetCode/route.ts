@@ -1,46 +1,42 @@
 import { ObjectId } from "mongodb";
-import jwt from 'jsonwebtoken';
-import {  NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import crypto from 'crypto';
-import type { TokenPayload } from "@/app/types/api";
+import { getAuthUser } from '@/app/api/_lib/auth';
 import clientPromise from '@/app/lib/mongodb';
-const JWT_SECRET = process.env.JWT_SECRET || '';
-export default async function POST(request: Request) {
-    const cookieStore = cookies();
-    const token = cookieStore.get('accessToken')?.value;
-    
-    if (!token) {
-        return NextResponse.json(
-            { error: 'Unauthorized' },
-            { status: 401 }
-        );
+
+export async function POST() {
+    const user = getAuthUser();
+    if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let userId: string;
     try {
-        const verified = jwt.verify(token, JWT_SECRET) as TokenPayload;
-        userId = verified.id;
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Invalid token' },
-            { status: 401 }
-        );
-    }
+        const client = await clientPromise;
+        const db = client.db(process.env.MONGODB_DB_NAME || 'users');
 
-    const client = await clientPromise;
-    try {
-        const data = {
-            userId: new ObjectId(userId),
-            resetCode: crypto.randomBytes(32).toString('hex'),
+        // Raw code goes to the user; only its hash is stored, so a DB leak
+        // cannot be used to reset passwords. resetPassword hashes the same way.
+        const rawCode = crypto.randomBytes(32).toString('hex');
+        const hashedCode = crypto.createHash('sha256').update(rawCode).digest('hex');
+
+        await db.collection('resetCodes').insertOne({
+            userId: new ObjectId(user.userId),
+            code: hashedCode,
             used: false,
-            expireAt: new Date(Date.now() + 12 * 60 * 60 * 1000)
-        }
+            createdAt: new Date(),
+            expireAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+        });
 
-    }catch (error){
+        // In production this code must be delivered by email, never returned in
+        // the response. Returned in dev only so the flow stays testable.
         return NextResponse.json(
-            { error: 'Database error' },
-            { status: 500 })
+            {
+                success: true,
+                ...(process.env.NODE_ENV !== 'production' ? { resetCode: rawCode } : {}),
+            },
+            { status: 201 }
+        );
+    } catch (error) {
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }
-
 }

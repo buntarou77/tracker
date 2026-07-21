@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { ObjectId } from "mongodb";
 import crypto from 'crypto';
 import clientPromise from '@/app/lib/mongodb';
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET: string = process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is not set'); })();
 
 type User = {
     _id: ObjectId,
@@ -59,7 +59,7 @@ export async function PATCH(request: Request){
     const heashResetCode = crypto.createHash('sha256').update(resetCode).digest('hex');
     const resetCodeFromDb = await db.collection('resetCodes').findOneAndUpdate({code: heashResetCode, userId: new ObjectId(userId), expireAt: {$gt: new Date()}}, {$set: {used: true}}, {session})
 
-    if(!resetCodeFromDb?.value){
+    if(!resetCodeFromDb){
         await session.abortTransaction();
         return NextResponse.json(
             {error: 'reset code is invalid'},

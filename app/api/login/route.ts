@@ -87,10 +87,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     return NextResponse.json(
-      {
-        error: "An error occurred during login",
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: "An error occurred during login" },
       { status: 500 },
     );
   }
